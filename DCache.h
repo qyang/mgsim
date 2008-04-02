@@ -50,10 +50,10 @@ public:
 
     enum LineState
     {
-        LINE_UNUSED,
+        LINE_INVALID,
         LINE_LOADING,
         LINE_PROCESSING,
-        LINE_USED
+        LINE_VALID
     };
 
     struct Line

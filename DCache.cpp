@@ -138,6 +138,12 @@ Result DCache::read(MemAddr address, void* data, MemSize size, LFID fid, RegAddr
         throw InvalidArgumentException("Size argument too big");
     }
 
+	// Check that we're reading readable memory
+	if (!m_parent.checkPermissions(address, size, IMemory::PERM_READ))
+	{
+		throw SecurityException("Attempting to read non-readable memory");
+	}
+
     Line*  line;
     Result result;
     // SUCCESS - A line with the address was found
@@ -204,6 +210,12 @@ Result DCache::write(MemAddr address, void* data, MemSize size, LFID fid)
     {
         throw InvalidArgumentException("Size argument too big");
     }
+
+	// Check that we're writing writable memory
+	if (!m_parent.checkPermissions(address, size, IMemory::PERM_WRITE))
+	{
+		throw SecurityException("Attempting to write non-writable memory");
+	}
 
 	COMMIT
 	(

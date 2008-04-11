@@ -51,7 +51,7 @@ Pipeline::PipeAction Pipeline::FetchStage::read()
 		if (!family.killed)
 		{
 			MemAddr pc = thread.pc;
-			if (pc % m_controlBlockSize == 0)
+			if (!family.legacy && pc % m_controlBlockSize == 0)
 			{
 				// Skip the control word
 				pc += sizeof(Instruction);
@@ -67,6 +67,7 @@ Pipeline::PipeAction Pipeline::FetchStage::read()
 			COMMIT
 			(
 				m_pc  = pc;
+			    m_legacy                = family.legacy;
 				m_isLastThreadInBlock   = thread.isLastThreadInBlock;
 				m_isLastThreadInFamily  = thread.isLastThreadInFamily;
 				m_isFirstThreadInFamily = thread.isFirstThreadInFamily;
@@ -115,7 +116,7 @@ Pipeline::PipeAction Pipeline::FetchStage::write()
 	size_t iControl = (offset & -m_controlBlockSize) / sizeof(Instruction); // Align offset down to control block size
 
 	Instruction* instrs = (Instruction*)m_buffer;
-	Instruction control = UnserializeInstruction(&instrs[iControl]) >> (2 * (iInstr - iControl));
+	Instruction control = (!m_legacy) ? UnserializeInstruction(&instrs[iControl]) >> (2 * (iInstr - iControl)) : 0;
 
 	if (m_switched)
 	{

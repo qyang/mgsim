@@ -22,7 +22,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
 #include "Memory.h"
 
 // Load the program file into the memory
-Simulator::MemAddr LoadProgram(Simulator::IMemoryAdmin* memory, const std::string& path);
+Simulator::MemAddr LoadProgram(Simulator::IMemoryAdmin* memory, const std::string& path, bool quiet);
 
 #endif
 

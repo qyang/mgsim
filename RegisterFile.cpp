@@ -94,9 +94,9 @@ bool RegisterFile::clear(const RegAddr& addr, RegSize size, const RegValue& valu
     for (RegSize i = 0; i < size; i++)
     {
         COMMIT
-		(
+		{
 			regs[addr.index + i] = value;
-		)
+		}
     }
 
     return true;
@@ -137,10 +137,10 @@ bool RegisterFile::writeRegister(const RegAddr& addr, const RegValue& data, cons
 		{
 			// Just copy the TID because we need to preserve the m_request member
 			COMMIT
-			(
+			{
 				value.m_tid   = data.m_tid;
 				value.m_state = RST_WAITING;
-			)
+			}
 		}
 	}
 	else
@@ -168,7 +168,7 @@ bool RegisterFile::writeRegister(const RegAddr& addr, const RegValue& data, cons
             }
         }
 
-        COMMIT( value = data; )
+        COMMIT{ value = data; }
     }
     return true;
 }

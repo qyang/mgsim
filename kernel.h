@@ -29,7 +29,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
 namespace Simulator
 {
 
-#define COMMIT(statements)  if (committing()) { statements }
+#define COMMIT  if (committing())
 
 class Object;
 class Mutex;

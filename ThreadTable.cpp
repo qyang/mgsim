@@ -49,11 +49,11 @@ TID ThreadTable::popEmpty()
     {
         assert(m_threads[tid].state == TST_EMPTY);
         COMMIT
-        (
+        {
             m_empty.head = m_threads[tid].nextMember;
             m_threads[tid].state = TST_WAITING;
             m_numUsed++;
-        )
+        }
     }
     return tid;
 }
@@ -61,7 +61,7 @@ TID ThreadTable::popEmpty()
 bool ThreadTable::pushEmpty(const ThreadQueue& q)
 {
     COMMIT
-    (
+    {
         if (m_empty.head == INVALID_TID) {
             m_empty.head = q.head;
         } else {
@@ -76,6 +76,6 @@ bool ThreadTable::pushEmpty(const ThreadQueue& q)
             m_threads[cur].state = TST_EMPTY;
             m_numUsed--;
         }
-    )
+    }
     return true;
 }

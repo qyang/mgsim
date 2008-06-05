@@ -99,7 +99,7 @@ Pipeline::PipeAction Pipeline::MemoryStage::write()
     }
 
     COMMIT
-    (
+    {
         m_output.isLastThreadInFamily  = m_input.isLastThreadInFamily;
 		m_output.isFirstThreadInFamily = m_input.isFirstThreadInFamily;
         m_output.fid  = m_input.fid;
@@ -109,7 +109,7 @@ Pipeline::PipeAction Pipeline::MemoryStage::write()
         m_output.Rc   = m_input.Rc;
         m_output.Rrc  = m_input.Rrc;
         m_output.Rcv  = rcv;
-    )   
+    }   
     return PIPE_CONTINUE;
 }
 

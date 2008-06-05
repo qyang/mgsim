@@ -65,7 +65,7 @@ Pipeline::PipeAction Pipeline::FetchStage::read()
 			}
 
 			COMMIT
-			(
+			{
 				m_pc  = pc;
 			    m_legacy                = family.legacy;
 				m_isLastThreadInBlock   = thread.isLastThreadInBlock;
@@ -81,15 +81,15 @@ Pipeline::PipeAction Pipeline::FetchStage::read()
 				}
 
 				m_switched = true;
-			)
+			}
         }
 
 		COMMIT
-		(
+		{
 			m_fid  = thread.family;
 			m_gfid = family.gfid;
 			m_tid  = tid;
-		)
+		}
 	}
     return PIPE_CONTINUE;
 }
@@ -122,12 +122,12 @@ Pipeline::PipeAction Pipeline::FetchStage::write()
 	{
 		// We've just switched to this thread
 		COMMIT
-		(
+		{
 			// Pop the active thread
 			m_allocator.m_activeThreads.head = thread.nextState;
 			m_next = m_allocator.m_activeThreads.head;
 			thread.nextState = INVALID_TID;
-		)
+		}
 
 		// Decrease the queued dependency
 		if (!m_allocator.decreaseFamilyDependency(m_fid, FAMDEP_THREADS_QUEUED))
@@ -142,14 +142,14 @@ Pipeline::PipeAction Pipeline::FetchStage::write()
 		}
 
 		COMMIT
-		(
+		{
 			// Mark the thread as running
 			thread.state = TST_RUNNING;
-		)
+		}
 	}
 
 	COMMIT
-	(
+	{
 		m_output.instr = UnserializeInstruction(&instrs[iInstr]);
 		m_output.fid   = m_fid;
 		m_output.gfid  = m_gfid;
@@ -183,7 +183,7 @@ Pipeline::PipeAction Pipeline::FetchStage::write()
 		}
 
 		m_switched = false;
-	)
+	}
 
 	return PIPE_CONTINUE;
 }

@@ -66,19 +66,19 @@ LFID FamilyTable::AllocateFamily(GFID gfid)
 			// This is a global family, set up the mapping as well.
 			// It should've already been reserved.
 			assert(m_globals[gfid].used);
-			COMMIT(
+			COMMIT{
 				m_globals[gfid].fid = fid;
 				family.gfid = gfid;
-			)
+			}
 		}
 
         COMMIT
-		(
+		{
             m_empty.head = m_families[fid].next;
             family.state = FST_ALLOCATED;
             family.next  = INVALID_LFID;
 			m_numFamilies++;
-		)
+		}
     }
     return fid;
 }
@@ -98,10 +98,10 @@ GFID FamilyTable::AllocateGlobal(LFID lfid)
         {
             // Mark it as used
 			COMMIT
-			(
+			{
 				m_globals[i].used = true;
 				m_globals[i].fid  = lfid;
-			)
+			}
 			DebugSimWrite("Allocated G%u for F%u\n", i, lfid);
             return GFID(i);
         }
@@ -115,7 +115,7 @@ bool FamilyTable::ReserveGlobal(GFID fid)
     assert(fid != INVALID_GFID);
     assert(!m_globals[fid].used);
 
-    COMMIT( m_globals[fid].used = true; )
+    COMMIT{ m_globals[fid].used = true; }
     DebugSimWrite("Reserved family G%u\n", fid);
     return true;
 }
@@ -125,8 +125,10 @@ bool FamilyTable::UnreserveGlobal(GFID fid)
     assert(fid != INVALID_GFID);
 	assert(m_globals[fid].used);
 
-    COMMIT( m_globals[fid].used = false; )
-	COMMIT( m_globals[fid].fid  = INVALID_LFID; )
+    COMMIT{
+        m_globals[fid].used = false;
+    	m_globals[fid].fid  = INVALID_LFID;
+    }
     DebugSimWrite("Unreserved family G%u\n", fid);
     return true;
 }
@@ -136,7 +138,7 @@ bool FamilyTable::FreeFamily(LFID fid)
 	assert(fid != INVALID_LFID);
 
     COMMIT
-    (
+    {
         // Put it on the queue
         if (m_empty.head == INVALID_LFID) {
             m_empty.head = fid;
@@ -149,6 +151,6 @@ bool FamilyTable::FreeFamily(LFID fid)
         family.next  = INVALID_LFID;
         family.state = FST_EMPTY;
         m_numFamilies--;
-    )
+    }
     return true;
 }

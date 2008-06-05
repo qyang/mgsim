@@ -39,7 +39,7 @@ bool Pipeline::ReadStage::readRegister(RegAddr reg, ReadPort& port, RegValue& va
     {
         // Execute stage will produce the value this cycle
         // We will have to grab it in the write phase, when the Execute stage has executed
-        COMMIT( RvFromExec = true; )
+        COMMIT{ RvFromExec = true; }
     }
     else if (!m_bypass1.empty() && m_bypass1.Rc == reg)
     {
@@ -68,10 +68,10 @@ bool Pipeline::ReadStage::readRegister(RegAddr reg, ReadPort& port, RegValue& va
 Pipeline::PipeAction Pipeline::ReadStage::read()
 {
     COMMIT
-    (
+    {
         m_ravFromExec = false;
         m_rbvFromExec = false;
-    )
+    }
 
     if (!readRegister(m_input.Ra, m_regFile.p_pipelineR1, m_rav, m_ravFromExec))
     {
@@ -82,10 +82,10 @@ Pipeline::PipeAction Pipeline::ReadStage::read()
     {
         // Use the literal instead
         COMMIT
-        (
+        {
             m_rbv.m_integer = m_input.literal;
             m_rbv.m_state   = RST_FULL;
-        )
+        }
     }
     else if (!readRegister(m_input.Rb, m_regFile.p_pipelineR2, m_rbv, m_rbvFromExec))
     {
@@ -100,7 +100,7 @@ Pipeline::PipeAction Pipeline::ReadStage::write()
     RegValue rbv = (m_rbvFromExec) ? m_bypass1.Rcv : m_rbv;
 
     COMMIT
-    (
+    {
         m_output.isLastThreadInFamily  = m_input.isLastThreadInFamily;
 		m_output.isFirstThreadInFamily = m_input.isFirstThreadInFamily;
         m_output.fid            = m_input.fid;
@@ -124,7 +124,7 @@ Pipeline::PipeAction Pipeline::ReadStage::write()
             m_output.familyRegs[i] = m_input.familyRegs[i];
             m_output.threadRegs[i] = m_input.threadRegs[i];
         }
-    )
+    }
 
     if (rav.m_state != RST_FULL)
     {
@@ -140,12 +140,12 @@ Pipeline::PipeAction Pipeline::ReadStage::write()
         }
         
         COMMIT
-        (
+        {
             m_output.Rc      = m_input.Ra;
             m_output.Rrc.fid = INVALID_GFID;
 			m_output.Rav.m_tid   = m_input.tid;
             m_output.Rav.m_state = RST_WAITING;
-        )
+        }
     }
     else if (rbv.m_state != RST_FULL)
     {
@@ -161,12 +161,12 @@ Pipeline::PipeAction Pipeline::ReadStage::write()
         }
 
         COMMIT
-        (
+        {
             m_output.Rc      = m_input.Rb;
             m_output.Rrc.fid = INVALID_GFID;
             m_output.Rbv.m_tid   = m_input.tid;
             m_output.Rbv.m_state = RST_WAITING;
-        )
+        }
     }
 
     return PIPE_CONTINUE;

@@ -16,91 +16,95 @@ You should have received a copy of the GNU Library General Public
 License along with this library; if not, write to the Free Software
 Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
 */
-#ifndef PARALLELMEMORY_H
-#define PARALLELMEMORY_H
+#ifndef BANKEDMEMORY_H
+#define BANKEDMEMORY_H
 
 #include <queue>
-#include <deque>
 #include <set>
-#include <map>
-#include <vector>
 #include "Memory.h"
 #include "kernel.h"
-#include "Processor.h"
 #include "VirtualMemory.h"
 
 namespace Simulator
 {
 
-class ParallelMemory : public IComponent, public IMemory, public IMemoryAdmin, public VirtualMemory
+class ArbitratedWriteFunction;
+
+class BankedMemory : public IComponent, public IMemory, public IMemoryAdmin, public VirtualMemory
 {
 public:
 	struct Config
 	{
-        BufferSize bufferSize;
-	    CycleNo	   baseRequestTime; // This many cycles per request regardless of size
-        CycleNo	   timePerLine;     // With this many additional cycles per line
-        size_t	   sizeOfLine;      // With this many bytes per line
-	    size_t	   width;	        // number of requests which can be processed parallel
+        CycleNo    baseRequestTime;
+        CycleNo    timePerLine;
+        size_t     sizeOfLine;
+        size_t     bufferSize;
+        size_t     numBanks;
 	};
-	
+
     class Request
     {
         void release();
-     public:
+
+    public:
         unsigned long*   refcount;
+        IMemoryCallback* callback;
         bool             write;
         MemAddr          address;
         MemData          data;
-        IMemoryCallback* callback;
 
         Request& operator =(const Request& req);
         Request(const Request& req);
         Request();
         ~Request();
     };
+    
+    struct Bank
+    {
+        ArbitratedWriteFunction* func;
+        bool                     busy;
+        Request                  request;
+        CycleNo                  done;
+        
+        Bank();
+        ~Bank();
+    };
 
-	struct Port
-	{
-		std::deque<Request>             m_requests;
-		std::multimap<CycleNo, Request> m_inFlight;
-	};
+    BankedMemory(Object* parent, Kernel& kernel, const std::string& name, const Config& config, size_t nProcs);
+    
+    typedef std::multimap<CycleNo, Request> Pipeline;
+   
+    const std::vector<Bank>&     GetBanks()    const { return m_banks; }
+    const std::vector<Pipeline>& GetIncoming() const { return m_incoming; }
+    const std::vector<Pipeline>& GetOutgoing() const { return m_outgoing; }
 
-    ParallelMemory(Object* parent, Kernel& kernel, const std::string& name, const Config& config, PSize numProcs );
-    ~ParallelMemory();
-
+    size_t GetQueueIndex(IMemoryCallback* callback);
+    size_t GetBankFromAddress(MemAddr address) const;
+    
     // Component
     Result onCycleWritePhase(unsigned int stateIndex);
 
     // IMemory
-    void registerListener(IMemoryCallback& callback);
+    void registerListener  (IMemoryCallback& callback);
     void unregisterListener(IMemoryCallback& callback);
     Result read (IMemoryCallback& callback, MemAddr address, void* data, MemSize size, MemTag tag);
     Result write(IMemoryCallback& callback, MemAddr address, void* data, MemSize size, MemTag tag);
 	bool checkPermissions(MemAddr address, MemSize size, int access) const;
 
     // IMemoryAdmin
-	void read (MemAddr address, void* data, MemSize size);
+    void read (MemAddr address, void* data, MemSize size);
     void write(MemAddr address, const void* data, MemSize size, int perm = 0);
 
-    const Config& getConfig()       const { return m_config; }
-    const Port&   getPort(size_t i) const { return m_ports[i]; }
-    size_t        getNumPorts()     const { return m_ports.size(); }
-
-    size_t getStatMaxRequests() { return m_statMaxRequests; }
-    size_t getStatMaxInFlight() { return m_statMaxInFlight; }
-    
 private:
-    void addRequest(Request& request);
+    Config                      m_config;
+    std::set<IMemoryCallback*>  m_caches;
+    std::vector<Bank>           m_banks;
     
-    std::set<IMemoryCallback*>        m_caches;
-    std::map<IMemoryCallback*, Port*> m_portmap;
-    std::vector<Port>                 m_ports;
- 
-    Config        m_config;
-	BufferSize    m_numRequests;
-	size_t	      m_statMaxRequests;
-	size_t	      m_statMaxInFlight;
+    void AddRequest(Pipeline& queue, const Request& request, bool data);
+    
+    std::vector<Pipeline> m_incoming;
+    std::vector<Pipeline> m_outgoing;
+    std::map<IMemoryCallback*, size_t> m_portmap;
 };
 
 }

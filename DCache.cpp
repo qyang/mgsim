@@ -196,9 +196,10 @@ Result DCache::read(MemAddr address, void* data, MemSize size, LFID fid, RegAddr
     return DELAYED;
 }
 
-Result DCache::write(MemAddr address, void* data, MemSize size, LFID fid)
+Result DCache::write(MemAddr address, void* data, MemSize size, LFID fid, TID tid)
 {
 	assert(fid != INVALID_LFID);
+	assert(tid != INVALID_TID);
 
 	size_t offset = (size_t)(address % m_lineSize);
     if (offset + size > m_lineSize)
@@ -233,7 +234,7 @@ Result DCache::write(MemAddr address, void* data, MemSize size, LFID fid)
 	}
 
     // Pass-through
-    return m_parent.writeMemory(address, data, size, MemTag(fid));
+    return m_parent.writeMemory(address, data, size, MemTag(fid, tid));
 }
 
 bool DCache::onMemoryReadCompleted(const MemData& data)
@@ -266,7 +267,7 @@ bool DCache::onMemoryReadCompleted(const MemData& data)
 bool DCache::onMemoryWriteCompleted(const MemTag& tag)
 {
     // Data has been written
-    if (!m_allocator.decreaseFamilyDependency(tag.fid, FAMDEP_OUTSTANDING_WRITES))
+    if (!m_allocator.DecreaseThreadDependency(tag.fid, tag.tid, THREADDEP_OUTSTANDING_WRITES, *this))
     {
         return false;
     }
@@ -293,7 +294,7 @@ bool DCache::onMemorySnooped(MemAddr address, const MemData& data)
     return true;
 }
 
-Result DCache::onCycleWritePhase(int stateIndex)
+Result DCache::onCycleWritePhase(unsigned int stateIndex)
 {
     if (m_returned.head == INVALID_CID)
     {
@@ -339,7 +340,7 @@ Result DCache::onCycleWritePhase(int stateIndex)
 			}
 		}
 
-		if (!m_allocator.decreaseFamilyDependency(value.m_request.fid, FAMDEP_OUTSTANDING_READS))
+		if (!m_allocator.DecreaseFamilyDependency(value.m_request.fid, FAMDEP_OUTSTANDING_READS))
 		{
 			return FAILED;
 		}

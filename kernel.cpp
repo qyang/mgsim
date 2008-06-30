@@ -239,6 +239,11 @@ RunState Kernel::step(CycleNo cycles)
             }
         }
 
+        for (CallbackList::iterator i = m_callbacks.begin(); i != m_callbacks.end(); ++i)
+        {
+            i->first->UpdateStatistics();
+        }
+        
         m_cycle++;
         if (cycles == INFINITE_CYCLES && idle)
         {

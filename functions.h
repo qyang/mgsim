@@ -40,7 +40,7 @@ public:
     }
 
     ArbitratedFunction(Kernel& kernel)
-        : m_kernel(kernel), m_priority(SIZE_MAX), m_component(NULL)
+        : m_kernel(kernel), m_priority(INT_MAX), m_component(NULL)
     {
         m_kernel.registerFunction(*this);
     }

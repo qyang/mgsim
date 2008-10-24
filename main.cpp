@@ -16,8 +16,17 @@ You should have received a copy of the GNU Library General Public
 License along with this library; if not, write to the Free Software
 Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
 */
+// Undefine to use ideal memory
+#define USE_BANKED_MEMORY
+
 #include "Processor.h"
+
+#ifdef USE_BANKED_MEMORY
 #include "BankedMemory.h"
+#else
+#include "ParallelMemory.h"
+#endif
+
 #include "commands.h"
 #include "config.h"
 #include "profile.h"
@@ -76,14 +85,18 @@ class AlphaCMPSystem : public Object
 
 public:
     //SimpleMemory*   m_memory;
-    //ParallelMemory* m_memory;
-    BankedMemory*   m_memory;
+#ifdef USE_BANKED_MEMORY
+    typedef BankedMemory MemoryType;
+#else
+    typedef ParallelMemory MemoryType;
+#endif
+    MemoryType* m_memory;
 
     struct Config
     {
-        PSize                numProcessors;
-        BankedMemory::Config memory;
-        Processor::Config    processor;
+        PSize              numProcessors;
+        MemoryType::Config memory;
+        Processor::Config  processor;
     };
 
     // Get or set the debug flag
@@ -271,7 +284,7 @@ public:
       : Object(NULL, NULL, "system"),
         m_numProcs(config.numProcessors)
     {
-        m_memory = new BankedMemory(this, m_kernel, "memory", config.memory, m_numProcs);
+        m_memory = new MemoryType(this, m_kernel, "memory", config.memory, m_numProcs);
         m_objects.resize(m_numProcs + 1);
         m_objects[m_numProcs] = m_memory;
 
@@ -411,8 +424,11 @@ static AlphaCMPSystem::Config ParseConfig(const Config& configfile)
     config.memory.timePerLine     = configfile.getInteger<CycleNo>("MemoryTimePerLine", 1);
     config.memory.sizeOfLine      = configfile.getInteger<size_t>("MemorySizeOfLine", 8);
     config.memory.bufferSize      = configfile.getInteger<BufferSize>("MemoryBufferSize", INFINITE);
-    //config.memory.width         = configfile.getInteger<size_t>("MemoryParallelRequests", 1);
+#ifdef USE_BANKED_MEMORY
     config.memory.numBanks        = configfile.getInteger<size_t>("MemoryBanks", config.numProcessors * 2);
+#else
+    config.memory.width         = configfile.getInteger<size_t>("MemoryParallelRequests", 1);
+#endif
 
 	config.processor.dcache.lineSize           = 
 	config.processor.icache.lineSize           = configfile.getInteger<size_t>("CacheLineSize",    64);

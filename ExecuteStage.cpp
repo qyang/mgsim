@@ -17,6 +17,8 @@ License along with this library; if not, write to the Free Software
 Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
 */
 #include <cassert>
+#include <iostream>
+#include <iomanip>
 #include "Pipeline.h"
 #include "ISA.h"
 #include "Processor.h"
@@ -273,7 +275,7 @@ Pipeline::PipeAction Pipeline::ExecuteStage::write()
 						switch (m_input.function)
 						{
 						case A_UTHREAD_SETSTART: family.start         = m_input.Rbv.m_integer; break;
-						case A_UTHREAD_SETLIMIT: family.end           = m_input.Rbv.m_integer; break;
+						case A_UTHREAD_SETLIMIT: family.limit         = m_input.Rbv.m_integer; break;
 						case A_UTHREAD_SETSTEP:  family.step          = m_input.Rbv.m_integer; break;
 						case A_UTHREAD_SETBLOCK: family.virtBlockSize = (TSize)m_input.Rbv.m_integer; break;
 						case A_UTHREAD_SETPLACE: family.gfid          = (m_input.Rbv.m_integer == 0) ? INVALID_GFID : 0; break;
@@ -286,9 +288,14 @@ Pipeline::PipeAction Pipeline::ExecuteStage::write()
 					case A_UTHREAD_SQUEEZE:  break;
 
 					case A_UTHREAD_DEBUG:
-						DebugProgWrite("DEBUG by T%u at %016llx: %016llx\n", m_input.tid, m_input.pc, m_input.Rav.m_integer);
-						output.Rc = INVALID_REG;
-						break;
+					    if (m_input.Rbv.m_integer == 0) {
+						    DebugProgWrite("DEBUG by T%u at %016llx: %016llx\n", m_input.tid, m_input.pc, m_input.Rav.m_integer);
+    					} else {
+	    				    ostream& out = (m_input.Rbv.m_integer != 1) ? cerr : cout;
+		    			    out << (char)m_input.Rav.m_integer;
+		    			}
+			    		output.Rc = INVALID_REG;
+				        break;
 				}
             }
             else if (m_input.opcode == A_OP_UTHREADF)
@@ -296,7 +303,12 @@ Pipeline::PipeAction Pipeline::ExecuteStage::write()
 				switch (m_input.function)
 				{
 					case A_UTHREADF_DEBUG:
-						DebugProgWrite("DEBUG by T%u at %016llx: %.12lf\n", m_input.tid, m_input.pc, m_input.Rav.m_float);
+					    if (m_input.Rbv.m_integer == 0) {
+    						DebugProgWrite("DEBUG by T%u at %016llx: %.12lf\n", m_input.tid, m_input.pc, m_input.Rav.m_float.todouble());
+    				    } else {
+	    				    ostream& out = (m_input.Rbv.m_integer != 1) ? cerr : cout;
+		    			    out << setprecision(12) << fixed << m_input.Rav.m_float.todouble();
+    				    }
 						output.Rc = INVALID_REG;
 						break;
 					

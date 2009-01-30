@@ -92,7 +92,7 @@ protected:
     void verify(const IComponent& component) const {
 #ifndef NDEBUG
         if (m_priorities.find(&component) == m_priorities.end()) {
-            throw IllegalPortAccess(component.getFQN());
+            throw IllegalPortAccess(component);
         }
 #endif
     }
@@ -207,7 +207,7 @@ protected:
     void verify(const IComponent& component) {
 #ifndef NDEBUG
         if (m_component != &component) {
-            throw IllegalPortAccess(component.getFQN());
+            throw IllegalPortAccess(component);
         }
 #endif
     }

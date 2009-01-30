@@ -21,6 +21,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
 #include "except.h"
 #include <fstream>
 #include <iostream>
+#include <vector>
 using namespace Simulator;
 using namespace std;
 
@@ -30,7 +31,7 @@ static const int PAGE_SIZE = 4096;
 static void Verify(bool expr, const char* error = "invalid ELF file")
 {
 	if (!expr) {
-		throw Exception(error);
+		throw runtime_error(error);
 	}
 }
 
@@ -153,24 +154,21 @@ MemAddr LoadProgram(IMemoryAdmin* memory, const string& path, bool quiet)
     ifstream input(path.c_str(), ios::binary);
     if (!input.is_open() || !input.good())
     {
-        throw Exception("Unable to load program: " + path);
+        throw runtime_error("Unable to open file \"" + path + "\"");
     }
 
 	// Read the entire file
     input.seekg(0, ios::end);
     streampos size = input.tellg();
-    char* data = new char[size];
+    vector<char> data(size);
 	try
 	{
 		input.seekg(0, ios::beg);
-		input.read(data, size);
-		MemAddr entry = LoadProgram(memory, data, size, quiet);
-		delete[] data;
-		return entry;
+		input.read(&data[0], size);
+		return LoadProgram(memory, &data[0], data.size(), quiet);
 	}
-	catch (Exception& e)
+	catch (exception& e)
 	{
-		delete[] data;
-		throw Exception(string("Unable to load program: ") + e.getMessage());
+		throw runtime_error("Unable to load program \"" + path + "\":\n" + e.what());
 	}
 }

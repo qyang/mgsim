@@ -22,6 +22,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
 #include "kernel.h"
 #include <map>
 #include <set>
+#include <limits>
 
 namespace Simulator
 {
@@ -36,43 +37,43 @@ public:
         : m_priorities(f.m_priorities), m_requests(f.m_requests), m_kernel(f.m_kernel),
           m_priority(f.m_priority), m_component(f.m_component)
     {
-        m_kernel.registerFunction(*this);
+        m_kernel.RegisterFunction(*this);
     }
 
     ArbitratedFunction(Kernel& kernel)
-        : m_kernel(kernel), m_priority(INT_MAX), m_component(NULL)
+        : m_kernel(kernel), m_priority(std::numeric_limits<int>::max()), m_component(NULL)
     {
-        m_kernel.registerFunction(*this);
+        m_kernel.RegisterFunction(*this);
     }
 
     virtual ~ArbitratedFunction() {
-        m_kernel.unregisterFunction(*this);
+        m_kernel.UnregisterFunction(*this);
     }
 
-    void setPriority(const IComponent& component, int priority);
-    void arbitrate();
+    void SetPriority(const IComponent& component, int priority);
+    void Arbitrate();
 
 protected:
-    bool acquiring() const {
-        return m_kernel.getCyclePhase() == PHASE_ACQUIRE;
+    bool IsAcquiring() const {
+        return m_kernel.GetCyclePhase() == PHASE_ACQUIRE;
     }
 
-    bool acquired(const IComponent& component) const {
+    bool HasAcquired(const IComponent& component) const {
         return &component == m_component;
     }
 
-    bool acquired(int priority) const {
+    bool HasAcquired(int priority) const {
         return m_priority == priority;
     }
 
 #ifndef NDEBUG
-    void verify(const IComponent& component) const;
+    void Verify(const IComponent& component) const;
 #else
-    void verify(const IComponent& component) const {}
+    void Verify(const IComponent& component) const {}
 #endif
 
-    void addRequest(const IComponent& component);
-    void addRequest(int priority);
+    void AddRequest(const IComponent& component);
+    void AddRequest(int priority);
 
 private:
     PriorityMap m_priorities;
@@ -86,18 +87,18 @@ private:
 class DedicatedFunction
 {
 public:
-    DedicatedFunction() { m_component = NULL; }
+    DedicatedFunction() : m_component(NULL) {}
     virtual ~DedicatedFunction() {}
 
-    virtual void setComponent(const IComponent& component) {
+    virtual void SetComponent(const IComponent& component) {
         m_component = &component;
     }
 
 protected:
 #ifndef NDEBUG
-    void verify(const IComponent& component) const;
+    void Verify(const IComponent& component) const;
 #else
-    void verify(const IComponent& component) const {}
+    void Verify(const IComponent& component) const {}
 #endif
 
 private:
@@ -110,8 +111,8 @@ private:
 class ReadFunction
 {
 public:
-    virtual bool invoke(const IComponent& component) = 0;
-    virtual bool invoke(int priority) = 0;
+    virtual bool Invoke(const IComponent& component) = 0;
+    virtual bool Invoke(int priority) = 0;
 
     virtual ~ReadFunction() {}
 };
@@ -119,8 +120,8 @@ public:
 class WriteFunction
 {
 public:
-    virtual bool invoke(const IComponent& component) = 0;
-    virtual bool invoke(int priority) = 0;
+    virtual bool Invoke(const IComponent& component) = 0;
+    virtual bool Invoke(int priority) = 0;
 
     virtual ~WriteFunction() {}
 };
@@ -132,29 +133,29 @@ class ArbitratedReadFunction : public ReadFunction, public ArbitratedFunction
 {
 public:
     ArbitratedReadFunction(Kernel& kernel) : ArbitratedFunction(kernel) {}
-    void onArbitrateReadPhase()               { arbitrate(); }
-    void onArbitrateWritePhase()              {}
-    bool invoke(const IComponent& component)
+    void OnArbitrateReadPhase()               { Arbitrate(); }
+    void OnArbitrateWritePhase()              {}
+    bool Invoke(const IComponent& component)
     {
-        verify(component);
-        if (acquiring())
+        Verify(component);
+        if (IsAcquiring())
         {
-            addRequest(component);
+            AddRequest(component);
         }
-        else if (!acquired(component))
+        else if (!HasAcquired(component))
         {
             return false;
         }
         return true;
     }
 
-    bool invoke(int priority)
+    bool Invoke(int priority)
     {
-        if (acquiring())
+        if (IsAcquiring())
         {
-            addRequest(priority);
+            AddRequest(priority);
         }
-        else if (!acquired(priority))
+        else if (!HasAcquired(priority))
         {
             return false;
         }
@@ -166,29 +167,29 @@ class ArbitratedWriteFunction : public WriteFunction, public ArbitratedFunction
 {
 public:
     ArbitratedWriteFunction(Kernel& kernel) : ArbitratedFunction(kernel) {}
-    void onArbitrateReadPhase()               {}
-    void onArbitrateWritePhase()              { arbitrate(); }
-    bool invoke(const IComponent& component)
+    void OnArbitrateReadPhase()               {}
+    void OnArbitrateWritePhase()              { Arbitrate(); }
+    bool Invoke(const IComponent& component)
     {
-        verify(component);
-        if (acquiring())
+        Verify(component);
+        if (IsAcquiring())
         {
-            addRequest(component);
+            AddRequest(component);
         }
-        else if (!acquired(component))
+        else if (!HasAcquired(component))
         {
             return false;
         }
         return true;
     }
     
-    bool invoke(int priority)
+    bool Invoke(int priority)
     {
-        if (acquiring())
+        if (IsAcquiring())
         {
-            addRequest(priority);
+            AddRequest(priority);
         }
-        else if (!acquired(priority))
+        else if (!HasAcquired(priority))
         {
             return false;
         }
@@ -202,8 +203,8 @@ public:
 class DedicatedReadFunction : public ReadFunction, public DedicatedFunction
 {
 public:
-    bool invoke(const IComponent& component) {
-        verify(component);
+    bool Invoke(const IComponent& component) {
+        Verify(component);
         return true;
     }
 };
@@ -211,8 +212,8 @@ public:
 class DedicatedWriteFunction : public WriteFunction, public DedicatedFunction
 {
 public:
-    bool invoke(const IComponent& component) {
-        verify(component);
+    bool Invoke(const IComponent& component) {
+        Verify(component);
         return true;
     }
 };

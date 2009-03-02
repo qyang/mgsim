@@ -16,9 +16,9 @@ You should have received a copy of the GNU Library General Public
 License along with this library; if not, write to the Free Software
 Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
 */
-#include <cassert>
 #include "Pipeline.h"
 #include "Processor.h"
+#include <cassert>
 using namespace Simulator;
 using namespace std;
 
@@ -68,6 +68,7 @@ Pipeline::PipeAction Pipeline::WritebackStage::write()
         case RST_WAITING:
             value.m_tid   = m_input.Rcv.m_tid;
             writebackSize = 1;      // Write just one register
+            nRegs         = 1;
             // Fall-through
 
         case RST_PENDING:
@@ -100,7 +101,7 @@ Pipeline::PipeAction Pipeline::WritebackStage::write()
         if (m_input.Rrc.fid != INVALID_GFID)
         {
             assert(m_input.Rcv.m_state == RST_FULL);
-
+            
             // Also forward the shared to the next CPU.
             // If we're the last thread in the family, it writes to the parent thread.
 			if (!m_network.SendShared(
@@ -128,7 +129,7 @@ Pipeline::PipeAction Pipeline::WritebackStage::write()
         {
             return PIPE_STALL;
         }
-
+        
         suspend = (value.m_state == RST_WAITING);
 
         // Adjust after writing

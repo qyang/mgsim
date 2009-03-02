@@ -16,15 +16,15 @@ You should have received a copy of the GNU Library General Public
 License along with this library; if not, write to the Free Software
 Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
 */
-#include <iomanip>
-#include <iostream>
-#include <sstream>
-#include <cstdlib>
 #include "commands.h"
 #include "Processor.h"
 #include "SimpleMemory.h"
 #include "ParallelMemory.h"
 #include "BankedMemory.h"
+#include <iomanip>
+#include <iostream>
+#include <sstream>
+#include <cstdlib>
 using namespace std;
 using namespace Simulator;
 

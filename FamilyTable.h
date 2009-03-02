@@ -19,8 +19,8 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
 #ifndef FAMILYTABLE_H
 #define FAMILYTABLE_H
 
-#include <queue>
 #include "ports.h"
+#include <queue>
 
 namespace Simulator
 {

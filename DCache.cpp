@@ -140,10 +140,12 @@ Result DCache::Read(MemAddr address, void* data, MemSize size, LFID fid, RegAddr
         throw InvalidArgumentException("Address range crosses over cache line boundary");
     }
 
+#if MEMSIZE_MAX >= SIZE_MAX
     if (size > SIZE_MAX)
     {
         throw InvalidArgumentException("Size argument too big");
     }
+#endif
 
 	// Check that we're reading readable memory
 	if (!m_parent.CheckPermissions(address, size, IMemory::PERM_READ))
@@ -224,10 +226,12 @@ Result DCache::Write(MemAddr address, void* data, MemSize size, LFID fid, TID ti
         throw InvalidArgumentException("Address range crosses over cache line boundary");
     }
 
+#if MEMSIZE_MAX >= SIZE_MAX
     if (size > SIZE_MAX)
     {
         throw InvalidArgumentException("Size argument too big");
     }
+#endif
 
 	// Check that we're writing writable memory
 	if (!m_parent.CheckPermissions(address, size, IMemory::PERM_WRITE))

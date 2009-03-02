@@ -19,9 +19,9 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
 #ifndef PROFILE_H
 #define PROFILE_H
 
+#include "types.h"
 #include <string>
 #include <map>
-#include "types.h"
 
 namespace Simulator
 {

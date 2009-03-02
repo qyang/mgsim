@@ -16,9 +16,10 @@ You should have received a copy of the GNU Library General Public
 License along with this library; if not, write to the Free Software
 Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
 */
+#include "BankedMemory.h"
 #include <cassert>
 #include <cmath>
-#include "BankedMemory.h"
+
 using namespace Simulator;
 using namespace std;
 
@@ -99,11 +100,13 @@ void BankedMemory::AddRequest(Pipeline& queue, const Request& request, bool data
 
 Result BankedMemory::Read(IMemoryCallback& callback, MemAddr address, void* data, MemSize size, MemTag tag)
 {
+#if MEMSIZE_MAX >= SIZE_MAX
     if (size > SIZE_MAX)
     {
         throw InvalidArgumentException("Size argument too big");
     }
-    
+#endif
+
     Pipeline& queue = m_banks[ GetBankFromAddress(address) ].incoming;
 	if (m_config.bufferSize == INFINITE || queue.size() < m_config.bufferSize)
     {
@@ -125,10 +128,12 @@ Result BankedMemory::Read(IMemoryCallback& callback, MemAddr address, void* data
 
 Result BankedMemory::Write(IMemoryCallback& callback, MemAddr address, void* data, MemSize size, MemTag tag)
 {
+#if MEMSIZE_MAX >= SIZE_MAX
     if (size > SIZE_MAX)
     {
         throw InvalidArgumentException("Size argument too big");
     }
+#endif
 
     Pipeline& queue = m_banks[ GetBankFromAddress(address) ].incoming;
     if (m_config.bufferSize == INFINITE || queue.size() < m_config.bufferSize)

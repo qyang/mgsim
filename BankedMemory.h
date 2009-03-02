@@ -19,11 +19,11 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
 #ifndef BANKEDMEMORY_H
 #define BANKEDMEMORY_H
 
-#include <queue>
-#include <set>
 #include "Memory.h"
 #include "kernel.h"
 #include "VirtualMemory.h"
+#include <queue>
+#include <set>
 
 namespace Simulator
 {

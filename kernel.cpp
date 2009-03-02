@@ -16,6 +16,8 @@ You should have received a copy of the GNU Library General Public
 License along with this library; if not, write to the Free Software
 Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
 */
+#include "kernel.h"
+#include "profile.h"
 #include <cassert>
 #include <algorithm>
 #include <cstdarg>
@@ -23,8 +25,6 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
 #include <iomanip>
 #include <set>
 #include <map>
-#include "kernel.h"
-#include "profile.h"
 using namespace Simulator;
 using namespace std;
 

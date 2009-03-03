@@ -19,6 +19,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
 #include "ICache.h"
 #include "Processor.h"
 #include <cassert>
+#include <cstring>
 using namespace Simulator;
 using namespace std;
 

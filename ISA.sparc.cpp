@@ -94,7 +94,7 @@ static int32_t SEXT(uint32_t value, int bits)
     return (int32_t)(value << bits) >> bits;
 }
 
-bool Pipeline::DecodeStage::DecodeInstruction(const Instruction& instr)
+void Pipeline::DecodeStage::DecodeInstruction(const Instruction& instr)
 {
     m_output.op1 = (instr >> OP1_SHIFT) & OP1_MASK;
     RegIndex Ra  = (instr >> RA_SHIFT) & REG_MASK;
@@ -143,12 +143,12 @@ bool Pipeline::DecodeStage::DecodeInstruction(const Instruction& instr)
             m_output.function     = (instr >> COND_SHIFT) & COND_MASK;
             break;
         }
-        return true;
+        break;
         
     case S_OP1_CALL:
         m_output.displacement = SEXT((instr >> OP1_DISP_SHIFT) & OP1_DISP_MASK, OP1_DISP_SIZE);
         m_output.Rc = MAKE_REGADDR(RT_INTEGER, 15);
-        return true;
+        break;
 
     case S_OP1_MEMORY:
         m_output.op3 = (instr >> OP3_SHIFT) & OP3_MASK;
@@ -175,7 +175,7 @@ bool Pipeline::DecodeStage::DecodeInstruction(const Instruction& instr)
             case S_OP3_STDA: case S_OP3_LDDA:  m_output.RcSize = 8; break;
             default:
                 // We don't support this instruction (yet)
-                return false;
+                break;
         }
 
         // Determine register type
@@ -192,7 +192,7 @@ bool Pipeline::DecodeStage::DecodeInstruction(const Instruction& instr)
                 m_output.Rc  = MAKE_REGADDR(RT_INTEGER, Rc);
                 break;
         }
-        return true;
+        break;
             
     case S_OP1_OTHER:
         m_output.op3 = (instr >> OP3_SHIFT) & OP3_MASK;
@@ -278,9 +278,8 @@ bool Pipeline::DecodeStage::DecodeInstruction(const Instruction& instr)
             }
             break;
         }
-        return true;
+        break;
     }
-    return false;
 }
 
 static bool BranchTakenInt(int cond, uint32_t psr)

@@ -23,6 +23,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
 #include <sstream>
 #include <map>
 #include <string>
+#include <vector>
 
 class Config
 {
@@ -40,6 +41,23 @@ public:
         stream << getString(name, "");
         stream >> val;
         return (!stream.fail() && stream.eof()) ? val : def;
+    }
+
+    template <typename T>
+    std::vector<T> getIntegerList(const std::string& name) const
+    {
+        std::vector<T> vals;
+        
+        std::stringstream stream;
+        stream << getString(name, "");
+        while (!stream.eof())
+        {
+            T val;
+            stream >> val;
+            if (stream.fail()) break;
+            vals.push_back(val);
+        }
+        return vals;
     }
 
     template <typename T>

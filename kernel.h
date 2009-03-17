@@ -72,11 +72,16 @@ enum RunState
 class Kernel
 {
 public:
-    /// Holds information about a component's callbacks
+    struct ComponentState
+    {
+        std::string name;   ///< Name of this state
+        RunState    state;  ///< Last run state of this state
+    };
+    
+    /// Holds information about a component's callbacks struct C
 	struct CallbackInfo
 	{
-		unsigned int nStates;   ///< Number of callbacks (states).
-		RunState     state;     ///< Last run state of the component.
+	    std::vector<ComponentState> states;   ///< The component's states
 	};
 
 	typedef std::map<IComponent*, CallbackInfo> CallbackList;   ///< List of callbacks, indexed by component.
@@ -88,8 +93,9 @@ public:
     /// Modes of debugging
     enum DebugMode
     {
-        DEBUG_SIM  = 1, ///< Debug the simulator 
-        DEBUG_PROG = 2, ///< Debug the program
+        DEBUG_SIM      = 1, ///< Debug the simulator 
+        DEBUG_PROG     = 2, ///< Debug the program
+        DEBUG_DEADLOCK = 4, ///< Debug deadlocks
     };
     
 private:
@@ -115,9 +121,9 @@ public:
     /**
      * Registers a component to the kernel.
      * @param component the component to register.
-     * @param nStates the number of callbacks (states) in the component.
+     * @param states '|'-delimited list of state names
      */
-    void RegisterComponent(IComponent& component, unsigned int nStates);
+    void RegisterComponent(IComponent& component, const std::string& states);
     /// Registers a register to the kernel. @param reg the register to register.
     void RegisterRegister (IRegister&  reg );
 
@@ -244,6 +250,13 @@ public:
      */
     void DebugProgWrite(const char* msg, ...) const;
 
+    /**
+     * @brief Writes deadlock debug output.
+     * Writes debug output if and only if the object's kernel's debug more contains at least DEBUG_DEADLOCK.
+     * @param msg the printf-style format string.
+     */
+    void DeadlockWrite(const char* msg, ...) const;
+
     /// Writes output. @param msg the printf-style format string.
     void OutputWrite(const char* msg, ...) const;
 };
@@ -327,9 +340,9 @@ public:
      * @param parent the parent object.
      * @param kernel the kernel that will manage this component.
      * @param name the name of tehe compnent.
-     * @param nStates the number of callbacks (states) in the component.
+     * @param states '|'-delimited list of state names
      */
-    IComponent(Object* parent, Kernel& kernel, const std::string& name, unsigned int numStates = 1);
+    IComponent(Object* parent, Kernel& kernel, const std::string& name, const std::string& states = "default");
     ~IComponent();
 };
 

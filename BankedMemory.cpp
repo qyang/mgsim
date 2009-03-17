@@ -17,6 +17,7 @@ License along with this library; if not, write to the Free Software
 Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
 */
 #include "BankedMemory.h"
+#include <sstream>
 #include <cassert>
 #include <cmath>
 #include <cstring>
@@ -283,8 +284,27 @@ Result BankedMemory::OnCycleWritePhase(unsigned int stateIndex)
     return SUCCESS;
 }
 
+static string CreateStateNames(size_t numBanks)
+{
+    stringstream states;
+    for (size_t i = 0; i < numBanks; i++)
+    {
+        states << "in"  << i << "|" <<
+                  "out" << i << "|";
+    }
+    for (size_t i = 0; i < numBanks; i++)
+    {
+        states << "bank" << i << "|";
+    }
+    string ret = states.str();
+    if (!ret.empty()) {
+        ret.erase(ret.end() - 1, ret.end());
+    }
+    return ret;
+}
+
 BankedMemory::BankedMemory(Object* parent, Kernel& kernel, const std::string& name, const Config& config, size_t nProcs) :
-    IComponent(parent, kernel, name, (unsigned int)(3 * config.numBanks) ),
+    IComponent(parent, kernel, name, CreateStateNames(config.numBanks)),
     m_config(config), m_banks(config.numBanks)
 {
 }

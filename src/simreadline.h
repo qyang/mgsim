@@ -19,9 +19,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
 #ifndef SIMREADLINE_H
 #define SIMREADLINE_H
 
-#ifdef HAVE_CONFIG_H
-#include "sys_config.h"
-#endif
+#include <cstdio>
 
 #ifdef HAVE_LIBREADLINE
 #if defined(HAVE_READLINE_READLINE_H)

@@ -19,6 +19,12 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
 // Undefine to use ideal memory
 #define USE_BANKED_MEMORY
 
+#ifdef HAVE_CONFIG_H
+#include "sys_config.h"
+#endif
+
+#include "simreadline.h"
+
 #include "Processor.h"
 #include "BankedMemory.h"
 #include "ParallelMemory.h"
@@ -34,8 +40,6 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
 #include <stdexcept>
 #include <limits>
 #include <typeinfo>
-
-#include "simreadline.h"
 
 #include <signal.h>
 
@@ -561,7 +565,8 @@ struct ProgramConfig
 static bool ParseArguments(int argc, const char* argv[], ProgramConfig& config)
 {
     config.m_interactive = false;
-	config.m_terminate   = false;
+    config.m_terminate   = false;
+    config.m_configFile  = MGSIM_CONFIG_PATH; 
 
     for (int i = 1; i < argc; i++)
     {

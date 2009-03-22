@@ -35,8 +35,8 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
 #include <limits>
 #include <typeinfo>
 
-#include <readline/readline.h>
-#include <readline/history.h>
+#include "simreadline.h"
+
 #include <signal.h>
 
 using namespace Simulator;

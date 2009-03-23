@@ -31,7 +31,7 @@ using namespace Simulator;
 /**
  ** Memory component functions
  **/
-static bool cmd_mem_help(Object* obj, const vector<string>& arguments )
+static bool cmd_mem_help(Object* obj, const vector<string>& /* arguments */)
 {
     if (dynamic_cast<SimpleMemory*>(obj) == NULL) return false;
 
@@ -353,7 +353,7 @@ static bool cmd_mem_read(Object* obj, const vector<string>& arguments )
 
 // Reads statistics for the memory
 // Usage: info <mem-component>
-static bool cmd_mem_info(Object* obj, const vector<string>& arguments )
+static bool cmd_mem_info(Object* obj, const vector<string>& /* arguments */)
 {
     VirtualMemory* mem = dynamic_cast<VirtualMemory*>(obj);
     if (mem == NULL) return false;
@@ -427,7 +427,7 @@ static bool cmd_mem_info(Object* obj, const vector<string>& arguments )
 /**
  ** Network functions
  **/
-static bool cmd_network_help(Object* obj, const vector<string>& arguments )
+static bool cmd_network_help(Object* obj, const vector<string>& /* arguments */)
 {
     if (dynamic_cast<Network*>(obj) == NULL) return false;
 
@@ -437,7 +437,7 @@ static bool cmd_network_help(Object* obj, const vector<string>& arguments )
     return true;
 }
 
-static bool cmd_network_read( Object* obj, const vector<string>& arguments )
+static bool cmd_network_read( Object* obj, const vector<string>& /* arguments */)
 {
     const Network* network = dynamic_cast<Network*>(obj);
     if (network == NULL) return false;
@@ -495,7 +495,7 @@ static bool cmd_network_read( Object* obj, const vector<string>& arguments )
 /**
  ** Allocator functions
  **/
-static bool cmd_allocator_help(Object* obj, const vector<string>& arguments )
+static bool cmd_allocator_help(Object* obj, const vector<string>& /* arguments */)
 {
     if (dynamic_cast<Allocator*>(obj) == NULL) return false;
 
@@ -505,7 +505,7 @@ static bool cmd_allocator_help(Object* obj, const vector<string>& arguments )
     return true;
 }
 
-static bool cmd_allocator_read( Object* obj, const vector<string>& arguments )
+static bool cmd_allocator_read( Object* obj, const vector<string>& /* arguments */)
 {
     const Allocator* alloc = dynamic_cast<Allocator*>(obj);
     if (alloc == NULL) return false;
@@ -594,7 +594,7 @@ static bool cmd_allocator_read( Object* obj, const vector<string>& arguments )
 /**
  ** I-Cache functions
  **/
-static bool cmd_icache_help(Object* obj, const vector<string>& arguments )
+static bool cmd_icache_help(Object* obj, const vector<string>& /* arguments */)
 {
     if (dynamic_cast<ICache*>(obj) == NULL) return false;
 
@@ -606,7 +606,7 @@ static bool cmd_icache_help(Object* obj, const vector<string>& arguments )
     return true;
 }
 
-static bool cmd_icache_info( Object* obj, const vector<string>& arguments )
+static bool cmd_icache_info( Object* obj, const vector<string>& /* arguments */)
 {
     const ICache* cache = dynamic_cast<ICache*>(obj);
     if (cache == NULL) return false;
@@ -639,7 +639,7 @@ static bool cmd_icache_info( Object* obj, const vector<string>& arguments )
     return true;
 }
 
-static bool cmd_icache_read( Object* obj, const vector<string>& arguments )
+static bool cmd_icache_read( Object* obj, const vector<string>& /* arguments */)
 {
     const ICache* cache = dynamic_cast<ICache*>(obj);
     if (cache == NULL) return false;
@@ -679,7 +679,7 @@ static bool cmd_icache_read( Object* obj, const vector<string>& arguments )
 /**
  ** D-Cache functions
  **/
-static bool cmd_dcache_help(Object* obj, const vector<string>& arguments )
+static bool cmd_dcache_help(Object* obj, const vector<string>& /* arguments */)
 {
     if (dynamic_cast<DCache*>(obj) == NULL) return false;
 
@@ -691,7 +691,7 @@ static bool cmd_dcache_help(Object* obj, const vector<string>& arguments )
     return true;
 }
 
-static bool cmd_dcache_info( Object* obj, const vector<string>& arguments )
+static bool cmd_dcache_info( Object* obj, const vector<string>& /* arguments */)
 {
     const DCache* cache = dynamic_cast<DCache*>(obj);
     if (cache == NULL) return false;
@@ -725,7 +725,7 @@ static bool cmd_dcache_info( Object* obj, const vector<string>& arguments )
     return true;
 }
 
-static bool cmd_dcache_read( Object* obj, const vector<string>& arguments )
+static bool cmd_dcache_read( Object* obj, const vector<string>& /* arguments */)
 {
     const DCache* cache = dynamic_cast<DCache*>(obj);
     if (cache == NULL) return false;
@@ -762,7 +762,7 @@ static bool cmd_dcache_read( Object* obj, const vector<string>& arguments )
 /**
  ** Family Table functions
  **/
-static bool cmd_families_help(Object* obj, const vector<string>& arguments )
+static bool cmd_families_help(Object* obj, const vector<string>& /* arguments */)
 {
     if (dynamic_cast<FamilyTable*>(obj) == NULL) return false;
 
@@ -773,7 +773,7 @@ static bool cmd_families_help(Object* obj, const vector<string>& arguments )
 }
 
 // Read the global and local family table
-static bool cmd_families_read( Object* obj, const vector<string>& arguments )
+static bool cmd_families_read( Object* obj, const vector<string>& /* arguments */)
 {
     const FamilyTable* table = dynamic_cast<FamilyTable*>(obj);
     if (table == NULL) return false;
@@ -843,7 +843,7 @@ static bool cmd_families_read( Object* obj, const vector<string>& arguments )
 /**
  ** Thread Table functions
  **/
-static bool cmd_threads_help(Object* obj, const vector<string>& arguments )
+static bool cmd_threads_help(Object* obj, const vector<string>& /* arguments */)
 {
     if (dynamic_cast<ThreadTable*>(obj) == NULL) return false;
 
@@ -853,7 +853,7 @@ static bool cmd_threads_help(Object* obj, const vector<string>& arguments )
     return true;
 }
 
-static bool cmd_threads_read( Object* obj, const vector<string>& arguments )
+static bool cmd_threads_read( Object* obj, const vector<string>& /* arguments */)
 {
     const ThreadTable* table = dynamic_cast<ThreadTable*>(obj);
     if (table == NULL) return false;
@@ -910,7 +910,7 @@ static bool cmd_threads_read( Object* obj, const vector<string>& arguments )
 /**
  ** Pipeline functions
  **/
-static bool cmd_pipeline_help(Object* obj, const vector<string>& arguments )
+static bool cmd_pipeline_help(Object* obj, const vector<string>& /* arguments */)
 {
     if (dynamic_cast<Pipeline*>(obj) == NULL) return false;
 
@@ -958,7 +958,7 @@ static ostream& operator<<(ostream& out, const RemoteRegAddr& rreg) {
 }
 
 // Read the pipeline latches
-static bool cmd_pipeline_read( Object* obj, const vector<string>& arguments )
+static bool cmd_pipeline_read( Object* obj, const vector<string>& /* arguments */)
 {
     const Pipeline* pipe = dynamic_cast<Pipeline*>(obj);
     if (pipe == NULL) return false;
@@ -1121,7 +1121,7 @@ static bool cmd_pipeline_read( Object* obj, const vector<string>& arguments )
 /**
  ** RAU functions
  **/
-static bool cmd_rau_help(Object* obj, const vector<string>& arguments )
+static bool cmd_rau_help(Object* obj, const vector<string>& /* arguments */)
 {
     if (dynamic_cast<RAUnit*>(obj) == NULL) return false;
 
@@ -1173,7 +1173,7 @@ struct REGINFO
 /**
  ** RegisterFile functions
  **/
-static bool cmd_regs_help(Object* obj, const vector<string>& arguments )
+static bool cmd_regs_help(Object* obj, const vector<string>& /* arguments */)
 {
     if (dynamic_cast<RegisterFile*>(obj) == NULL) return false;
 

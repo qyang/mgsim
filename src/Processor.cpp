@@ -124,7 +124,7 @@ bool Processor::OnMemorySnooped(MemAddr addr, const MemData& data)
 	return m_dcache.OnMemorySnooped(addr, data);
 }
 
-void Processor::OnFamilyTerminatedLocally(MemAddr pc)
+void Processor::OnFamilyTerminatedLocally(MemAddr /* pc */)
 {
     CycleNo cycle = GetKernel().GetCycleNo();
     m_localFamilyCompletion = cycle;

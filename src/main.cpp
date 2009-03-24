@@ -677,6 +677,8 @@ static RunState StepSystem(MGSystem& system, CycleNo cycles)
     
 int main(int argc, const char* argv[])
 {
+    try
+    {
         // Parse command line arguments
         ProgramConfig config;
         if (!ParseArguments(argc, argv, config))
@@ -698,8 +700,6 @@ int main(int argc, const char* argv[])
         // Create the system
 		MGSystem sys(systemconfig, config.m_programFile, config.m_regs, !config.m_interactive);
 
-    try
-    {
         bool interactive = config.m_interactive;
         if (!interactive)
         {

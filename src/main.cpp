@@ -40,6 +40,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
 #include <stdexcept>
 #include <limits>
 #include <typeinfo>
+#include <cstring>
 
 #include <signal.h>
 

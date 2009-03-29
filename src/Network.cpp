@@ -182,7 +182,7 @@ bool Network::SendFamilyCreate(LFID fid)
 			message.address       = family.pc;
 			message.parent        = family.parent;
 
-            for (RegType i = 0; i < NUM_REG_TYPES; i++)
+            for (RegType i = 0; i < NUM_REG_TYPES; ++i)
             {
 				message.regsNo[i] = family.regs[i].count;
 			}
@@ -525,7 +525,7 @@ Result Network::OnCycleWritePhase(unsigned int stateIndex)
 				const Family& family = m_familyTable[fid];
 
 				m_global.count = 0;
-				for (RegType i = 0; i < NUM_REG_TYPES; i++)
+				for (RegType i = 0; i < NUM_REG_TYPES; ++i)
 				{
 					m_globalsBase[i] = family.regs[i].globals;
 					if (m_global.count == 0 && msg.regsNo[i].globals > 0)
@@ -560,7 +560,7 @@ Result Network::OnCycleWritePhase(unsigned int stateIndex)
 				const Family& family = m_familyTable[create.first];
 
 				m_global.count = 0;
-				for (RegType i = 0; i < NUM_REG_TYPES; i++)
+				for (RegType i = 0; i < NUM_REG_TYPES; ++i)
 				{
 					m_globalsBase[i] = family.regs[i].globals;
 					if (m_global.count == 0 && msg.regsNo[i].globals > 0)
@@ -638,7 +638,7 @@ Result Network::OnCycleWritePhase(unsigned int stateIndex)
 					// Last global of this type, go to the next type
 					done = true;
 					COMMIT{ m_global.count = 0; }
-					for (RegType i = m_global.addr.type + 1; i < NUM_REG_TYPES; i++)
+					for (RegType i = m_global.addr.type + 1; i < NUM_REG_TYPES; ++i)
 					{
 						if (family->regs[i].count.globals > 0)
 						{
@@ -658,7 +658,7 @@ Result Network::OnCycleWritePhase(unsigned int stateIndex)
 				if (done)
 				{
 				    DebugSimWrite("Done with creation for F%u; remote: %s", m_createFid, m_createState == CS_PROCESSING_REMOTE ? "true" : "false");
-					for (RegType i = 0; i < NUM_REG_TYPES; i++)
+					for (RegType i = 0; i < NUM_REG_TYPES; ++i)
 					{
 					    DebugSimWrite("#Globals: %u, #Shareds: %u", family->regs[i].globals, family->regs[i].shareds);
 					}

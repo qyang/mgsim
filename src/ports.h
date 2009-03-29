@@ -59,7 +59,7 @@ public:
     {
         // Choose the request with the highest priority
         int highest = std::numeric_limits<int>::max();
-        for (typename RequestMap::const_iterator i = m_requests.begin(); i != m_requests.end(); i++)
+        for (typename RequestMap::const_iterator i = m_requests.begin(); i != m_requests.end(); ++i)
         {
             typename PriorityMap::const_iterator priority = m_priorities.find(i->first);
             if (priority != m_priorities.end() && priority->second < highest)
@@ -145,7 +145,7 @@ public:
     {
         // Arbitrate between the ports      
         m_requests.clear();
-        for (typename WritePortList::iterator i = m_writePorts.begin(); i != m_writePorts.end(); i++)
+        for (typename WritePortList::iterator i = m_writePorts.begin(); i != m_writePorts.end(); ++i)
         {
             I index = I();
             if ((*i)->Arbitrate(&index))
@@ -155,12 +155,12 @@ public:
             }
         }
 
-        for (typename RequestPortMap::iterator i = m_requests.begin(); i != m_requests.end(); i++)
+        for (typename RequestPortMap::iterator i = m_requests.begin(); i != m_requests.end(); ++i)
         {
             ArbitratedWritePort<I>* port = NULL;
             int highest = std::numeric_limits<int>::max();
 
-            for (typename WritePortMap::iterator j = i->second.begin(); j != i->second.end(); j++)
+            for (typename WritePortMap::iterator j = i->second.begin(); j != i->second.end(); ++j)
             {
                 int priority = GetPriority(*j);
                 if (priority < highest)
@@ -170,7 +170,7 @@ public:
                 }
             }
 
-            for (typename WritePortMap::iterator j = i->second.begin(); j != i->second.end(); j++)
+            for (typename WritePortMap::iterator j = i->second.begin(); j != i->second.end(); ++j)
             {
                 (*j)->Notify( port == *j );
             }
@@ -326,7 +326,7 @@ template <typename I>
 void Structure<I>::OnArbitrateReadPhase()
 {
     // Arbitrate between all incoming requests
-    for (typename ReadPortList::iterator i = m_readPorts.begin(); i != m_readPorts.end(); i++)
+    for (typename ReadPortList::iterator i = m_readPorts.begin(); i != m_readPorts.end(); ++i)
     {
         bool index;
         if ((*i)->Arbitrate(&index))

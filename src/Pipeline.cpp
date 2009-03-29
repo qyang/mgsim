@@ -66,7 +66,7 @@ Result Pipeline::OnCycleReadPhase(unsigned int stateIndex)
     {
         // Begin of the cycle, initialize
         m_nStagesRunnable = 0;
-        for (int i = 0; i < NUM_STAGES; i++)
+        for (int i = 0; i < NUM_STAGES; ++i)
         {
             Latch* input = m_stages[i]->getInput();
             m_runnable[i] = (input == NULL || !input->empty());
@@ -88,7 +88,7 @@ Result Pipeline::OnCycleReadPhase(unsigned int stateIndex)
 			if (action == PIPE_STALL || action == PIPE_DELAY)
 			{
 				// This stage has stalled, abort pipeline
-				for (int i = 0; i < stage; i++)
+				for (int i = 0; i < stage; ++i)
 				{
 					m_runnable[i] = false;
 				}
@@ -101,7 +101,7 @@ Result Pipeline::OnCycleReadPhase(unsigned int stateIndex)
 				{
 					// Clear all previous stages with the same TID
 					TID tid = m_stages[stage]->getInput()->tid;
-					for (int j = 0; j < stage; j++)
+					for (int j = 0; j < stage; ++j)
 					{
 						Latch* input = m_stages[j]->getInput();
 						if (input != NULL && input->tid == tid)
@@ -134,7 +134,7 @@ Result Pipeline::OnCycleWritePhase(unsigned int stateIndex)
 			    if (action == PIPE_STALL || action == PIPE_DELAY)
     			{
     				// This stage has stalled or is delayed, abort pipeline
-    				for (int i = 0; i < stage; i++)
+    				for (int i = 0; i < stage; ++i)
     				{
     					m_runnable[i] = false;
     				}
@@ -147,7 +147,7 @@ Result Pipeline::OnCycleWritePhase(unsigned int stateIndex)
 	    		if (action == PIPE_FLUSH)
     			{
     				// Clear all previous stages with the same TID
-    				for (int j = 0; j < stage; j++)
+    				for (int j = 0; j < stage; ++j)
     				{
     					Latch* in = m_stages[j]->getInput();
     					if (in != NULL && in->tid == input->tid)

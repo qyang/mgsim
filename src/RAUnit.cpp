@@ -27,7 +27,7 @@ using namespace std;
 RAUnit::RAUnit(Processor& parent, const std::string& name, const RegisterFile& regFile, const Config& config)
     : Object(&parent, &parent.GetKernel(), name)
 {
-    for (RegType i = 0; i < NUM_REG_TYPES; i++)
+    for (RegType i = 0; i < NUM_REG_TYPES; ++i)
     {
         RegSize size = regFile.GetSize(i);
 
@@ -48,7 +48,7 @@ RAUnit::RAUnit(Processor& parent, const std::string& name, const RegisterFile& r
 
 bool RAUnit::Alloc(const RegSize sizes[NUM_REG_TYPES], LFID fid, RegIndex indices[NUM_REG_TYPES])
 {
-	for (RegType i = 0; i < NUM_REG_TYPES; i++)
+	for (RegType i = 0; i < NUM_REG_TYPES; ++i)
 	{
 		indices[i] = INVALID_REG_INDEX;
 		if (sizes[i] != 0)
@@ -66,7 +66,7 @@ bool RAUnit::Alloc(const RegSize sizes[NUM_REG_TYPES], LFID fid, RegIndex indice
 				else
 				{
 					// Free area, check size
-					for (RegIndex start = pos; pos < list.size() && list[pos].first == 0; pos++)
+					for (RegIndex start = pos; pos < list.size() && list[pos].first == 0; ++pos)
 					{
 						if (pos - start + 1 == size)
 						{
@@ -88,7 +88,7 @@ bool RAUnit::Alloc(const RegSize sizes[NUM_REG_TYPES], LFID fid, RegIndex indice
 	COMMIT
 	{ 
 		// We've found blocks for all types, commit them
-		for (RegType i = 0; i < NUM_REG_TYPES; i++)
+		for (RegType i = 0; i < NUM_REG_TYPES; ++i)
 		{
 			if (sizes[i] != 0)
 			{
@@ -104,7 +104,7 @@ bool RAUnit::Alloc(const RegSize sizes[NUM_REG_TYPES], LFID fid, RegIndex indice
 
 bool RAUnit::Free(RegIndex indices[NUM_REG_TYPES])
 {
-	for (RegType i = 0; i < NUM_REG_TYPES; i++)
+	for (RegType i = 0; i < NUM_REG_TYPES; ++i)
 	{
 		if (indices[i] != INVALID_REG_INDEX)
 		{

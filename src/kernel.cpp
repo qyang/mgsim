@@ -47,7 +47,7 @@ Object::~Object()
     if (m_parent != NULL)
     {
         // Remove ourself from the parent's children array
-        for (vector<Object*>::iterator p = m_parent->m_children.begin(); p != m_parent->m_children.end(); p++)
+        for (vector<Object*>::iterator p = m_parent->m_children.begin(); p != m_parent->m_children.end(); ++p)
         {
             if (*p == this)
             {

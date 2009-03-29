@@ -60,7 +60,7 @@ DCache::DCache(Processor& parent, const std::string& name, Allocator& alloc, Fam
     }
 
     m_lines.resize(config.sets * config.assoc);
-    for (size_t i = 0; i < m_lines.size(); i++)
+    for (size_t i = 0; i < m_lines.size(); ++i)
     {
         m_lines[i].state = LINE_EMPTY;
         m_lines[i].data  = new char[config.lineSize];
@@ -70,7 +70,7 @@ DCache::DCache(Processor& parent, const std::string& name, Allocator& alloc, Fam
 
 DCache::~DCache()
 {
-    for (size_t i = 0; i < m_lines.size(); i++)
+    for (size_t i = 0; i < m_lines.size(); ++i)
     {
         delete[] m_lines[i].data;
     }
@@ -85,7 +85,7 @@ Result DCache::FindLine(MemAddr address, Line* &line, bool check_only)
     // Find the line
     Line* empty   = NULL;
     Line* replace = NULL;
-    for (size_t i = 0; i < m_config.assoc; i++)
+    for (size_t i = 0; i < m_config.assoc; ++i)
     {
         line = &m_lines[set + i];
 

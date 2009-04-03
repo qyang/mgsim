@@ -87,6 +87,8 @@ public:
 
     TID  PopEmpty();
     bool PushEmpty(const ThreadQueue& queue);
+    
+    bool IsEmpty() const { return m_numThreadsUsed == 0; }
 
     //
     // Ports
@@ -98,6 +100,7 @@ private:
     Processor&          m_parent;
     ThreadQueue         m_empty;
     std::vector<Thread> m_threads;
+    TSize               m_numThreadsUsed;
 };
 
 }

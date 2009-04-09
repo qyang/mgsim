@@ -1001,7 +1001,7 @@ bool Allocator::OnDelegatedCreate(const DelegateMessage& msg)
 	return fid;
 }
 
-LFID Allocator::OnGroupCreate(const CreateMessage& msg)
+LFID Allocator::OnGroupCreate(const CreateMessage& msg, LFID link_next)
 {
 	LFID fid = m_familyTable.AllocateFamily();
 	if (fid == INVALID_LFID)
@@ -1028,7 +1028,7 @@ LFID Allocator::OnGroupCreate(const CreateMessage& msg)
 	family.pc            = msg.address;
 	family.hasDependency = false;
     family.link_prev     = msg.link_prev;
-    family.link_next     = INVALID_LFID;
+    family.link_next     = link_next;
 	for (RegType i = 0; i < NUM_REG_TYPES; i++)
     {
         family.regs[i].globals = INVALID_REG_INDEX;
@@ -1730,11 +1730,6 @@ bool Allocator::SanitizeFamily(Family& family, bool hasDependency)
                              : family.virtBlockSize;
         family.virtBlockSize = max<uint64_t>(nBlock,1);
         family.nThreads      = nThreads;
-        if (local)
-        {
-            family.place.pid        = 0;
-            family.place.capability = 0;
-        }
     }
     return local;
 }

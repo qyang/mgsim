@@ -47,7 +47,7 @@ Pipeline::PipeAction Pipeline::ExecuteStage::write()
     COMMIT
     {
         // Copy common latch data
-        (CommonLatch&)m_output = m_input;
+        (Latch&)m_output = m_input;
 
         m_output.Rc          = m_input.Rc;
         m_output.Rrc         = m_input.Rrc;

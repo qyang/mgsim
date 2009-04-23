@@ -131,7 +131,7 @@ Pipeline::PipeAction Pipeline::DecodeStage::write()
     COMMIT
     {
         // Copy common latch data
-        (CommonLatch&)m_output = m_input;
+        (Latch&)m_output = m_input;
         m_output.regs = m_input.regs;
         
         try

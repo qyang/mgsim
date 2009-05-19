@@ -51,6 +51,7 @@ LFID FamilyTable::AllocateFamily()
     if (m_empty.head != INVALID_LFID)
     {
 		// There are empty families, pop one off the queue
+        assert(m_numFamiliesUsed < m_families.size());
 		Family& family = m_families[fid];
         assert(family.state == FST_EMPTY);
 
@@ -69,7 +70,8 @@ LFID FamilyTable::AllocateFamily()
 bool FamilyTable::FreeFamily(LFID fid)
 {
 	assert(fid != INVALID_LFID);
-
+    assert(m_numFamiliesUsed > 0);
+    
     COMMIT
     {
         // Put it on the queue

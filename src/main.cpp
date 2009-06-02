@@ -206,7 +206,7 @@ public:
 			amin = min(amin, a);
 			avg += a;
         }
-        avg /= m_procs.size();
+        avg /= (float)m_procs.size();
 		cout << avg << " " << amin << " " << amax;
 	}
 
@@ -226,7 +226,7 @@ public:
 				num++;
 			}
         }
-        avg /= num;
+        avg /= (float)num;
 		cout << avg << " " << amin << " " << amax;
 	}
 	
@@ -237,12 +237,12 @@ public:
 	    uint64_t amin   = numeric_limits<uint64_t>::max();
 	    CycleNo cycles = m_kernel.GetCycleNo();
         for (size_t i = 0; i < m_procs.size(); ++i) {
-            float a = (float)m_procs[i]->GetTotalActiveQueueSize() / cycles;
+            float a = (float)m_procs[i]->GetTotalActiveQueueSize() / (float)cycles;
 			amax    = max(amax, m_procs[i]->GetMaxActiveQueueSize() );
 			amin    = min(amin, m_procs[i]->GetMinActiveQueueSize() );
 			avg += a;
         }
-        avg /= m_procs.size();
+        avg /= (float)m_procs.size();
 		cout << avg << " " << amin << " " << amax;
 	}
 
@@ -257,7 +257,7 @@ public:
 			amin    = min(amin, m_procs[i]->GetMinPipelineIdleTime() );
 			avg += a;
         }
-        avg /= m_procs.size();
+        avg /= (float)m_procs.size();
         if (avg == 0) {
     		cout << "- - -";
         } else {
@@ -561,12 +561,12 @@ static void PrintProfiles()
         for (ProfileMap::const_iterator p = profiles.begin(); p != profiles.end(); ++p)
         {
             cout << setw((streamsize)length) << left << p->first << " "
-                 << setw(6) << right << fixed << setprecision(2) << (p->second / 1000000.0f) << "s "
-                 << setw(5) << right << fixed << setprecision(1) << (p->second * 100.0f / total) << "%" << endl;
+                 << setw(6) << right << fixed << setprecision(2) << ((float)p->second / 1000000.0f) << "s "
+                 << setw(5) << right << fixed << setprecision(1) << ((float)p->second * 100.0f / (float)total) << "%" << endl;
         }
         cout << string(length + 15, '-') << endl;
         cout << setw((streamsize)length) << left << "Total:" << " "
-             << setw(6) << right << fixed << setprecision(2) << total / 1000000.0f << "s 100.0%" << endl << endl;
+             << setw(6) << right << fixed << setprecision(2) << (float)total / 1000000.0f << "s 100.0%" << endl << endl;
     }
 }
 

@@ -191,7 +191,7 @@ Result DCache::Read(MemAddr address, void* data, MemSize size, LFID /* fid */, R
         // Data was already in the cache or has been loaded immediately, copy it
         COMMIT
         {
-            memcpy(data, line->data + offset, size);
+            memcpy(data, line->data + offset, (size_t)size);
             m_numHits++;
         }
         return SUCCESS;
@@ -246,7 +246,7 @@ Result DCache::Write(MemAddr address, void* data, MemSize size, LFID fid, TID ti
 		{
 			if (line->state == LINE_FULL) {
 				// The line is cached and has no outstanding reads, update it.
-				memcpy(line->data + offset, data, size);
+				memcpy(line->data + offset, data, (size_t)size);
 			} else {
 			    assert(line->state == LINE_LOADING || line->state == LINE_PROCESSING);
 			    
@@ -271,7 +271,7 @@ bool DCache::OnMemoryReadCompleted(const MemData& data)
         Line& line = m_lines[data.tag.cid];
         
         // Copy the data into the cache line
-        memcpy(line.data, data.data, data.size);
+        memcpy(line.data, data.data, (size_t)data.size);
 
         // Push the cache-line to the back of the queue
         if (m_returned.head == INVALID_CID) {
@@ -314,7 +314,7 @@ bool DCache::OnMemorySnooped(MemAddr address, const MemData& data)
             if (line->state != LINE_LOADING)
             {
                 // Yes, update it
-                memcpy(&line->data[offset], data.data, data.size);
+                memcpy(&line->data[offset], data.data, (size_t)data.size);
             }
         }
     }

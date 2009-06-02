@@ -175,7 +175,7 @@ bool ICache::Read(CID cid, MemAddr address, void* data, MemSize size) const
 	// Verify that we're actually reading a fetched line
 	assert(m_lines[cid].fetched);
 
-    COMMIT{ memcpy(data, m_lines[cid].data + offset, size); }
+    COMMIT{ memcpy(data, m_lines[cid].data + offset, (size_t)size); }
     return true;
 }
 
@@ -282,7 +282,7 @@ Result ICache::Fetch(MemAddr address, MemSize size, TID* tid, CID* cid)
 			if (result == SUCCESS)
 			{
 				// Data was fetched immediately, copy it
-				memcpy(line->data, data.data, data.size);
+				memcpy(line->data, data.data, (size_t)data.size);
 				m_numHits++;
 			}
 			else
@@ -329,7 +329,7 @@ bool ICache::OnMemoryReadCompleted(const MemData& data)
 	Line& line = m_lines[data.tag.cid];
     COMMIT
     {
-        memcpy(line.data, data.data, data.size);
+        memcpy(line.data, data.data, (size_t)data.size);
 		line.fetched = true;
     }
 

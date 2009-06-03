@@ -21,6 +21,8 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
 
 #include "ports.h"
 
+class Config;
+
 namespace Simulator
 {
 
@@ -73,11 +75,6 @@ struct Thread
 class ThreadTable : public Structure<TID>
 {
 public:
-	struct Config
-	{
-		TSize numThreads;
-	};
-
     ThreadTable(Processor& parent, const Config& config);
 
     TSize GetNumThreads()     const { return m_threads.size(); }

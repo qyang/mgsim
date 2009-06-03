@@ -18,7 +18,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
 */
 #include "commands.h"
 #include "Processor.h"
-#include "SimpleMemory.h"
+#include "IdealMemory.h"
 #include "ParallelMemory.h"
 #include "BankedMemory.h"
 #include <iomanip>
@@ -33,7 +33,7 @@ using namespace Simulator;
  **/
 static bool cmd_mem_help(Object* obj, const vector<string>& /* arguments */)
 {
-    if (dynamic_cast<SimpleMemory*>(obj) == NULL) return false;
+    if (dynamic_cast<IdealMemory*>(obj) == NULL) return false;
 
     cout <<
     "- read <memory-component> <address> <count>\n"
@@ -43,12 +43,12 @@ static bool cmd_mem_help(Object* obj, const vector<string>& /* arguments */)
     return true;
 }
 
-static void cmd_simplemem_requests(SimpleMemory* mem)
+static void cmd_simplemem_requests(IdealMemory* mem)
 {
     cout << " Address  | Size | CPU  | CID  | Type" << endl;
     cout << "----------+------+------+------+------------" << endl;
 
-    typedef queue<SimpleMemory::Request> RequestQueue;
+    typedef queue<IdealMemory::Request> RequestQueue;
     RequestQueue requests = mem->GetRequests();
     while (!requests.empty())
     {
@@ -108,6 +108,7 @@ static void cmd_parallelmem_requests(ParallelMemory* mem)
 		iters.push_back(mem->GetPort(i).m_inFlight.begin());
 	}
 
+/*
 	for (size_t y = 0; y < mem->GetConfig().width; ++y)
 	{
 		for (size_t x = 0; x < mem->GetNumPorts(); ++x)
@@ -145,7 +146,7 @@ static void cmd_parallelmem_requests(ParallelMemory* mem)
 			cout << " ";
 		}
 		cout << endl;
-	}
+	}*/
     cout << endl << endl;
 }
 
@@ -273,9 +274,9 @@ static bool cmd_mem_read(Object* obj, const vector<string>& arguments )
     // Check input
     if (arguments.size() == 1 && arguments[0] == "requests")
     {
-        if (dynamic_cast<SimpleMemory*>(mem) != NULL)
+        if (dynamic_cast<IdealMemory*>(mem) != NULL)
         {
-			cmd_simplemem_requests( dynamic_cast<SimpleMemory*>(mem) );
+			cmd_simplemem_requests( dynamic_cast<IdealMemory*>(mem) );
         }
         else if (dynamic_cast<ParallelMemory*>(mem) != NULL)
         {

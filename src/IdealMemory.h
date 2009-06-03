@@ -16,8 +16,8 @@ You should have received a copy of the GNU Library General Public
 License along with this library; if not, write to the Free Software
 Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
 */
-#ifndef SIMPLEMEMORY_H
-#define SIMPLEMEMORY_H
+#ifndef IDEALMEMORY_H
+#define IDEALMEMORY_H
 
 #include "Memory.h"
 #include "kernel.h"
@@ -25,20 +25,14 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
 #include <queue>
 #include <set>
 
+class Config;
+
 namespace Simulator
 {
 
-class SimpleMemory : public IComponent, public IMemory, public IMemoryAdmin, public VirtualMemory
+class IdealMemory : public IComponent, public IMemoryAdmin, public VirtualMemory
 {
 public:
-	struct Config
-	{
-        BufferSize bufferSize;
-        CycleNo    baseRequestTime;
-        CycleNo    timePerLine;
-        size_t     sizeOfLine;
-	};
-
     class Request
     {
         void release()
@@ -75,7 +69,7 @@ public:
         ~Request() { release(); }
     };
 
-    SimpleMemory(Object* parent, Kernel& kernel, const std::string& name, const Config& config);
+    IdealMemory(Object* parent, Kernel& kernel, const std::string& name, const Config& config);
 
     CycleNo GetTotalWaitTime() const { return m_totalWaitTime; }
 
@@ -103,7 +97,10 @@ public:
 private:
     std::set<IMemoryCallback*>  m_caches;
     std::queue<Request>         m_requests;
-    Config                      m_config;
+    BufferSize                  m_bufferSize;
+    CycleNo                     m_baseRequestTime;
+    CycleNo                     m_timePerLine;
+    CycleNo                     m_sizeOfLine;
     CycleNo                     m_totalWaitTime;
 };
 

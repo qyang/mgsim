@@ -23,6 +23,8 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
 #include "FamilyTable.h"
 #include <queue>
 
+class Config;
+
 namespace Simulator
 {
 
@@ -63,13 +65,6 @@ enum ThreadDependency
 class Allocator : public IComponent
 {
 public:
-	struct Config
-	{
-		BufferSize localCreatesSize;
-		BufferSize remoteCreatesSize;
-		BufferSize cleanupSize;
-	};
-
     struct RegisterBases
     {
         RegIndex globals;

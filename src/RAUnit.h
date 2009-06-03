@@ -21,6 +21,8 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
 
 #include "kernel.h"
 
+class Config;
+
 namespace Simulator
 {
 
@@ -30,11 +32,6 @@ class RegisterFile;
 class RAUnit : public Object
 {
 public:
-	struct Config
-	{
-		RegSize blockSizes[NUM_REG_TYPES];
-	};
-
     typedef std::vector<std::pair<RegSize, LFID> > List;
 
     RAUnit(Processor& parent, const std::string& name, const RegisterFile& regFile, const Config& config);

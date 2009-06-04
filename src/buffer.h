@@ -19,6 +19,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
 #ifndef BUFFER_H
 #define BUFFER_H
 
+#include "kernel.h"
 #include <queue>
 
 namespace Simulator
@@ -30,6 +31,7 @@ static const    BufferSize INFINITE = (size_t)-1;
 template <typename T>
 class Buffer
 {
+    Kernel&         m_kernel;
     size_t          m_maxSize;
     std::queue<T>   m_data;
 
@@ -39,18 +41,19 @@ public:
     BufferSize size()  const { return m_data.size(); }
     const T& front() const { return m_data.front(); }
           T& front()       { return m_data.front(); }
-    void     pop() { m_data.pop(); }
+
+    void pop() { if (m_kernel.GetCyclePhase() == PHASE_COMMIT) { m_data.pop(); } }
     bool push(const T& item)
     {
         if (!full())
         {
-            m_data.push(item);
+            if (m_kernel.GetCyclePhase() == PHASE_COMMIT) { m_data.push(item); }
             return true;
         }
         return false;
     }
 
-    Buffer(BufferSize maxSize) : m_maxSize(maxSize)
+    Buffer(Kernel& kernel, BufferSize maxSize) : m_kernel(kernel), m_maxSize(maxSize)
     {
     }
 };

@@ -18,6 +18,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
 */
 #include "Pipeline.h"
 #include "Processor.h"
+#include "FPU.h"
 #include <limits>
 #include <cassert>
 using namespace Simulator;
@@ -50,7 +51,7 @@ Pipeline::Pipeline(
     m_fetch    (*this,            m_fdLatch, alloc, familyTable, threadTable, icache, lpid, config),
     m_decode   (*this, m_fdLatch, m_drLatch, config),
     m_read     (*this, m_drLatch, m_reLatch, regFile, m_emLatch, m_mwLatch, config),
-    m_execute  (*this, m_reLatch, m_emLatch, alloc, network, threadTable, regFile, fpu, config),
+    m_execute  (*this, m_reLatch, m_emLatch, alloc, network, threadTable, fpu, fpu.RegisterSource(regFile), config),
     m_memory   (*this, m_emLatch, m_mwLatch, dcache, alloc, config),
     m_writeback(*this, m_mwLatch,            regFile, network, alloc, threadTable, config)
 {

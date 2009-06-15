@@ -22,9 +22,6 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
 using namespace Simulator;
 using namespace std;
 
-// Memory reads and writes will be of at most this many bytes
-static const size_t MAX_MEMORY_OPERATION_SIZE = 8;
-
 Pipeline::PipeAction Pipeline::MemoryStage::read()
 {
     return PIPE_CONTINUE;
@@ -37,8 +34,7 @@ Pipeline::PipeAction Pipeline::MemoryStage::write()
     if (m_input.size > 0)
     {
         // It's a new memory operation!
-        assert(m_input.size <= MAX_MEMORY_OPERATION_SIZE);
-        assert(MAX_MEMORY_OPERATION_SIZE <= sizeof(uint64_t));
+        assert(m_input.size <= sizeof(uint64_t));
 
         Result result = SUCCESS;
         if (rcv.m_state == RST_FULL)

@@ -24,37 +24,12 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
 using namespace Simulator;
 using namespace std;
 
-void ParallelMemory::Request::release()
-{
-    if (refcount != NULL && --*refcount == 0) {
-        delete[] (char*)data.data;
-        delete refcount;
-    }
-}
-
-ParallelMemory::Request& ParallelMemory::Request::operator =(const Request& req)
-{
-    release();
-    refcount  = req.refcount;
-    write     = req.write;
-    address   = req.address;
-    data      = req.data;
-    callback  = req.callback;
-    ++*refcount;
-    return *this;
-}
-
-ParallelMemory::Request::Request(const Request& req) : refcount(NULL) { *this = req; }
-ParallelMemory::Request::Request() { refcount = new unsigned long(1); data.data = NULL; }
-ParallelMemory::Request::~Request() { release(); }
-
-                                    
-void ParallelMemory::RegisterListener(IMemoryCallback& callback)
+void ParallelMemory::RegisterListener(PSize /*pid*/, IMemoryCallback& callback)
 {
     m_caches.insert(&callback);
 }
 
-void ParallelMemory::UnregisterListener(IMemoryCallback& callback)
+void ParallelMemory::UnregisterListener(PSize /*pid*/, IMemoryCallback& callback)
 {
     m_caches.erase(&callback);
 }
@@ -82,15 +57,12 @@ void ParallelMemory::AddRequest(Request& request)
 	m_statMaxRequests = max(m_statMaxRequests, m_numRequests);
 }
 
-Result ParallelMemory::Read(IMemoryCallback& callback, MemAddr address, 
-                            void* /* data */, MemSize size, MemTag tag)
+Result ParallelMemory::Read(IMemoryCallback& callback, MemAddr address, void* /*data*/, MemSize size, MemTag tag)
 {
-#if MEMSIZE_MAX >= SIZE_MAX
-    if (size > SIZE_MAX)
+    if (size > MAX_MEMORY_OPERATION_SIZE)
     {
         throw InvalidArgumentException("Size argument too big");
     }
-#endif
 
     if (m_bufferSize == INFINITE || m_numRequests < m_bufferSize)
     {
@@ -99,7 +71,6 @@ Result ParallelMemory::Read(IMemoryCallback& callback, MemAddr address,
             Request request;
             request.callback  = &callback;
             request.address   = address;
-            request.data.data = new char[ (size_t)size ];
             request.data.size = size;
             request.data.tag  = tag;
             request.write     = false;
@@ -112,19 +83,16 @@ Result ParallelMemory::Read(IMemoryCallback& callback, MemAddr address,
 
 Result ParallelMemory::Write(IMemoryCallback& callback, MemAddr address, void* data, MemSize size, MemTag tag)
 {
-#if MEMSIZE_MAX >= SIZE_MAX
-    if (size > SIZE_MAX)
+    if (size > MAX_MEMORY_OPERATION_SIZE)
     {
         throw InvalidArgumentException("Size argument too big");
     }
-#endif
 
     if (m_bufferSize == INFINITE || m_numRequests < m_bufferSize)
     {
         Request request;
         request.callback  = &callback;
         request.address   = address;
-        request.data.data = new char[ (size_t)size ];
         request.data.size = size;
         request.data.tag  = tag;
         request.write     = true;
@@ -164,7 +132,7 @@ Result ParallelMemory::OnCycleWritePhase(unsigned int stateIndex)
 		if (now >= p->first)
 		{
 			// Yes, do the callback
-			const Request& request = p->second;
+			Request& request = p->second;
 			
 			if (request.write)
 			{

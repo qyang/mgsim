@@ -20,6 +20,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
 #define PORTS_H
 
 #include "kernel.h"
+#include <cassert>
 #include <map>
 #include <set>
 #include <limits>
@@ -76,6 +77,10 @@ protected:
     bool HasAcquired(ArbitrationSource source) const {
         return m_source == source;
     }
+    
+    const ArbitrationSource& GetArbitratedSource() const {
+        return m_source;
+    }
 
 #ifndef NDEBUG
     void Verify(ArbitrationSource source) const {
@@ -87,7 +92,7 @@ protected:
     void Verify(ArbitrationSource /* source */) const {}
 #endif
 
-    void AddRequest(ArbitrationSource source) {
+    void AddRequest(const ArbitrationSource& source) {
         m_requests.insert(source);
     }
 
@@ -143,9 +148,8 @@ protected:
     }
 
 public:
-    bool     IsValid()  const { return m_valid;  }
     bool     IsChosen() const { return m_chosen; }
-    const I& GetIndex() const { return m_index;  }
+    const I* GetIndex() const { return (m_valid) ? &m_index : NULL; }
     
     void Notify(bool chosen) {
         m_chosen = chosen;
@@ -189,9 +193,10 @@ private:
         RequestPortMap requests;
         for (typename WritePortList::iterator i = m_writePorts.begin(); i != m_writePorts.end(); ++i)
         {
-            if ((*i)->IsValid())
+            const I* index = (*i)->GetIndex();
+            if (index != NULL)
             {
-                requests[(*i)->GetIndex()].push_back(*i);
+                requests[*index].push_back(*i);
             }
         }
 
@@ -262,8 +267,32 @@ public:
 template <typename I>
 class ArbitratedWritePort : public ArbitratedPort, public WritePort<I>
 {
+    typedef std::map<ArbitrationSource, I> IndexMap;
+   
     Structure<I>& m_structure;
+    IndexMap      m_indices;
+
+    void AddRequest(const ArbitrationSource& source, const I& index)
+    {
+        ArbitratedPort::AddRequest(source);
+        m_indices[source] = index;
+    }
+    
 public:
+    void Arbitrate()
+    {
+        ArbitratedPort::Arbitrate();
+        const ArbitrationSource& source = GetArbitratedSource();
+        if (source != ArbitrationSource())
+        {
+            // A source was selected; make its index active for
+            // write port arbitration
+            typename IndexMap::const_iterator p = m_indices.find(source);
+            assert(p != m_indices.end());
+            this->SetIndex(p->second);
+        }
+    }
+
     ArbitratedWritePort(Structure<I>& structure, const std::string& name)
         : ArbitratedPort(structure, name), m_structure(structure)
     {
@@ -280,8 +309,7 @@ public:
         Verify(source);
         if (m_structure.GetKernel()->GetCyclePhase() == PHASE_ACQUIRE)
         {
-            AddRequest(source);
-            SetIndex(index);
+            AddRequest(source, index);
         }
         else if (!this->IsChosen() || !HasAcquired(source))
         {

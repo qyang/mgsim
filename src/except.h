@@ -21,6 +21,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
 
 #include <string>
 #include <stdexcept>
+#include <list>
 
 namespace Simulator
 {
@@ -30,12 +31,17 @@ class Object;
 // Base exception class
 class SimulationException : public std::runtime_error
 {
+    std::list<std::string> m_details;
 public:
+    const std::list<std::string>& GetDetails() const { return m_details; }
+    
+    void AddDetails(const std::string& msg) { m_details.push_back(msg); }
     SimulationException(const std::string& msg) : std::runtime_error(msg) {}
+    SimulationException(const std::string& msg, const Object& object);
+    virtual ~SimulationException() throw() {}
 };
 
 class InvalidArgumentException : public std::runtime_error
-
 {
 public:
     InvalidArgumentException(const std::string& msg) : std::runtime_error(msg) {}
@@ -62,7 +68,7 @@ public:
 class SecurityException : public SimulationException
 {
 public:
-    SecurityException(const Object& , const std::string& msg) : SimulationException(msg) {}
+    SecurityException(const std::string& msg, const Object& object) : SimulationException(msg, object) {}
 };
 
 }

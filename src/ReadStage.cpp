@@ -34,8 +34,10 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
 #include <cassert>
 #include <sstream>
 #include <iomanip>
-using namespace Simulator;
 using namespace std;
+
+namespace Simulator
+{
 
 static uint64_t MAKE_MASK(int num_bits)
 {
@@ -580,4 +582,6 @@ Pipeline::ReadStage::ReadStage(Pipeline& parent, DecodeReadLatch& input, ReadExe
     m_operand1.port = &m_regFile.p_pipelineR1;
     m_operand2.port = &m_regFile.p_pipelineR2;
     clear(input.tid);
+}
+
 }

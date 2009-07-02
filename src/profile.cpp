@@ -18,11 +18,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
 */
 #include "profile.h"
 #include "simtime.h"
-
 using namespace std;
-
-namespace Simulator
-{
 
 static ProfileMap g_TotalProfiles;
 static ProfileMap g_ActiveProfiles;
@@ -59,6 +55,3 @@ const ProfileMap& GetProfiles()
 {
     return g_TotalProfiles;
 }
-
-}
-

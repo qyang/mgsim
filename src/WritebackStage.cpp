@@ -19,8 +19,10 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
 #include "Pipeline.h"
 #include "Processor.h"
 #include <cassert>
-using namespace Simulator;
 using namespace std;
+
+namespace Simulator
+{
 
 Pipeline::PipeAction Pipeline::WritebackStage::read()
 {
@@ -260,4 +262,6 @@ Pipeline::WritebackStage::WritebackStage(Pipeline& parent, MemoryWritebackLatch&
     m_threadTable(threadTable),
     m_writebackSize(0)
 {
+}
+
 }

@@ -16,22 +16,23 @@ You should have received a copy of the GNU Library General Public
 License along with this library; if not, write to the Free Software
 Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
 */
-#ifndef COMMANDS_H
-#define COMMANDS_H
-
+#include "except.h"
 #include "kernel.h"
 
-//
-// The commands array
-// This holds a list of all (normal) commands
-//
-struct COMMAND
+namespace Simulator
 {
-    const char*      name;
-    bool (*execute)(Simulator::Object* obj, const std::vector<std::string>&);
-};
 
-extern const COMMAND Commands[];
+static std::string MakeMessage(const Object& object, const std::string& msg)
+{
+    std::string name = object.GetFQN();
+    transform(name.begin(), name.end(), name.begin(), toupper);
+    return name + ": " + msg;
+}
 
-#endif
+SimulationException::SimulationException(const std::string& msg, const Object& object)
+    : std::runtime_error(MakeMessage(object, msg))
+{
+    
+}
 
+}

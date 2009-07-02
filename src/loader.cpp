@@ -22,8 +22,8 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
 #include <fstream>
 #include <iostream>
 #include <vector>
-using namespace Simulator;
 using namespace std;
+using namespace Simulator;
 
 static const int PAGE_SIZE = 4096;
 

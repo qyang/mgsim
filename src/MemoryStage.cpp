@@ -19,8 +19,10 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
 #include "Pipeline.h"
 #include "Processor.h"
 #include <cassert>
-using namespace Simulator;
 using namespace std;
+
+namespace Simulator
+{
 
 Pipeline::PipeAction Pipeline::MemoryStage::read()
 {
@@ -151,4 +153,6 @@ Pipeline::MemoryStage::MemoryStage(Pipeline& parent, ExecuteMemoryLatch& input, 
     m_allocator(alloc),
     m_dcache(dcache)
 {
+}
+
 }

@@ -22,8 +22,10 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
 #include <cmath>
 #include <iostream>
 #include <iomanip>
-using namespace Simulator;
 using namespace std;
+
+namespace Simulator
+{
 
 bool Pipeline::ExecuteStage::MemoryWriteBarrier(TID tid) const
 {
@@ -236,4 +238,6 @@ Pipeline::ExecuteStage::ExecuteStage(Pipeline& parent, ReadExecuteLatch& input, 
 {
     m_flop = 0;
     m_op   = 0;
+}
+
 }

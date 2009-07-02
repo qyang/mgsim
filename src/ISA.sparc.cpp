@@ -23,8 +23,10 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
 #include <cmath>
 #include <sstream>
 #include <iomanip>
-using namespace Simulator;
 using namespace std;
+
+namespace Simulator
+{
 
 static const int RA_SHIFT       = 14;
 static const int RB_SHIFT       = 0;
@@ -56,7 +58,7 @@ static const int OPF_SHIFT      = 5;
 static const int OPF_MASK       = (1 << 9) - 1;
 
 // Function for getting a register's type and index within that type
-unsigned char Simulator::GetRegisterClass(unsigned char addr, const RegsNo& regs, RegClass* rc)
+unsigned char GetRegisterClass(unsigned char addr, const RegsNo& regs, RegClass* rc)
 {
     // SPARC has r0 as RAZ, so we flip everything around.
     addr = (unsigned char)(31 - addr);
@@ -905,4 +907,6 @@ Pipeline::PipeAction Pipeline::ExecuteStage::ExecuteInstruction()
     }
     }
     return PIPE_CONTINUE;
+}
+
 }

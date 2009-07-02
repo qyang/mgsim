@@ -21,6 +21,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
 
 #include "simtypes.h"
 #include <map>
+#include <vector>
 
 namespace Simulator
 {
@@ -59,8 +60,8 @@ public:
 
 	virtual ~VirtualMemory();
 
-	const RangeMap& GetRangeMap() const { return m_ranges; }
-	const BlockMap& GetBlockMap() const { return m_blocks; }
+	void Cmd_Info(std::ostream& out, const std::vector<std::string>& arguments) const;
+	void Cmd_Read(std::ostream& out, const std::vector<std::string>& arguments) const;
 private:
 	RangeMap::const_iterator GetReservationRange(MemAddr address, MemSize size) const;
 	

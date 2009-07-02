@@ -21,8 +21,8 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
 #include <algorithm>
 #include <fstream>
 #include <iostream>
-using namespace Simulator;
 using namespace std;
+using namespace Simulator;
 
 bool Config::getBoolean(const string& name, const bool def) const
 {

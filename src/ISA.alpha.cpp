@@ -23,8 +23,10 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
 #include <cassert>
 #include <sstream>
 #include <iomanip>
-using namespace Simulator;
 using namespace std;
+
+namespace Simulator
+{
 
 static const int A_OPCODE_SHIFT   = 26;
 static const int A_RA_SHIFT       = 21;
@@ -55,7 +57,7 @@ static void ThrowIllegalInstructionException(Object& obj, MemAddr pc)
 }
 
 // Function for getting a register's type and index within that type
-unsigned char Simulator::GetRegisterClass(unsigned char addr, const RegsNo& regs, RegClass* rc)
+unsigned char GetRegisterClass(unsigned char addr, const RegsNo& regs, RegClass* rc)
 {
     if (addr < regs.globals)
     {
@@ -1264,3 +1266,4 @@ Pipeline::PipeAction Pipeline::ExecuteStage::ExecuteInstruction()
     return PIPE_CONTINUE;
 }
 
+}

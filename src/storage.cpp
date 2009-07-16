@@ -16,18 +16,35 @@ You should have received a copy of the GNU Library General Public
 License along with this library; if not, write to the Free Software
 Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
 */
-#ifndef TIME_H
-#define TIME_H
-
-#include "types.h"
+#include "storage.h"
 
 namespace Simulator
 {
 
-// Returns the current time, in microseconds
-uint64_t GetTime();
-
+void SensitiveStorage::Notify()
+{
+    m_kernel.ActivateProcess(m_handle);
 }
 
-#endif
+void SensitiveStorage::Unnotify()
+{
+    if (--m_handle->activations == 0)
+    {
+        // Remove the handle node from the list
+        *m_handle->pPrev = m_handle->next;
+        if (m_handle->next != NULL) {
+            m_handle->next->pPrev = m_handle->pPrev;
+        }
+        
+        m_handle->state = STATE_IDLE;
+    }
+}
 
+SensitiveStorage::SensitiveStorage(Kernel& kernel, IComponent& component, int state)
+    : Storage(kernel)
+{
+    m_component = &component;
+    m_state     = state;
+}
+
+}

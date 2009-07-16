@@ -20,6 +20,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
 #define MEMORY_H
 
 #include "simtypes.h"
+#include "ports.h"
 
 namespace Simulator
 {
@@ -54,13 +55,13 @@ public:
 	static const int PERM_WRITE   = 2;
 	static const int PERM_READ    = 4;
 
-    virtual void   Reserve(MemAddr address, MemSize size, int perm) = 0;
-    virtual void   Unreserve(MemAddr address) = 0;
-    virtual void   RegisterListener  (PSize pid, IMemoryCallback& callback) = 0;
-    virtual void   UnregisterListener(PSize pid, IMemoryCallback& callback) = 0;
-    virtual Result Read (IMemoryCallback& callback, MemAddr address, void* data, MemSize size, MemTag tag) = 0;
-    virtual Result Write(IMemoryCallback& callback, MemAddr address, void* data, MemSize size, MemTag tag) = 0;
-	virtual bool   CheckPermissions(MemAddr address, MemSize size, int access) const = 0;
+    virtual void Reserve(MemAddr address, MemSize size, int perm) = 0;
+    virtual void Unreserve(MemAddr address) = 0;
+    virtual void RegisterListener  (PSize pid, IMemoryCallback& callback, const ArbitrationSource* sources) = 0;
+    virtual void UnregisterListener(PSize pid, IMemoryCallback& callback) = 0;
+    virtual bool Read (IMemoryCallback& callback, MemAddr address, MemSize size, MemTag tag) = 0;
+    virtual bool Write(IMemoryCallback& callback, MemAddr address, const void* data, MemSize size, MemTag tag) = 0;
+	virtual bool CheckPermissions(MemAddr address, MemSize size, int access) const = 0;
 
     virtual ~IMemory() {}
 };

@@ -16,7 +16,7 @@ You should have received a copy of the GNU Library General Public
 License along with this library; if not, write to the Free Software
 Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
 */
-#include "Pipeline.h"
+    #include "Pipeline.h"
 #include "Processor.h"
 #include <cassert>
 using namespace std;
@@ -24,12 +24,7 @@ using namespace std;
 namespace Simulator
 {
 
-Pipeline::PipeAction Pipeline::MemoryStage::read()
-{
-    return PIPE_CONTINUE;
-}
-
-Pipeline::PipeAction Pipeline::MemoryStage::write()
+Pipeline::PipeAction Pipeline::MemoryStage::Write()
 {
     PipeValue rcv = m_input.Rcv;
     
@@ -117,7 +112,7 @@ Pipeline::PipeAction Pipeline::MemoryStage::write()
 
         if (result == DELAYED)
         {
-            // Increase the oustanding memory count for the family
+            // Increase the outstanding memory count for the family
             if (m_input.Rcv.m_state == RST_FULL)
             {
                 if (!m_allocator.IncreaseThreadDependency(m_input.tid, THREADDEP_OUTSTANDING_WRITES))
@@ -135,19 +130,18 @@ Pipeline::PipeAction Pipeline::MemoryStage::write()
     COMMIT
     {
         // Copy common latch data
-        (Latch&)m_output = m_input;
+        (CommonData&)m_output = m_input;
         
         m_output.suspend = m_input.suspend;
         m_output.Rc      = m_input.Rc;
         m_output.Rrc     = m_input.Rrc;
         m_output.Rcv     = rcv;
     }
-    
     return PIPE_CONTINUE;
 }
 
-Pipeline::MemoryStage::MemoryStage(Pipeline& parent, ExecuteMemoryLatch& input, MemoryWritebackLatch& output, DCache& dcache, Allocator& alloc, const Config& /*config*/)
-  : Stage(parent, "memory", &input, &output),
+Pipeline::MemoryStage::MemoryStage(Pipeline& parent, const ExecuteMemoryLatch& input, MemoryWritebackLatch& output, DCache& dcache, Allocator& alloc, const Config& /*config*/)
+  : Stage(parent, "memory"),
     m_input(input),
     m_output(output),
     m_allocator(alloc),

@@ -38,7 +38,18 @@ class ArbitratedReadPort;
 // This identifies any 'source' for arbitrated requests.
 // It consists of a component ID and state index.
 //
-typedef std::pair<const IComponent*, int> ArbitrationSource;
+struct ArbitrationSource : public std::pair<IComponent*, int>
+{
+    ArbitrationSource() {}
+    
+    ArbitrationSource(IComponent* component, int state) 
+        : std::pair<IComponent*, int>(component, state) {
+    }
+    
+    explicit ArbitrationSource(const Kernel::ProcessInfo* p)
+        : std::pair<IComponent*, int>(p->info->component, p - &p->info->processes[0]) {
+    }
+};
 
 //
 // IllegalPortAccess
@@ -59,7 +70,7 @@ public:
 //
 class ArbitratedPort
 {
-    typedef std::set<ArbitrationSource>     RequestMap;
+    typedef std::vector<ArbitrationSource>  RequestList;
     typedef std::map<ArbitrationSource,int> PriorityMap;
 
 public:
@@ -67,14 +78,14 @@ public:
 		return m_busyCycles;
 	}
 
-    void AddSource(ArbitrationSource source) {
+    void AddSource(const ArbitrationSource& source) {
         m_priorities.insert(PriorityMap::value_type(source, m_priorities.size()));
     }
 
     void Arbitrate();
     
 protected:
-    bool HasAcquired(ArbitrationSource source) const {
+    bool HasAcquired(const ArbitrationSource& source) const {
         return m_source == source;
     }
     
@@ -83,47 +94,27 @@ protected:
     }
 
 #ifndef NDEBUG
-    void Verify(ArbitrationSource source) const {
+    void Verify(const ArbitrationSource& source) const {
         if (m_priorities.find(source) == m_priorities.end()) {
             throw IllegalPortAccess(m_object, m_name, source);
         }
     }
 #else
-    void Verify(ArbitrationSource /* source */) const {}
+    void Verify(const ArbitrationSource& /* source */) const {}
 #endif
 
-    void AddRequest(const ArbitrationSource& source) {
-        m_requests.insert(source);
-    }
+    void AddRequest(const ArbitrationSource& source);
 
     ArbitratedPort(const Object& object, const std::string& name) : m_busyCycles(0), m_object(object), m_name(name) {}
     virtual ~ArbitratedPort() {}
 
 private:
     PriorityMap       m_priorities;
-    RequestMap        m_requests;
+    RequestList       m_requests;
     ArbitrationSource m_source;
 	uint64_t          m_busyCycles;
 	const Object&     m_object;
     std::string       m_name;
-};
-
-//
-// Structure
-//
-class StructureBase : public IStructure
-{
-    typedef std::set<ArbitratedReadPort*> ReadPortList;
-public:
-    StructureBase(Object* parent, Kernel& kernel, const std::string& name) : IStructure(parent, kernel, name) {}
-    
-    void OnArbitrateReadPhase();
-
-    void RegisterReadPort(ArbitratedReadPort& port);
-    void UnregisterReadPort(ArbitratedReadPort& port);
-
-private:
-    ReadPortList m_readPorts;
 };
 
 //
@@ -143,8 +134,9 @@ class WritePort
 protected:
     void SetIndex(const I& index)
     {
-        m_index = index;
-        m_valid = true;
+        m_index  = index;
+        m_valid  = true;
+        m_chosen = false;
     }
 
 public:
@@ -157,33 +149,52 @@ public:
     }
 };
 
+//
+// Structure
+//
+
+/// Base class for all structures
+class IStructure : public Object, private Arbitrator
+{
+    typedef std::set<ArbitratedReadPort*> ReadPortList;
+
+    ReadPortList m_readPorts;
+
+protected:
+    void ArbitrateReadPorts();
+
+public:
+    void RequestArbitration()
+    {
+        Arbitrator::RequestArbitration();
+    }
+    
+    /**
+     * @brief Constructs the structure
+     * @param parent parent object.
+     * @param kernel the kernel which will manage this structure.
+     * @param name name of the object.
+     */
+    IStructure(Object* parent, Kernel& kernel, const std::string& name);
+
+    void RegisterReadPort(ArbitratedReadPort& port);
+    void UnregisterReadPort(ArbitratedReadPort& port);
+};
+
 template <typename I>
-class Structure : public StructureBase
+class Structure : public IStructure
 {
     typedef std::map<WritePort<I>*, int>      PriorityMap;
     typedef std::set<ArbitratedWritePort<I>*> ArbitratedWritePortList;
     typedef std::set<WritePort<I>*>           WritePortList;
 
-public:
-    Structure(Object* parent, Kernel& kernel, const std::string& name) : StructureBase(parent, kernel, name) {}
-
-    void AddPort(WritePort<I>& port)
-    {
-        m_priorities.insert(typename PriorityMap::value_type(&port, m_priorities.size()));
-    }
-
-    void RegisterWritePort(WritePort<I>& port)                        { m_writePorts.insert(&port); }
-    void UnregisterWritePort(WritePort<I>& port)                      { m_writePorts.erase(&port);  }
-    void RegisterArbitratedWritePort(ArbitratedWritePort<I>& port)    { RegisterWritePort(port);   m_arbitratedWritePorts.insert(&port); }
-    void UnregisterArbitratedWritePort(ArbitratedWritePort<I>& port)  { UnregisterWritePort(port); m_arbitratedWritePorts.erase (&port); }
-
-private:
-    void OnArbitrateWritePhase()
+    void OnArbitrate()
     {
         typedef std::vector<WritePort<I>*> WritePortMap;
         typedef std::map<I,WritePortMap>   RequestPortMap;
-    
+        
         // Tell each port to arbitrate
+        ArbitrateReadPorts();
         for (typename ArbitratedWritePortList::iterator i = m_arbitratedWritePorts.begin(); i != m_arbitratedWritePorts.end(); ++i)
         {
             (*i)->Arbitrate();
@@ -226,6 +237,19 @@ private:
     WritePortList           m_writePorts;
     ArbitratedWritePortList m_arbitratedWritePorts;
     PriorityMap             m_priorities;
+
+public:
+    Structure(Object* parent, Kernel& kernel, const std::string& name) : IStructure(parent, kernel, name) {}
+
+    void AddPort(WritePort<I>& port)
+    {
+        m_priorities.insert(typename PriorityMap::value_type(&port, m_priorities.size()));
+    }
+
+    void RegisterWritePort(WritePort<I>& port)                        { m_writePorts.insert(&port); }
+    void UnregisterWritePort(WritePort<I>& port)                      { m_writePorts.erase(&port);  }
+    void RegisterArbitratedWritePort(ArbitratedWritePort<I>& port)    { RegisterWritePort(port);   m_arbitratedWritePorts.insert(&port); }
+    void UnregisterArbitratedWritePort(ArbitratedWritePort<I>& port)  { UnregisterWritePort(port); m_arbitratedWritePorts.erase (&port); }
 };
 
 //
@@ -233,9 +257,9 @@ private:
 //
 class ArbitratedReadPort : public ArbitratedPort
 {
-    StructureBase& m_structure;
+    IStructure& m_structure;
 public:
-    ArbitratedReadPort(StructureBase& structure, const std::string& name)
+    ArbitratedReadPort(IStructure& structure, const std::string& name)
         : ArbitratedPort(structure, name), m_structure(structure)
     {
         m_structure.RegisterReadPort(*this);
@@ -247,11 +271,12 @@ public:
 
     bool Read()
     {
-        const ArbitrationSource& source = m_structure.GetKernel()->GetComponent();
+        const ArbitrationSource source(m_structure.GetKernel()->GetActiveProcess());
         Verify(source);
         if (m_structure.GetKernel()->GetCyclePhase() == PHASE_ACQUIRE)
         {
             AddRequest(source);
+            m_structure.RequestArbitration();
         }
         else if (!HasAcquired(source))
         {
@@ -305,11 +330,12 @@ public:
 
     bool Write(const I& index)
     {
-        const ArbitrationSource& source = m_structure.GetKernel()->GetComponent();
+        const ArbitrationSource source(m_structure.GetKernel()->GetActiveProcess());
         Verify(source);
         if (m_structure.GetKernel()->GetCyclePhase() == PHASE_ACQUIRE)
         {
             AddRequest(source, index);
+            m_structure.RequestArbitration();
         }
         else if (!this->IsChosen() || !HasAcquired(source))
         {
@@ -325,7 +351,7 @@ public:
 class DedicatedPort
 {
 public:
-    DedicatedPort(const Object& object, const std::string& name) : m_object(object), m_name(name) { }
+    DedicatedPort(const Object& object, const std::string& name) : m_object(object), m_name(name) {}
     virtual ~DedicatedPort() {}
 
     void SetSource(ArbitrationSource source) {
@@ -352,13 +378,14 @@ private:
 //
 class DedicatedReadPort : public DedicatedPort
 {
-    StructureBase& m_structure;
+    IStructure& m_structure;
 public:
-    DedicatedReadPort(StructureBase& structure, const std::string& name)
+    DedicatedReadPort(IStructure& structure, const std::string& name)
         : DedicatedPort(structure, name), m_structure(structure) {}
         
     bool Read() {
-        const ArbitrationSource& source = m_structure.GetKernel()->GetComponent();
+        const ArbitrationSource source(m_structure.GetKernel()->GetActiveProcess());
+        // Dedicated Read ports always succeed -- they don't require arbitration
         Verify(source);
         return true;
     }
@@ -383,10 +410,11 @@ public:
     }
 
     bool Write(const I& index) {
-        const ArbitrationSource& source = m_structure.GetKernel()->GetComponent();
+        const ArbitrationSource source(m_structure.GetKernel()->GetActiveProcess());
         DedicatedPort::Verify(source);
         if (m_structure.GetKernel()->GetCyclePhase() == PHASE_ACQUIRE) {
             this->SetIndex(index);
+            m_structure.RequestArbitration();
         } else if (!this->IsChosen()) {
             return false;
         }
@@ -403,17 +431,16 @@ public:
 //
 class ArbitratedService : public ArbitratedPort, public Arbitrator
 {
-    Kernel& m_kernel;
+    void OnArbitrate();
     
-    void OnArbitrateReadPhase();
-    void OnArbitrateWritePhase();
 public:
     bool Invoke()
     {
-        const ArbitrationSource& source = m_kernel.GetComponent();
+        const ArbitrationSource source(m_kernel.GetActiveProcess());
         Verify(source);
         if (m_kernel.GetCyclePhase() == PHASE_ACQUIRE) {
             this->AddRequest(source);
+            RequestArbitration();
         } else if (!this->HasAcquired(source)) {
             return false;
         }
@@ -421,13 +448,11 @@ public:
     }
     
     ArbitratedService(const Object& object, const std::string& name)
-        : ArbitratedPort(object, name), m_kernel(*object.GetKernel())
+        : ArbitratedPort(object, name), Arbitrator(*object.GetKernel())
     {
-        m_kernel.RegisterArbitrator(*this);
     }
     
     ~ArbitratedService() {
-        m_kernel.UnregisterArbitrator(*this);
     }
 };
 

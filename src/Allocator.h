@@ -154,7 +154,9 @@ public:
 
     /* Admin functions */
 	TID GetRegisterType(LFID fid, RegAddr addr, RegClass* group) const;
-	
+    MemAddr CalculateTLSAddress(LFID fid, TID tid) const;
+    MemSize CalculateTLSSize() const;
+    
     void Cmd_Help(std::ostream& out, const std::vector<std::string>& arguments) const;
     void Cmd_Read(std::ostream& out, const std::vector<std::string>& arguments) const;
 
@@ -166,10 +168,6 @@ private:
         RegValue value;     // What to write
     };
 
-    // Private functions
-    MemAddr CalculateTLSAddress(LFID fid, TID tid) const;
-    MemSize CalculateTLSSize() const;
-    
 	void SetDefaultFamilyEntry(LFID fid, TID parent, const RegisterBases bases[]) const;
 	void InitializeFamily(LFID fid, Family::Type type) const;
 	bool AllocateRegisters(LFID fid);

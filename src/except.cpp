@@ -18,6 +18,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
 */
 #include "except.h"
 #include "kernel.h"
+#include <algorithm>
 
 namespace Simulator
 {
@@ -25,7 +26,7 @@ namespace Simulator
 static std::string MakeMessage(const Object& object, const std::string& msg)
 {
     std::string name = object.GetFQN();
-    transform(name.begin(), name.end(), name.begin(), toupper);
+    std::transform(name.begin(), name.end(), name.begin(), toupper);
     return name + ": " + msg;
 }
 

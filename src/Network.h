@@ -60,8 +60,8 @@ struct CreateMessage
     struct {
         GPID gpid;
         LPID lpid;
-        TID  tid;
-    } parent;                       ///< Parent Thread ID
+        LFID fid;
+    } parent;                       ///< Parent ID
     RegsNo    regsNo[NUM_REG_TYPES];///< Register counts
 };
 
@@ -164,6 +164,7 @@ private:
     bool OnRemoteRegisterRequested(const RegisterRequest& request);
     bool OnRemoteRegisterReceived(const RegisterResponse& response);
     bool ReadRegister(const RegisterRequest& request);
+    bool WriteRegister(const RemoteRegAddr& addr, const RegValue& value);
 
     Result OnCycle(unsigned int stateIndex);
 

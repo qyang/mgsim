@@ -24,7 +24,7 @@ using namespace std;
 namespace Simulator
 {
 
-Pipeline::PipeAction Pipeline::WritebackStage::Write()
+Pipeline::PipeAction Pipeline::WritebackStage::OnCycle()
 {
     int  writebackOffset  = m_writebackOffset;
     int  size             = -1;

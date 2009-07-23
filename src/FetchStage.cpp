@@ -33,7 +33,7 @@ void Pipeline::FetchStage::Clear(TID tid)
     }
 }
 
-Pipeline::PipeAction Pipeline::FetchStage::Write()
+Pipeline::PipeAction Pipeline::FetchStage::OnCycle()
 {
     MemAddr pc = m_pc;
     if (m_switched)

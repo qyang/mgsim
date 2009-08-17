@@ -542,7 +542,7 @@ Pipeline::PipeAction Pipeline::ExecuteStage::ExecuteInstruction()
             } else {
                 COMMIT {
                     // The request was buffered and will be written back
-                    m_output.Rcv = MAKE_EMPTY_PIPEVALUE(m_output.Rcv.m_size);
+                    m_output.Rcv = MAKE_PENDING_PIPEVALUE(m_output.Rcv.m_size);
                 }
             }
             break;
@@ -739,7 +739,7 @@ Pipeline::PipeAction Pipeline::ExecuteStage::ExecuteInstruction()
 
                 COMMIT
                 {
-                    m_output.Rcv = MAKE_EMPTY_PIPEVALUE(m_output.Rcv.m_size);
+                    m_output.Rcv = MAKE_PENDING_PIPEVALUE(m_output.Rcv.m_size);
                     m_output.Rcv.m_remote = m_input.Rrc;
 
                     // We've executed a floating point operation

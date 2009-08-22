@@ -50,7 +50,7 @@ Processor::Processor(Object* parent, Kernel& kernel, GPID gpid, LPID lpid, const
     m_memory.RegisterListener(m_pid, *this, sources);
 }
 
-void Processor::Initialize(Processor& prev, Processor& next, MemAddr runAddress)
+void Processor::Initialize(Processor& prev, Processor& next, MemAddr runAddress, bool legacy)
 {
     m_network.Initialize(prev.m_network, next.m_network);
 
@@ -149,7 +149,7 @@ void Processor::Initialize(Processor& prev, Processor& next, MemAddr runAddress)
     if (m_pid == 0)
     {
         // Allocate the startup family on the first processor
-        m_allocator.AllocateInitialFamily(runAddress);
+        m_allocator.AllocateInitialFamily(runAddress, legacy);
     }    
 }    
 

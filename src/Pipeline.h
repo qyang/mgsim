@@ -343,7 +343,6 @@ class Pipeline : public IComponent
             FAMPROP_LIMIT,
             FAMPROP_STEP,
             FAMPROP_BLOCK,
-            FAMPROP_PLACE,
         };
         
         bool       MemoryWriteBarrier(TID tid) const;

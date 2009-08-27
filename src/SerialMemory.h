@@ -16,8 +16,8 @@ You should have received a copy of the GNU Library General Public
 License along with this library; if not, write to the Free Software
 Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
 */
-#ifndef IDEALMEMORY_H
-#define IDEALMEMORY_H
+#ifndef SERIALMEMORY_H
+#define SERIALMEMORY_H
 
 #include "Memory.h"
 #include "storage.h"
@@ -30,7 +30,7 @@ class Config;
 namespace Simulator
 {
 
-class IdealMemory : public IComponent, public IMemoryAdmin, public VirtualMemory
+class SerialMemory : public IComponent, public IMemoryAdmin, public VirtualMemory
 {
     struct Request
     {
@@ -66,7 +66,7 @@ class IdealMemory : public IComponent, public IMemoryAdmin, public VirtualMemory
     CycleNo                     m_nextdone;
 
 public:
-    IdealMemory(Object* parent, Kernel& kernel, const std::string& name, const Config& config);
+    SerialMemory(Object* parent, Kernel& kernel, const std::string& name, const Config& config);
 
     // Debugging
     void Cmd_Help(std::ostream& out, const std::vector<std::string>& arguments) const;

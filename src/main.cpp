@@ -24,7 +24,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
 
 #include "Processor.h"
 #include "FPU.h"
-#include "IdealMemory.h"
+#include "SerialMemory.h"
 #include "ParallelMemory.h"
 #include "BankedMemory.h"
 #include "RandomBankedMemory.h"
@@ -407,8 +407,8 @@ public:
         std::transform(memory_type.begin(), memory_type.end(), memory_type.begin(), ::toupper);
         
         m_objects.resize(numProcessors + numFPUs + 1);
-        if (memory_type == "IDEAL") {
-            IdealMemory* memory = new IdealMemory(this, m_kernel, "memory", config);
+        if (memory_type == "SERIAL") {
+            SerialMemory* memory = new SerialMemory(this, m_kernel, "memory", config);
             m_objects.back() = memory;
             m_memory = memory;
         } else if (memory_type == "PARALLEL") {
@@ -616,7 +616,7 @@ static const struct
     {"help", new bind_cmd_T<DCache            >(&DCache            ::Cmd_Help) },
     {"help", new bind_cmd_T<Pipeline          >(&Pipeline          ::Cmd_Help) },
     {"help", new bind_cmd_T<Allocator         >(&Allocator         ::Cmd_Help) },
-    {"help", new bind_cmd_T<IdealMemory       >(&IdealMemory       ::Cmd_Help) },
+    {"help", new bind_cmd_T<SerialMemory      >(&SerialMemory      ::Cmd_Help) },
     {"help", new bind_cmd_T<ParallelMemory    >(&ParallelMemory    ::Cmd_Help) },
     {"help", new bind_cmd_T<RandomBankedMemory>(&RandomBankedMemory::Cmd_Help) },
     {"help", new bind_cmd_T<BankedMemory      >(&BankedMemory      ::Cmd_Help) },
@@ -631,7 +631,7 @@ static const struct
     {"read", new bind_cmd_T<DCache            >(&DCache            ::Cmd_Read) },
     {"read", new bind_cmd_T<Pipeline          >(&Pipeline          ::Cmd_Read) },
     {"read", new bind_cmd_T<Allocator         >(&Allocator         ::Cmd_Read) },
-    {"read", new bind_cmd_T<IdealMemory       >(&IdealMemory       ::Cmd_Read) },
+    {"read", new bind_cmd_T<SerialMemory      >(&SerialMemory      ::Cmd_Read) },
     {"read", new bind_cmd_T<ParallelMemory    >(&ParallelMemory    ::Cmd_Read) },
     {"read", new bind_cmd_T<RandomBankedMemory>(&RandomBankedMemory::Cmd_Read) },
     {"read", new bind_cmd_T<BankedMemory      >(&BankedMemory      ::Cmd_Read) },

@@ -22,6 +22,8 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
 #include "types.h"
 #include <cassert>
 #include <cstddef>
+#include <string>
+#include <iostream>
 
 class GfxFrameBuffer {
  public:
@@ -50,6 +52,8 @@ class GfxFrameBuffer {
 
   void resize(size_t nw, size_t nh);
 
+  void dump(std::ostream&, unsigned key, const std::string& comment = std::string()) const;
+
 protected:
   GfxFrameBuffer(const GfxFrameBuffer&);
   GfxFrameBuffer& operator=(const GfxFrameBuffer&);
@@ -63,7 +67,6 @@ protected:
     assert(buffer != NULL);
     return *(buffer + y * width + x); 
   }
-
 };
 
 class GfxScaler;

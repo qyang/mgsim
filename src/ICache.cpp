@@ -22,6 +22,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
 #include <cassert>
 #include <cstring>
 #include <iomanip>
+#include <iostream>
 using namespace std;
 
 namespace Simulator

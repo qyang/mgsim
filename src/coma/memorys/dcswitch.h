@@ -33,12 +33,13 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
 
 ////////////////////////
 // debug enabling switch
+#ifdef MDBLOG
+#define MEM_ENABLE_DEBUG    MEM_DEBUG_LEVEL_ALL
+#else
 //#define MEM_ENABLE_DEBUG    MEM_DEBUG_LEVEL_LOG
 //#define MEM_ENABLE_DEBUG    MEM_DEBUG_LEVEL_ALL
 #define MEM_ENABLE_DEBUG    MEM_DEBUG_LEVEL_NONE
 
-#ifdef MDBLOG
-#define MEM_ENABLE_DEBUG    MEM_DEBUG_LEVEL_ALL
 #endif
 
 // enable specific switches for debug

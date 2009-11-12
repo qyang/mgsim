@@ -26,9 +26,9 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
 //#include "VirtualMemory.h"
 #include "SimpleMemory.h"
 
-#include "../simlink/linkmgs.h"
+#include "coma/simlink/linkmgs.h"
 
-#include "../simlink/memorydatacontainer.h"
+#include "coma/simlink/memorydatacontainer.h"
 
 #include "Processor.h"
 

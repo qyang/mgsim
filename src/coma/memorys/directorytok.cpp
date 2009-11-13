@@ -188,11 +188,11 @@ void DirectoryTOK::ProcessRequestBEL()
     case MemoryState::REQUEST_INVALIDATE_BR:
         // error
         cerr << ERR_HEAD_OUTPUT << "===================================== ERROR =====================================" << endl;
-        assert(false);
+        abort();
         break;
 
     default:
-        assert(false);
+      abort();
         break;
     }
 }
@@ -257,7 +257,7 @@ void DirectoryTOK::BehaviorBelowNet()
         break;
 
     default:
-        assert(false);
+      abort();
         break;
     }
 }
@@ -276,7 +276,7 @@ ST_request* DirectoryTOK::FetchRequestNet(bool below)
         if (!nif->m_fifoinNetwork.nb_read(reqinc))
         {
             cerr << ERR_HEAD_OUTPUT << "fetch incoming request from " << (below?"below":"above") << " interface failed." << endl;
-            assert(false);
+            abort();
             return NULL;
         }
 
@@ -321,11 +321,11 @@ void DirectoryTOK::ProcessRequestABO()
     case MemoryState::REQUEST_INVALIDATE_BR:
         // error
         cerr << ERR_HEAD_OUTPUT << "===================================== ERROR =====================================" << endl;
-        assert(false);
+        abort();
         break;
 
     default:
-        assert(false);
+      abort();
         break;
     }
 }
@@ -389,7 +389,7 @@ void DirectoryTOK::BehaviorAboveNet()
         break;
 
     default:
-        assert(false);
+      abort();
         break;
     }
 }
@@ -446,11 +446,16 @@ bool DirectoryTOK::ShouldLocalReqGoGlobal(ST_request* req, dir_line_t* line)
     else if (req->type == MemoryState::REQUEST_DISSEMINATE_TOKEN_DATA)
     {
         // DD decision is make in tokim file
-        assert(false);
+      cerr << __FILE__ << ':' << __LINE__ << ": assert(false)" << endl;
+      abort();
+      // assert(false);
+
     }
     else
     {
-        assert(false);
+      cerr << __FILE__ << ':' << __LINE__ << ": assert(false)" << endl;
+      abort();
+      // assert(false);
     }
 }
 #endif
@@ -806,6 +811,7 @@ void DirectoryTOK::PostUpdateDirLine(dir_line_t* line, ST_request* req, bool bel
                 //assert(line->nrequestin > 0);
                 // add the information to the evicted line buffer
                 bool evictedhit = m_evictedlinebuffer.FindEvictedLine(req->getlineaddress());
+		(void)evictedhit;
                 assert(evictedhit == false);
                 m_evictedlinebuffer.AddEvictedLine(req->getlineaddress(), line->nrequestin, line->ntokenrem, line->grouppriority);
 
@@ -824,8 +830,10 @@ void DirectoryTOK::PostUpdateDirLine(dir_line_t* line, ST_request* req, bool bel
             else        // remote request
             {
                 bool evictedhit = m_evictedlinebuffer.FindEvictedLine(req->getlineaddress());
+		(void)evictedhit;
                 assert(evictedhit == false);
-                m_evictedlinebuffer.AddEvictedLine(req->getlineaddress(), line->nrequestin, line->ntokenrem, line->grouppriority);
+                m_evictedlinebuffer.AddEvictedLine(req->getlineaddress(), 
+						   line->nrequestin, line->ntokenrem, line->grouppriority);
 
                 // evict line
                 assert(line->tokencount == 0);

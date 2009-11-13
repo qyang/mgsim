@@ -16,7 +16,7 @@ You should have received a copy of the GNU Library General Public
 License along with this library; if not, write to the Free Software
 Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
 */
-#include "directoryrttok.h"
+ #include "directoryrttok.h"
 using namespace MemSim;
 
 void DirectoryRTTOK::InitializeDirLines()
@@ -84,11 +84,11 @@ void DirectoryRTTOK::ProcessRequestNET()
     case MemoryState::REQUEST_INVALIDATE_BR:
         // error
         cerr << ERR_HEAD_OUTPUT << "===================================== ERROR =====================================" << endl;
-        assert(false);
+        abort();
         break;
 
     default:
-        assert(false);
+      abort();
         break;
     }
 }
@@ -236,7 +236,7 @@ void DirectoryRTTOK::SendRequestFromNET()
 //            }
 //        }
 //        else    // shouldn't reach this function at all
-//            assert(false);
+//            abort();
 
         return;
     }
@@ -262,8 +262,9 @@ void DirectoryRTTOK::SendRequestFromNET()
             if (SendRequestNETtoNET(m_pPrefetchDeferredReq))
             {
                 // pop deferred request from the queue
-                ST_request* tmp = PopDeferredRequest();
-                assert(tmp == m_pPrefetchDeferredReq);
+	      ST_request* tmp = PopDeferredRequest();
+	      (void)tmp;
+	      assert(tmp == m_pPrefetchDeferredReq);
 //                m_pPrefetchDeferredReq = NULL;  // JXXXDEBUG
             }
         }
@@ -384,7 +385,7 @@ void DirectoryRTTOK::BehaviorNET()
         break;
 
     default:
-        assert(false);
+      abort();
         break;
     }
 }
@@ -406,8 +407,9 @@ LOG_VERBOSE_END
     // update info ?
     line->time = sc_time_stamp();
 
-    if (!m_srqSusReqQ.ReactivateLine(line))
-        assert(false);
+    bool lineactivated = m_srqSusReqQ.ReactivateLine(line);
+    (void)lineactivated;
+    assert(lineactivated);
 
     m_pReqCurBUS2Net = req;
 
@@ -462,7 +464,7 @@ void DirectoryRTTOK::BehaviorBUS()
             if (!m_pfifoFeedback->nb_read(req_incoming))
             {
                 cerr << ERR_HEAD_OUTPUT << "should not get failed in this nb_read request" << endl;
-                assert(false);
+                abort();
                 return;
             }
 
@@ -492,7 +494,7 @@ void DirectoryRTTOK::BehaviorBUS()
                 if (!m_pfifoFeedback->nb_read(req_incoming))
                 {
                     cerr << ERR_HEAD_OUTPUT << "should not get failed in this nb_read request" << endl;
-                    assert(false);
+                    abort();
                     return;
                 }
 
@@ -610,7 +612,7 @@ uint64 DirectoryRTTOK::DirTag(__address_t address)
 
 ST_request* DirectoryRTTOK::PickRequest(ST_request* req)
 {
-    assert(false);
+  abort();
     return NULL;
 }
 
@@ -618,7 +620,7 @@ bool DirectoryRTTOK::FixDirLine(dir_line_t* line)
 {
     bool berr = false;
 
-    if ((line->tokencount < 0) || (line->tokencount > GetTotalTokenNum()))
+    if ((line->tokencount > GetTotalTokenNum()))
     {
         cerr << ERR_HEAD_OUTPUT << "the tokencount is invalid" << endl;
         berr = true;
@@ -648,10 +650,10 @@ bool DirectoryRTTOK::FixDirLine(dir_line_t* line)
 
 bool DirectoryRTTOK::CheckDirLines(dir_line_t* line)
 {
-    assert(false);
+  abort();
     bool berr = false;
 
-    if ((line->tokencount < 0) || (line->tokencount > GetTotalTokenNum()))
+    if ((line->tokencount > GetTotalTokenNum()))
     {
         // error
         cerr << ERR_HEAD_OUTPUT << "token couting error" << endl;
@@ -660,7 +662,7 @@ bool DirectoryRTTOK::CheckDirLines(dir_line_t* line)
         return berr;
     }
 
-    if ((line->tokengroup < 0) || (line->tokencount > GetTotalTokenNum()))
+    if ((line->tokencount > GetTotalTokenNum()))
     {
         // error
         cerr << ERR_HEAD_OUTPUT << "token couting error" << endl;
@@ -691,7 +693,7 @@ ST_request* DirectoryRTTOK::FetchRequestNet()
         if (!m_fifoinNetwork.nb_read(req_incoming))
         {
             cerr << ERR_HEAD_OUTPUT << "should not get failed in this nb_read request" << endl;
-            assert(false);
+            abort();
             return NULL;
         }
 
@@ -779,8 +781,8 @@ void DirectoryRTTOK::CleansingPipelineAndAppendNet(ST_request* req, dir_line_t* 
             // append request to line queue
             if (!m_srqSusReqQ.ReverselyAppendRequest2Line(reqtemp, line))
             {
-                // this could happen when the queue is totally full
-                assert(false);
+	      cerr << "cannot rev-append request to line (maybe the queue is full)" << endl;
+	      abort();
             }
 
             LOG_VERBOSE_BEGIN(VERBOSE_DETAIL)
@@ -808,8 +810,8 @@ void DirectoryRTTOK::CleansingPipelineAndAppendNet(ST_request* req, dir_line_t* 
             // append request to line queue
             if (!m_srqSusReqQ.AppendRequest2Line(reqtemp, line))
             {
-                // this could happen when the queue is totally full
-                assert(false);
+	      cerr << "cannot append request to line (maybe the queue is full)" << endl;
+	      abort();
             }
 
             LOG_VERBOSE_BEGIN(VERBOSE_DETAIL)
@@ -832,7 +834,11 @@ void DirectoryRTTOK::CleansingPipelineAndAppendNet(ST_request* req, dir_line_t* 
     if (bappendreq)
     {
         if (!m_srqSusReqQ.ReverselyAppendRequest2Line(req, line))
-            assert(false);
+	  {
+	      cerr << "cannot rev-append request to line (2, maybe the queue is full)" << endl;
+	      abort();
+
+	  }
     }
 }
 
@@ -881,7 +887,7 @@ bool DirectoryRTTOK::PreFill(__address_t lineaddr)
 //    else
 //    {
 //        // shouldn't happen, at least for now
-//        assert(false);
+//        abort();
 //        return false;
 //    }
 

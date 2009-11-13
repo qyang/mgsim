@@ -101,8 +101,8 @@ ST_request* SuspendedRequestQueue::PopTopActiveRequest()
 
 //            if (bRem)
 //            {
-//                if (!RemoveLineFromLineQueue(activeline))
-//                    assert(false);
+//                bool lineremoved = RemoveLineFromLineQueue(activeline);
+//                (void) lineremoved; assert(lineremoved);
 //
 ////                LOG_VERBOSE_BEGIN(VERBOSE_MOST)
 ////                    clog << LOG_HEAD_OUTPUT << "line removed from active line queue" << endl;
@@ -122,12 +122,8 @@ ST_request* SuspendedRequestQueue::PopTopActiveRequest()
 // append the line to the line queue
 bool SuspendedRequestQueue::AppendLine2LineQueue(dir_line_t* line)
 {
-    if (m_nEmptyLineQueueHead == EOQ)
-    {
-        assert(false);
+  assert (m_nEmptyLineQueueHead != EOQ);
 
-        return false;
-    }
 
     // acquire the an empty slot
     unsigned int newslot = m_nEmptyLineQueueHead;
@@ -193,12 +189,9 @@ bool SuspendedRequestQueue::AppendRequest2Line(ST_request* req, dir_line_t* line
 
     assert(!req->bqueued);
 
-    if (line->aux == AUXSTATE_NONE)
-    {
-        assert(false);
-        return false;
-    }
-    else if ((line->aux == AUXSTATE_LOADING) || (line->aux == AUXSTATE_DEFER))
+    assert (line->aux != AUXSTATE_NONE);
+
+    assert ((line->aux == AUXSTATE_LOADING) || (line->aux == AUXSTATE_DEFER));
     {
         unsigned int emptyhead = m_nEmptyReqQueueHead;
 
@@ -214,8 +207,7 @@ bool SuspendedRequestQueue::AppendRequest2Line(ST_request* req, dir_line_t* line
         }
         else
         {
-            assert(false);
-            return false;
+	  abort();
         }
 
         // acquire the empty queue head
@@ -243,11 +235,7 @@ bool SuspendedRequestQueue::AppendRequest2Line(ST_request* req, dir_line_t* line
 
         return true;
     }
-    else
-    {
-        assert(false);
-        return false;
-    }
+
 
 }
 
@@ -264,12 +252,9 @@ bool SuspendedRequestQueue::ReverselyAppendRequest2Line(ST_request* req, dir_lin
 
     assert(req->bqueued);
 
-    if (line->aux == AUXSTATE_NONE)
-    {
-        assert(false);
-        return false;
-    }
-    else if ((line->aux == AUXSTATE_LOADING) || (line->aux == AUXSTATE_DEFER))
+    assert (line->aux != AUXSTATE_NONE);
+
+    assert ((line->aux == AUXSTATE_LOADING) || (line->aux == AUXSTATE_DEFER));
     {
         unsigned int emptyhead = m_nEmptyReqQueueHead;
 
@@ -297,11 +282,7 @@ bool SuspendedRequestQueue::ReverselyAppendRequest2Line(ST_request* req, dir_lin
 
         return true;
     }
-    else
-    {
-        assert(false);
-        return false;
-    }
+
 
 }
 
@@ -335,7 +316,7 @@ bool SuspendedRequestQueue::ReactivateLine(dir_line_t* line)
 // Normalize line Aux
 bool SuspendedRequestQueue::NormalizeLineAux(dir_line_t* line)
 {
-    assert(!((line->tokencount < 0) || (line->tokencount > CacheState::GetTotalTokenNum())));
+    assert(!((line->tokencount > CacheState::GetTotalTokenNum())));
 
     if (line->tokencount == CacheState::GetTotalTokenNum()) // all the tokens are collected by the directory now
     {

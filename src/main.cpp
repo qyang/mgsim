@@ -29,6 +29,8 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
 # include "coma/simlink/th.h"
 # include "coma/simlink/linkmgs.h"
 # include "memdump.h"
+
+const char* semaphore_journal = "/tmp/simx-sem-journal";
 #else
 # include "SerialMemory.h"
 # include "ParallelMemory.h"

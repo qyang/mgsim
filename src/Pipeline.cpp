@@ -46,6 +46,7 @@ Pipeline::Pipeline(
     ThreadTable&        threadTable,
     ICache&             icache,
     DCache&             dcache,
+    Display&            display,
 	FPU&                fpu,
     const Config&       config)
 :
@@ -83,7 +84,7 @@ Pipeline::Pipeline(
     std::vector<BypassInfo> bypasses;
 
     // Create the Execute stage
-    m_stages[3].stage  = new ExecuteStage(*this, m_reLatch, m_emLatch, alloc, network, threadTable, fpu, fpu.RegisterSource(regFile), config);
+    m_stages[3].stage  = new ExecuteStage(*this, m_reLatch, m_emLatch, alloc, network, threadTable, display, fpu, fpu.RegisterSource(regFile), config);
     m_stages[3].input  = &m_reLatch;
     m_stages[3].output = &m_emLatch;
     bypasses.push_back(BypassInfo(m_emLatch.empty, m_emLatch.Rc, m_emLatch.Rcv));

@@ -23,6 +23,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
 #include <cstring>
 #include <vector>
 #include <tinyxml/tinyxml.h>
+#include <stdexcept>
 using namespace std;
 
 #include "ddrxml.h"
@@ -262,7 +263,9 @@ int parseinterfaces(TiXmlNode* proot, map<int, ddr_interface*>* &pinterfaces)
 map<int, ddr_interface*>* loadxmlddrinterfaces(const char* fname)
 {
     TiXmlDocument doc(fname);
-    if (!doc.LoadFile()) return NULL;
+    if (!doc.LoadFile()) 
+      throw std::runtime_error("Cannot open DDR configuration: " +
+			       std::string(fname));
 
     TiXmlHandle hDoc(&doc);
     TiXmlNode* pNode;

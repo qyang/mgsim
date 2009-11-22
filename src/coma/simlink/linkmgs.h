@@ -36,6 +36,8 @@ public:
     unsigned int m_nCache;
     unsigned int m_nDirectory;
     unsigned int m_nSplitRootNumber;
+    unsigned int m_nMemoryChannelNumber;
+    unsigned int m_nChannelInterleavingScheme;
     unsigned __int64 m_nStartingAddress;
     unsigned __int64 m_nMemorySize;
     unsigned int m_nCacheSet;

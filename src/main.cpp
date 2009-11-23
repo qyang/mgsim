@@ -1181,6 +1181,7 @@ int mgs_main(int argc, char const** argv)
                     sys.PrintPipelineIdleTime(cerr);
                     sys.PrintPipelineEfficiency(cerr);
                     sys.PrintFamilyCompletions(cerr);
+                    sys.PrintAllFamilyCompletions(std::cerr);
 #ifdef ENABLE_COMA
                     cout << LinkMGS::s_oLinkConfig.m_nProcLink << "\t# COMA: nProcLink" << endl
 			 << LinkMGS::s_oLinkConfig.m_nProcMGS << "\t# COMA: number of connected cores" << endl
@@ -1219,7 +1220,6 @@ int mgs_main(int argc, char const** argv)
 			 <<  g_uProbingLocalLoad 
                          << "\t# COMA: number of L2 hits by reusing invalidated cache lines (total)" << endl;
 #endif
-                    sys.PrintAllFamilyCompletions(std::cerr);
                     cerr << "### end end-of-simulation statistics" << endl;
                 }
 #ifdef ENABLE_COMA

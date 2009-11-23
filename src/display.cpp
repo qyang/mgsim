@@ -20,6 +20,9 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
 #include "config.h"
 #include <stdexcept>
 #include <cassert>
+#ifdef USE_SDL
+#include <SDL.h>
+#endif
 
 class ScreenOutput {
 protected:

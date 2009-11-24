@@ -27,7 +27,6 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
 #include <set>
 #include <cassert>
 
-class Display;
 
 namespace Simulator
 {
@@ -41,6 +40,7 @@ class Kernel;
 class Arbitrator;
 class IComponent;
 class IRegister;
+class Display;
 
 /**
  * Enumeration for the phases inside a cycle

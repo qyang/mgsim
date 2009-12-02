@@ -308,7 +308,7 @@ public:
                 last  = max(last,  cycle);
             }
         }
-        cout << first << "\t# cycle counter at first family completion" << endl
+        os << first << "\t# cycle counter at first family completion" << endl
              << last << "\t# cycle counter at last family completion" << endl;
     }
 

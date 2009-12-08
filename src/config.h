@@ -24,6 +24,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
 #include <map>
 #include <string>
 #include <vector>
+#include <ostream>
 
 class Config
 {
@@ -96,6 +97,8 @@ public:
     }
 
     std::string getString(std::string name, const std::string& def) const;
+
+    void dumpConfiguration(std::ostream& os) const;
 
     Config(const std::string& filename, const ConfigMap& overrides);
 };

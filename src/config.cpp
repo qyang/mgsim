@@ -21,6 +21,8 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
 #include <algorithm>
 #include <fstream>
 #include <iostream>
+#include <set>
+
 using namespace std;
 using namespace Simulator;
 
@@ -42,7 +44,7 @@ bool Config::getBoolean(const string& name, const bool def) const
 
 string Config::getString(string name, const string& def) const
 {
-    std::transform(name.begin(), name.end(), name.begin(), ::toupper);
+    transform(name.begin(), name.end(), name.begin(), ::toupper);
     ConfigMap::const_iterator p = m_overrides.find(name);
     if (p != m_overrides.end())
     {
@@ -57,6 +59,21 @@ string Config::getString(string name, const string& def) const
         return p->second;
     }
     return def;
+}
+
+void Config::dumpConfiguration(ostream& os) const
+{
+    os << "### begin simulator configuration" << endl;
+    set<string> seen;
+    for (ConfigMap::const_iterator p = m_overrides.begin(); p != m_overrides.end(); ++p)
+    {
+        seen.insert(p->first);
+        os << "# -o " << p->first << "=" << p->second << endl;
+    }
+    for (ConfigMap::const_iterator p = m_data.begin(); p != m_data.end(); ++p)
+        if (seen.find(p->first) == seen.end())
+            os << "# -o " << p->first << "=" << p->second << endl;
+    os << "### end simulator configuration" << endl;
 }
 
 Config::Config(const string& filename, const ConfigMap& overrides)

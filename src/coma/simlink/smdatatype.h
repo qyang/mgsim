@@ -17,9 +17,5 @@ License along with this library; if not, write to the Free Software
 Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
 */
 #include <stdint.h>
-#ifdef WIN32
-#else
-#define __int32 int
-#define __int64 long long
 #define UINT	unsigned int
-#endif
+

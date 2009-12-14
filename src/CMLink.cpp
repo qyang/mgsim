@@ -24,6 +24,9 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
 #include <iostream>
 #include <iomanip>
 #include <cstring>
+
+#include "coma/memorys/predef.h"
+
 using namespace Simulator;
 using namespace std;
 using namespace MemSim;
@@ -550,6 +553,13 @@ void CMLink::Unreserve(MemAddr address)
     s_pMemoryDataContainer->UpdateUnreserve(address);
 }
 
+void CMLink::GetMemoryStatistics(uint64_t& nr, uint64_t& nw, uint64_t& nrb, uint64_t& nwb) const
+{
+    nr = g_uMemoryAccessesL;
+    nrb = g_uMemoryAccessesL * g_nCacheLineSize;
+    nw = g_uMemoryAccessesS;
+    nwb = g_uMemoryAccessesS * g_nCacheLineSize;
+};
 
 
 #ifdef MEM_CACHE_LEVEL_ONE_SNOOP

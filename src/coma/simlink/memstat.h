@@ -21,8 +21,8 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
 namespace MemSim{
 
 // within memory
-extern unsigned int g_uMemoryAccessesL;
-extern unsigned int g_uMemoryAccessesS;
+extern uint64_t g_uMemoryAccessesL;
+extern uint64_t g_uMemoryAccessesS;
 
 extern unsigned int g_uHitCountL;
 extern unsigned int g_uTotalL;

@@ -33,8 +33,8 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
 using namespace std;
 
 namespace MemSim{
-    unsigned int g_uMemoryAccessesL = 0;
-    unsigned int g_uMemoryAccessesS = 0;
+    uint64_t g_uMemoryAccessesL = 0;
+    uint64_t g_uMemoryAccessesS = 0;
 }
 
 

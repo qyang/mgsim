@@ -17,14 +17,11 @@ License along with this library; if not, write to the Free Software
 Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
 */
 #include "ddrmemorysys.h"
+#include "../simlink/memstat.h"
 
 using namespace MemSim;
 
 namespace MemSim{
-extern unsigned int g_uMemoryAccessesL;
-extern unsigned int g_uMemoryAccessesS;
-
-
 
 bool DDRChannel::ScheduleRequest(ST_request* req)
 {

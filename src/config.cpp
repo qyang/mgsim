@@ -1,6 +1,6 @@
 /*
 mgsim: Microgrid Simulator
-Copyright (C) 2006,2007,2008,2009  The Microgrid Project.
+Copyright (C) 2006,2007,2008,2009,2010  The Microgrid Project.
 
 This library is free software; you can redistribute it and/or
 modify it under the terms of the GNU Library General Public
@@ -102,10 +102,10 @@ Config::Config(const string& filename, const ConfigMap& overrides)
     while (!input.eof())
     {
         int c = input.get();
-		if (input.fail())
-		{
-			break;
-		}
+        if (input.fail())
+        {
+            break;
+        }
 
         if (state == STATE_BEGIN && !isspace(c))
         {

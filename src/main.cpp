@@ -1,6 +1,6 @@
 /*
 mgsim: Microgrid Simulator
-Copyright (C) 2006,2007,2008,2009  The Microgrid Project.
+Copyright (C) 2006,2007,2008,2009,2010  The Microgrid Project.
 
 This library is free software; you can redistribute it and/or
 modify it under the terms of the GNU Library General Public
@@ -113,7 +113,7 @@ static string Trim(const string& str)
     return "";
 }
 
-class MGSystem : public Object
+class MGSystem : public virtual Object
 {
     vector<Processor*> m_procs;
     vector<FPU*>       m_fpus;
@@ -203,33 +203,26 @@ public:
     void PrintState(const vector<string>& arguments) const
     {
         typedef map<string, RunState> StateMap;
-		
-        bool show_all = (!arguments.empty() && arguments[0] == "all");
-		
+        
         StateMap   states;
         streamsize length = 0;
 
-        const Kernel::ComponentList& components = m_kernel.GetComponents();
-        for (Kernel::ComponentList::const_iterator p = components.begin(); p != components.end(); ++p)
+        // This should be all non-idle processes
+        for (const Process* process = m_kernel.GetActiveProcesses(); process != NULL; process = process->GetNext())
         {
-            for (size_t i = 0; i < p->processes.size(); ++i)
-            {
-                RunState state = p->processes[i].state;
-                if (show_all || state != STATE_IDLE) {
-                    const string name = p->component->GetFQN() + ":" + p->processes[i].name + ": ";
-                    states[name] = state;
-                    length = max(length, (streamsize)name.length());
-                }
-    	    }
+            const std::string name = process->GetName();
+            states[name] = process->GetState();
+            length = std::max(length, (streamsize)name.length());
         }
-		
+        
         cout << left << setfill(' ');
         for (StateMap::const_iterator p = states.begin(); p != states.end(); ++p)
         {
-            cout << setw(length) << p->first;
+            cout << setw(length) << p->first << ": ";
             switch (p->second)
             {
-            case STATE_IDLE:     cout << "idle";    break;
+            case STATE_IDLE:     assert(0); break;
+            case STATE_ACTIVE:   cout << "active"; break;
             case STATE_DEADLOCK: cout << "stalled"; break;
             case STATE_RUNNING:  cout << "running"; break;
             case STATE_ABORTED:  assert(0); break;
@@ -241,10 +234,8 @@ public:
         int width = (int)log10(m_procs.size()) + 1;
         for (size_t i = 0; i < m_procs.size(); ++i)
         {
-            bool idle = m_procs[i]->IsIdle();
-            if (show_all || !idle) {
-                cout << "Processor " << dec << right << setw(width) << i << ": "
-                     << (idle ? "empty" : "non-empty") << endl;
+            if (!m_procs[i]->IsIdle()) {
+                cout << "Processor " << dec << right << setw(width) << i << ": non-empty" << endl;
             }
         }
     }
@@ -287,7 +278,7 @@ public:
            << amin << "\t# min pipeline efficiency" << endl
            << amax << "\t# max pipeline efficiency" << endl;
     }
-	
+    
     void PrintPipelineIdleTime(std::ostream& os) const
     {
         float    avg    = 0;
@@ -431,25 +422,24 @@ public:
                 }
             }
         }
-   		
+        
         if (state == STATE_DEADLOCK)
         {
             // See how many processes are in each of the states
-            unsigned int num_idle = 0, num_stalled = 0, num_running = 0;
-            const Kernel::ComponentList& components = m_kernel.GetComponents();
+            unsigned int num_stalled = 0, num_running = 0;
+           /* const Kernel::ComponentList& components = m_kernel.GetComponents();
             for (Kernel::ComponentList::const_iterator p = components.begin(); p != components.end(); ++p)
             {
                 for (size_t i = 0; i < p->processes.size(); ++i)
                 {
                     switch (p->processes[i].state)
                     {
-                    case STATE_IDLE:     ++num_idle;    break;
                     case STATE_DEADLOCK: ++num_stalled; break;
                     case STATE_RUNNING:  ++num_running; break;
                     case STATE_ABORTED:  assert(0); break;
                     }
                 }
-            }
+            }*/
             
             unsigned int num_regs = 0;
             for (size_t i = 0; i < m_procs.size(); ++i)
@@ -461,9 +451,9 @@ public:
             ss << "Deadlock!" << endl
                << "(" << num_stalled << " processes stalled;  " << num_running << " processes running; "
                << num_regs << " registers waited on)";
-    	    throw runtime_error(ss.str());
+            throw runtime_error(ss.str());
         }
-    							
+                                
         if (state == STATE_ABORTED)
         {
             // The simulation was aborted, because the user interrupted it.
@@ -480,7 +470,7 @@ public:
              const vector<pair<RegAddr, RegValue> >& regs,
              const vector<pair<RegAddr, string> >& loads,
              bool quiet)
-        : Object(NULL, NULL, "system"),
+        : Object("system", m_kernel),
           m_kernel(display)
     {
         const vector<PSize> placeSizes = config.getIntegerList<PSize>("NumProcessors");
@@ -527,19 +517,19 @@ public:
         
         m_objects.resize(numProcessors + numFPUs + 1);
         if (memory_type == "SERIAL") {
-            SerialMemory* memory = new SerialMemory(this, m_kernel, "memory", config);
+            SerialMemory* memory = new SerialMemory("memory", *this, config);
             m_objects.back() = memory;
             m_memory = memory;
         } else if (memory_type == "PARALLEL") {
-            ParallelMemory* memory = new ParallelMemory(this, m_kernel, "memory", config);
+            ParallelMemory* memory = new ParallelMemory("memory", *this, config);
             m_objects.back() = memory;
             m_memory = memory;
         } else if (memory_type == "BANKED") {
-            BankedMemory* memory = new BankedMemory(this, m_kernel, "memory", config);
+            BankedMemory* memory = new BankedMemory("memory", *this, config);
             m_objects.back() = memory;
             m_memory = memory;
         } else if (memory_type == "RANDOMBANKED") {
-            RandomBankedMemory* memory = new RandomBankedMemory(this, m_kernel, "memory", config);            
+            RandomBankedMemory* memory = new RandomBankedMemory("memory", *this, config);            
             m_objects.back() = memory;
             m_memory = memory;
         } else {
@@ -553,7 +543,7 @@ public:
         {
             stringstream name;
             name << "fpu" << f;
-            m_fpus[f] = new FPU(this, m_kernel, name.str(), config, numProcessorsPerFPU);
+            m_fpus[f] = new FPU(name.str(), *this, config, numProcessorsPerFPU);
         }
 
         // Create processor grid
@@ -577,14 +567,14 @@ public:
                 namem << "memory" << pid;
                 if (pid >= LinkMGS::s_oLinkConfig.m_nProcLink)
                 { std::cerr << "Too many memory links!" << std::endl; exit(1); }
-                m_pmemory[pid] = new CMLink(this, m_kernel, namem.str(), config, g_pLinks[i], g_pMemoryDataContainer);
+                m_pmemory[pid] = new CMLink(namem.str(), *this, config, g_pLinks[i], g_pMemoryDataContainer);
                 if (pid == 0)
                     m_memory = m_pmemory[0];
-                m_procs[pid]   = new Processor(this, m_kernel, pid, i, m_procs, m_procs.size(), *m_places[p], name.str(), *m_pmemory[pid], display, fpu, config);  
+                m_procs[pid]   = new Processor(name.str(), *this, pid, i, m_procs, m_procs.size(), *m_places[p], *m_pmemory[pid], display, fpu, config);  
                 m_pmemory[pid]->SetProcessor(m_procs[pid]);
                 m_objects[pid+numProcessors] = m_pmemory[pid];
 #else
-                m_procs[pid]   = new Processor(this, m_kernel, pid, i, m_procs, m_procs.size(), *m_places[p], name.str(), *m_memory, display, fpu, config);
+                m_procs[pid]   = new Processor(name.str(), *this, pid, i, m_procs, m_procs.size(), *m_places[p], *m_memory, display, fpu, config);
 #endif
                 m_objects[pid] = m_procs[pid];
             }
@@ -594,8 +584,6 @@ public:
         // Load the program into memory
         std::pair<MemAddr, bool> progdesc = LoadProgram(m_memory, program, quiet);
         
-        m_kernel.Initialize();
-
         // Connect processors in rings
         first = 0;
         for (size_t p = 0; p < placeSizes.size(); ++p)
@@ -619,7 +607,7 @@ public:
                 m_procs[0]->WriteRegister(regs[i].first, regs[i].second);
             }
 
-            // Load data files	        
+            // Load data files          
             for (size_t i = 0; i < loads.size(); ++i)
             { 
                 RegValue value; 
@@ -648,7 +636,6 @@ public:
 
     ~MGSystem()
     {
-        delete m_memory;
         for (size_t i = 0; i < m_procs.size(); ++i)
         {
             delete m_procs[i];
@@ -657,6 +644,11 @@ public:
         {
             delete m_places[i];
         }
+        for (size_t i = 0; i < m_fpus.size(); ++i)
+        {
+            delete m_fpus[i];
+        }
+        delete m_memory;
     }
 };
 
@@ -784,8 +776,8 @@ static void PrintHelp(ostream& out)
         "(s)tep           Advance the system one clock cycle.\n"
         "(r)un            Run the system until it is idle or deadlocks.\n"
         "                 Livelocks will not be reported.\n"
-        "state [all]      Shows the state of the system. When \"all\" is\n"
-        "                 not specified, it leaves out all idle components\n"
+        "state            Shows the state of the system. Idle components\n"
+        "                 are left out.\n"
         "debug [mode]     Show debug mode or set debug mode\n"
         "                 Debug mode can be: SIM, PROG, DEADLOCK or NONE.\n"
         "                 ALL is short for SIM and PROG\n"
@@ -972,14 +964,14 @@ struct ProgramConfig
     bool               m_dumpconf;
     bool               m_quiet;
     map<string,string> m_overrides;
-	
+    
     vector<pair<RegAddr, RegValue> > m_regs;
     vector<pair<RegAddr, string> >   m_loads;
 };
 
 static void ParseArguments(int argc, const char ** argv, ProgramConfig& config
 #ifdef ENABLE_COMA
-			   , LinkConfig& lkconfig
+               , LinkConfig& lkconfig
 #endif
     )
 {
@@ -1014,8 +1006,8 @@ static void ParseArguments(int argc, const char ** argv, ProgramConfig& config
         else if (arg == "-d" || arg == "--dumpconf")    config.m_dumpconf    = true;
 #ifdef ENABLE_COMA
         else if (arg == "--ddr")        lkconfig.m_sDDRXML = argv[++i];
-        else if (arg == "--verbose")        			{lkconfig.m_nDefaultVerbose = atoi(argv[++i]);}
-        else if (arg == "--memlog")						{lkconfig.m_pGlobalLogFile = (char*)argv[++i];}
+        else if (arg == "--verbose")                    {lkconfig.m_nDefaultVerbose = atoi(argv[++i]);}
+        else if (arg == "--memlog")                     {lkconfig.m_pGlobalLogFile = (char*)argv[++i];}
 #endif
         else if (arg == "-o" || arg == "--override")
         {
@@ -1054,7 +1046,7 @@ static void ParseArguments(int argc, const char ** argv, ProgramConfig& config
             char* endptr;
             unsigned long index = strtoul(&arg[2], &endptr, 0);
             if (*endptr != '\0') {
-             	throw runtime_error("Error: invalid register specifier in option");
+                throw runtime_error("Error: invalid register specifier in option");
             }
                 
             if (toupper(arg[1]) == 'R') {
@@ -1124,11 +1116,11 @@ static void PrintException(ostream& out, const exception& e)
     const SimulationException* se = dynamic_cast<const SimulationException*>(&e);
     if (se != NULL)
     {
-    	// SimulationExceptions hold more information, print it
-    	const list<string>& details = se->GetDetails();
-    	for (list<string>::const_iterator p = details.begin(); p != details.end(); ++p)
-    	{
-    	    out << *p << endl;
+        // SimulationExceptions hold more information, print it
+        const list<string>& details = se->GetDetails();
+        for (list<string>::const_iterator p = details.begin(); p != details.end(); ++p)
+        {
+            out << *p << endl;
         }
     }
 }
@@ -1291,7 +1283,7 @@ int mgs_main(int argc, char const** argv)
             try
             {
                 StepSystem(sys, INFINITE_CYCLES);
-    			
+                
                 if (!config.m_quiet)
                 {
                     clog << "### begin end-of-simulation statistics" << endl;
@@ -1316,7 +1308,7 @@ int mgs_main(int argc, char const** argv)
                 }
                 
                 PrintException(cerr, e);
-    		    
+                
                 // When we get an exception in non-interactive mode,
                 // jump into interactive mode
                 interactive = true;
@@ -1343,7 +1335,7 @@ int mgs_main(int argc, char const** argv)
                     cout << endl;
                     break;
                 }
-				
+                
                 vector<string> commands = Tokenize(line, ";");
                 if (commands.size() == 0)
                 {
@@ -1417,7 +1409,7 @@ int mgs_main(int argc, char const** argv)
                                 state = args[0];
                                 transform(state.begin(), state.end(), state.begin(), ::toupper);
                             }
-	        
+            
                             if (state == "SIM")      sys.ToggleDebugMode(Kernel::DEBUG_SIM);
                             else if (state == "PROG")     sys.ToggleDebugMode(Kernel::DEBUG_PROG);
                             else if (state == "DEADLOCK") sys.ToggleDebugMode(Kernel::DEBUG_DEADLOCK);
@@ -1426,11 +1418,11 @@ int mgs_main(int argc, char const** argv)
                             
                             string debugStr;
                             int m = sys.GetDebugMode();
-			    if (m & Kernel::DEBUG_PROG)     debugStr += " program";
-			    if (m & Kernel::DEBUG_SIM)      debugStr += " simulator";
-			    if (m & Kernel::DEBUG_DEADLOCK) debugStr += " deadlocks";
-			    if (!debugStr.size()) debugStr = " (nothing)";
-			    cout << "Debugging:" << debugStr << endl;
+                if (m & Kernel::DEBUG_PROG)     debugStr += " program";
+                if (m & Kernel::DEBUG_SIM)      debugStr += " simulator";
+                if (m & Kernel::DEBUG_DEADLOCK) debugStr += " deadlocks";
+                if (!debugStr.size()) debugStr = " (nothing)";
+                cout << "Debugging:" << debugStr << endl;
                         }
 #ifdef ENABLE_COMA
                         else if (command == "verbose")

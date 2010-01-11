@@ -1,6 +1,6 @@
 /*
 mgsim: Microgrid Simulator
-Copyright (C) 2006,2007,2008,2009  The Microgrid Project.
+Copyright (C) 2006,2007,2008,2009,2010  The Microgrid Project.
 
 This library is free software; you can redistribute it and/or
 modify it under the terms of the GNU Library General Public
@@ -38,7 +38,7 @@ public:
     typedef RegSize  BlockSize;
     typedef RegIndex BlockIndex;
 
-    RAUnit(Processor& parent, const std::string& name, const RegisterFile& regFile, const Config& config);
+    RAUnit(const std::string& name, Processor& parent, const RegisterFile& regFile, const Config& config);
 
     /**
      * \brief Allocates registers

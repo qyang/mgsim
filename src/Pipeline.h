@@ -1,6 +1,6 @@
 /*
 mgsim: Microgrid Simulator
-Copyright (C) 2006,2007,2008,2009  The Microgrid Project.
+Copyright (C) 2006,2007,2008,2009,2010  The Microgrid Project.
 
 This library is free software; you can redistribute it and/or
 modify it under the terms of the GNU Library General Public
@@ -84,7 +84,7 @@ static inline PipeValue MAKE_PENDING_PIPEVALUE(unsigned int size)
     return value;
 }
 
-class Pipeline : public IComponent
+class Pipeline : public Object
 {
 #if TARGET_ARCH == ARCH_ALPHA
     struct ArchDecodeReadLatch
@@ -247,7 +247,7 @@ class Pipeline : public IComponent
     public:
         virtual PipeAction OnCycle() = 0;
         virtual void       Clear(TID /*tid*/) {}
-        Stage(Pipeline& parent, const std::string& name);
+        Stage(const std::string& name, Pipeline& parent);
 
     protected:
         Pipeline& m_parent;
@@ -390,7 +390,7 @@ class Pipeline : public IComponent
 
         PipeAction OnCycle();
     public:
-        DummyStage(Pipeline& parent, const std::string& name, const MemoryWritebackLatch& input, MemoryWritebackLatch& output, const Config& config);
+        DummyStage(const std::string& name, Pipeline& parent, const MemoryWritebackLatch& input, MemoryWritebackLatch& output, const Config& config);
     };
 
     class WritebackStage : public Stage
@@ -412,10 +412,10 @@ class Pipeline : public IComponent
     static std::string MakePipeValue(const RegType& type, const PipeValue& value);
     
 public:
-    Pipeline(Processor& parent, const std::string& name, LPID lpid, RegisterFile& regFile, Network& network, Allocator& allocator, FamilyTable& familyTable, ThreadTable& threadTable, ICache& icache, DCache& dcache, Display& display, FPU& fpu, const Config& config);
+    Pipeline(const std::string& name, Processor& parent, LPID lpid, RegisterFile& regFile, Network& network, Allocator& allocator, FamilyTable& familyTable, ThreadTable& threadTable, ICache& icache, DCache& dcache, Display& display, FPU& fpu, const Config& config);
     ~Pipeline();
 
-    Result OnCycle(unsigned int stateIndex);
+    Result DoPipeline();
 
     Processor& GetProcessor()  const { return m_parent; }
     
@@ -433,6 +433,8 @@ public:
     void Cmd_Help(std::ostream& out, const std::vector<std::string>& arguments) const;
     void Cmd_Read(std::ostream& out, const std::vector<std::string>& arguments) const;
 
+    // Processes
+    Process p_Pipeline;
 private:
     struct StageInfo
     {
@@ -463,7 +465,7 @@ private:
     uint64_t m_totalPipelineIdleTime;
     uint64_t m_pipelineIdleEvents;
     uint64_t m_pipelineIdleTime;
-    uint64_t m_pipelineBusyTime;
+    uint64_t m_pipelineBusyTime;   
 };
 
 }

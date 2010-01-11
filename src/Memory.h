@@ -1,6 +1,6 @@
 /*
 mgsim: Microgrid Simulator
-Copyright (C) 2006,2007,2008,2009  The Microgrid Project.
+Copyright (C) 2006,2007,2008,2009,2010  The Microgrid Project.
 
 This library is free software; you can redistribute it and/or
 modify it under the terms of the GNU Library General Public
@@ -57,10 +57,10 @@ public:
 
     virtual void Reserve(MemAddr address, MemSize size, int perm) = 0;
     virtual void Unreserve(MemAddr address) = 0;
-    virtual void RegisterListener  (PSize pid, IMemoryCallback& callback, const ArbitrationSource* sources) = 0;
-    virtual void UnregisterListener(PSize pid, IMemoryCallback& callback) = 0;
-    virtual bool Read (IMemoryCallback& callback, MemAddr address, MemSize size, MemTag tag) = 0;
-    virtual bool Write(IMemoryCallback& callback, MemAddr address, const void* data, MemSize size, MemTag tag) = 0;
+    virtual void RegisterClient  (PSize pid, IMemoryCallback& callback, const Process* processes[]) = 0;
+    virtual void UnregisterClient(PSize pid) = 0;
+    virtual bool Read (PSize pid, MemAddr address, MemSize size, MemTag tag) = 0;
+    virtual bool Write(PSize pid, MemAddr address, const void* data, MemSize size, MemTag tag) = 0;
 	virtual bool CheckPermissions(MemAddr address, MemSize size, int access) const = 0;
 
     virtual ~IMemory() {}

@@ -1,6 +1,6 @@
 /*
 mgsim: Microgrid Simulator
-Copyright (C) 2006,2007,2008,2009  The Microgrid Project.
+Copyright (C) 2006,2007,2008,2009,2010  The Microgrid Project.
 
 This library is free software; you can redistribute it and/or
 modify it under the terms of the GNU Library General Public
@@ -37,8 +37,8 @@ Pipeline::PipeAction Pipeline::DummyStage::OnCycle()
     return PIPE_CONTINUE;
 }
 
-Pipeline::DummyStage::DummyStage(Pipeline& parent, const std::string& name, const MemoryWritebackLatch& input, MemoryWritebackLatch& output, const Config& /*config*/)
-  : Stage(parent, name),
+Pipeline::DummyStage::DummyStage(const std::string& name, Pipeline& parent, const MemoryWritebackLatch& input, MemoryWritebackLatch& output, const Config& /*config*/)
+  : Stage(name, parent),
     m_input(input),
     m_output(output)
 {

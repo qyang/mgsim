@@ -1,6 +1,6 @@
 /*
 mgsim: Microgrid Simulator
-Copyright (C) 2006,2007,2008,2009  The Microgrid Project.
+Copyright (C) 2006,2007,2008,2009,2010  The Microgrid Project.
 
 This library is free software; you can redistribute it and/or
 modify it under the terms of the GNU Library General Public
@@ -51,7 +51,7 @@ enum FPUOperation
  * This component accepts floating point operations, executes them asynchronously and writes them
  * back once calculated. It has several pipelines, assuming every operation of equal delay can be pipelined.
  */
-class FPU : public IComponent
+class FPU : public Object
 {
     /// Represents an FP operation
     struct Operation
@@ -108,24 +108,23 @@ class FPU : public IComponent
 	 */
     Result CalculateResult(const Operation& op) const;
 	
-	Simulator::Result OnCycle(unsigned int stateIndex);
-
     Register<bool>       m_active;                ///< Process-trigger for FPU
 	std::vector<Source*> m_sources;               ///< Data for the sources for this FPU
 	std::vector<Unit>    m_units;                 ///< The execution units in the FPU
 	std::vector<size_t>  m_mapping[FPU_NUM_OPS];  ///< List of units for each FPU op
+	
+	Simulator::Result DoPipeline();
 
     void Cleanup();
 public:
     /**
      * @brief Constructs the FPU.
      * @param parent     reference to the parent object
-     * @param kernel     the kernel to manage this FPU
      * @param name       name of the FPU, irrelevant to simulation
      * @param config     reference to the configuration data
      * @param num_inputs number of inputs that will be connected to this FPU
      */
-    FPU(Object* parent, Kernel& kernel, const std::string& name, const Config& config, size_t num_inputs);
+    FPU(const std::string& name, Object& parent, const Config& config, size_t num_inputs);
     
     /// Destroys the FPU object
     ~FPU();
@@ -150,6 +149,9 @@ public:
      * @return true if the operation could be queued.
      */
 	bool QueueOperation(size_t source, FPUOperation op, int size, double Rav, double Rbv, const RegAddr& Rc);
+
+	// Processes
+	Process p_Pipeline;
 
     void Cmd_Help(std::ostream& out, const std::vector<std::string>& arguments) const;
     void Cmd_Read(std::ostream& out, const std::vector<std::string>& arguments) const;

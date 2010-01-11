@@ -1,6 +1,6 @@
 /*
 mgsim: Microgrid Simulator
-Copyright (C) 2006,2007,2008,2009  The Microgrid Project.
+Copyright (C) 2006,2007,2008,2009,2010  The Microgrid Project.
 
 This library is free software; you can redistribute it and/or
 modify it under the terms of the GNU Library General Public
@@ -32,8 +32,8 @@ size_t RandomBankedMemory::GetBankFromAddress(MemAddr address) const
     return (size_t)((hash + address) % m_banks.size());
 }
 
-RandomBankedMemory::RandomBankedMemory(Object* parent, Kernel& kernel, const std::string& name, const Config& config)
-    : BankedMemory(parent, kernel, name, config)
+RandomBankedMemory::RandomBankedMemory(const std::string& name, Object& parent, const Config& config)
+    : BankedMemory(name, parent, config)
 {
 }
 

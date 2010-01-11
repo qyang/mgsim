@@ -1,6 +1,6 @@
 /*
 mgsim: Microgrid Simulator
-Copyright (C) 2006,2007,2008,2009  The Microgrid Project.
+Copyright (C) 2006,2007,2008,2009,2010  The Microgrid Project.
 
 This library is free software; you can redistribute it and/or
 modify it under the terms of the GNU Library General Public
@@ -481,7 +481,7 @@ Pipeline::ReadStage::ReadStage(Pipeline& parent, const DecodeReadLatch& input, R
     const vector<BypassInfo>& bypasses,
     const Config& /*config*/
   )
-  : Stage(parent, "read"),
+  : Stage("read", parent),
     m_regFile(regFile),
     m_input(input),
     m_output(output),

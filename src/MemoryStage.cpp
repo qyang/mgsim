@@ -1,6 +1,6 @@
 /*
 mgsim: Microgrid Simulator
-Copyright (C) 2006,2007,2008,2009  The Microgrid Project.
+Copyright (C) 2006,2007,2008,2009,2010  The Microgrid Project.
 
 This library is free software; you can redistribute it and/or
 modify it under the terms of the GNU Library General Public
@@ -57,7 +57,7 @@ Pipeline::PipeAction Pipeline::MemoryStage::OnCycle()
 
 #ifdef MEM_DEBUG_TRACE
             COMMIT{
-                uint64_t cycleno = m_parent.GetProcessor().GetKernel().GetCycleNo();
+                uint64_t cycleno = m_parent.GetProcessor().GetKernel()->GetCycleNo();
                 GPID pid = m_parent.GetProcessor().GetPID();
                 TID tid = m_input.fid;
                 uint64_t addr = m_input.address;
@@ -108,7 +108,7 @@ Pipeline::PipeAction Pipeline::MemoryStage::OnCycle()
             // Memory read
 #ifdef MEM_DEBUG_TRACE
             COMMIT{
-                uint64_t cycleno = m_parent.GetProcessor().GetKernel().GetCycleNo();
+                uint64_t cycleno = m_parent.GetProcessor().GetKernel()->GetCycleNo();
                 GPID pid = m_parent.GetProcessor().GetPID();
                 TID tid = m_input.fid;
                 uint64_t addr = m_input.address;
@@ -134,7 +134,7 @@ Pipeline::PipeAction Pipeline::MemoryStage::OnCycle()
 
 #ifdef MEM_DEBUG_TRACE
                 COMMIT{
-                    uint64_t cycleno = m_parent.GetProcessor().GetKernel().GetCycleNo();
+                    uint64_t cycleno = m_parent.GetProcessor().GetKernel()->GetCycleNo();
                     GPID pid = m_parent.GetProcessor().GetPID();
                     TID tid = m_input.fid;
                     uint64_t addr = m_input.address;
@@ -207,7 +207,7 @@ Pipeline::PipeAction Pipeline::MemoryStage::OnCycle()
 }
 
 Pipeline::MemoryStage::MemoryStage(Pipeline& parent, const ExecuteMemoryLatch& input, MemoryWritebackLatch& output, DCache& dcache, Allocator& alloc, const Config& /*config*/)
-    : Stage(parent, "memory"),
+    : Stage("memory", parent),
       m_input(input),
       m_output(output),
       m_allocator(alloc),

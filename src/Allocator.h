@@ -1,6 +1,6 @@
 /*
 mgsim: Microgrid Simulator
-Copyright (C) 2006,2007,2008,2009  The Microgrid Project.
+Copyright (C) 2006,2007,2008,2009,2010  The Microgrid Project.
 
 This library is free software; you can redistribute it and/or
 modify it under the terms of the GNU Library General Public
@@ -64,7 +64,7 @@ enum ThreadDependency
     THREADDEP_TERMINATED,           // Thread has terminated
 };
 
-class Allocator : public IComponent
+class Allocator : public Object
 {
 public:
     typedef LinkedList< TID, ThreadTable, &Thread::nextState> ThreadList;
@@ -96,7 +96,7 @@ public:
 		CREATE_ALLOCATING_REGISTERS,// Allocating register space
 	};
 
-    Allocator(Processor& parent, const std::string& name,
+    Allocator(const std::string& name, Processor& parent,
         FamilyTable& familyTable, ThreadTable& threadTable, RegisterFile& registerFile, RAUnit& raunit, ICache& icache, Network& network, Pipeline& pipeline,
         PlaceInfo& place, LPID lpid, const Config& config);
 
@@ -151,9 +151,6 @@ public:
     bool OnRemoteSync(LFID fid, ExitCode code);
     void ReserveContext(bool self);
 
-    // Component
-    Result OnCycle(unsigned int stateIndex);
-
     // Helpers
 	TID     GetRegisterType(LFID fid, RegAddr addr, RegClass* group) const;
     MemAddr CalculateTLSAddress(LFID fid, TID tid) const;
@@ -207,8 +204,21 @@ private:
 	CreateState           m_createState;	///< State of the current state;
 	CID                   m_createLine;	   	///< Cache line that holds the register info
     ThreadList            m_readyThreads;   ///< Queue of the threads can be activated
-
+    
+    Result DoThreadAllocate();
+    Result DoFamilyAllocate();
+    Result DoFamilyCreate();
+    Result DoThreadActivation();
+    Result DoRegWrites();
+    
 public:
+    // Processes
+    Process p_ThreadAllocate;
+    Process p_FamilyAllocate;
+    Process p_FamilyCreate;
+    Process p_ThreadActivation;
+    Process p_RegWrites;
+
     ArbitratedService     p_allocation;     ///< Arbitrator for FamilyTable::AllocateFamily
     ArbitratedService     p_alloc;          ///< Arbitrator for m_alloc
     ArbitratedService     p_readyThreads;   ///< Arbitrator for m_readyThreads

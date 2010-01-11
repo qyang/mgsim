@@ -1,6 +1,6 @@
 /*
 mgsim: Microgrid Simulator
-Copyright (C) 2006,2007,2008,2009  The Microgrid Project.
+Copyright (C) 2006,2007,2008,2009,2010  The Microgrid Project.
 
 This library is free software; you can redistribute it and/or
 modify it under the terms of the GNU Library General Public
@@ -75,7 +75,7 @@ struct Thread
 class ThreadTable : public Object
 {
 public:
-    ThreadTable(Processor& parent, const Config& config);
+    ThreadTable(const std::string& name, Processor& parent, const Config& config);
 
     TSize GetNumThreads() const { return m_threads.size(); }
 
@@ -95,7 +95,6 @@ public:
     void Cmd_Read(std::ostream& out, const std::vector<std::string>& arguments) const;
 
 private:
-    Processor&          m_parent;
     ThreadQueue         m_empty;
     std::vector<Thread> m_threads;
     TSize               m_free[NUM_CONTEXT_TYPES];

@@ -1,6 +1,6 @@
 /*
 mgsim: Microgrid Simulator
-Copyright (C) 2006,2007,2008,2009  The Microgrid Project.
+Copyright (C) 2006,2007,2008,2009,2010  The Microgrid Project.
 
 This library is free software; you can redistribute it and/or
 modify it under the terms of the GNU Library General Public
@@ -27,9 +27,8 @@ using namespace std;
 namespace Simulator
 {
 
-ThreadTable::ThreadTable(Processor& parent, const Config& config)
-  : Object(&parent, &parent.GetKernel(), "threads"),
-    m_parent(parent),
+ThreadTable::ThreadTable(const std::string& name, Processor& parent, const Config& config)
+  : Object(name, parent),
     m_threads(config.getInteger<size_t>("NumThreads", 64))
 {
     for (TID i = 0; i < m_threads.size(); ++i)

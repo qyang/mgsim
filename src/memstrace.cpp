@@ -1,6 +1,6 @@
 /*
 mgsim: Microgrid Simulator
-Copyright (C) 2006,2007,2008,2009  The Microgrid Project.
+Copyright (C) 2006,2007,2008,2009,2010  The Microgrid Project.
 
 This library is free software; you can redistribute it and/or
 modify it under the terms of the GNU Library General Public
@@ -160,7 +160,7 @@ void tracecacheproc(Object* obj, uint64_t cycleno, size_t pid, unsigned int ext)
     if (!g_osTraceFileDCache.is_open() && g_osTraceFileDCache.good())
         return;
 
-    DCache *pdcache = (DCache*)obj;
+    DCache *pdcache = dynamic_cast<DCache*>(obj);
 
     size_t sets = pdcache->GetNumSets();
     size_t asso = pdcache->GetAssociativity();

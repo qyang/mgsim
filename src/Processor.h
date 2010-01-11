@@ -1,6 +1,6 @@
 /*
 mgsim: Microgrid Simulator
-Copyright (C) 2006,2007,2008,2009  The Microgrid Project.
+Copyright (C) 2006,2007,2008,2009,2010  The Microgrid Project.
 
 This library is free software; you can redistribute it and/or
 modify it under the terms of the GNU Library General Public
@@ -39,7 +39,7 @@ struct PlaceInfo
 {
     PSize        m_size;            ///< Number of processors in the place
     CombinedFlag m_full_context;    ///< Place-global signal for free context identification
-    Flag         m_reserve_context; ///< Place-global flag for reserving a context
+    MultiFlag    m_reserve_context; ///< Place-global flag for reserving a context
     CombinedFlag m_want_token;      ///< Place-global signal for token request
 
     PlaceInfo(Kernel& kernel, unsigned int size)
@@ -53,16 +53,17 @@ struct PlaceInfo
 
 class FPU;
 
-class Processor : public IComponent, public IMemoryCallback
+class Processor : public Object, public IMemoryCallback
 {
 public:
-    Processor(Object* parent, Kernel& kernel, GPID pid, LPID lpid, const std::vector<Processor*>& grid, PSize gridSize, PlaceInfo& place, const std::string& name, IMemory& m_memory, Display& display, FPU& fpu, const Config& config);
+    Processor(const std::string& name, Object& parent, GPID pid, LPID lpid, const std::vector<Processor*>& grid, PSize gridSize, PlaceInfo& place, IMemory& m_memory, Display& display, FPU& fpu, const Config& config);
+    ~Processor();
+    
     void Initialize(Processor& prev, Processor& next, MemAddr runAddress, bool legacy);
 
     GPID    GetPID()       const { return m_pid; }
     PSize   GetPlaceSize() const { return m_place.m_size; }
     PSize   GetGridSize()  const { return m_gridSize; }
-    Kernel& GetKernel()    const { return m_kernel; }
     bool    IsIdle()       const;
 
     uint64_t GetFlop()     const { return m_pipeline.GetFlop(); }
@@ -71,7 +72,7 @@ public:
     { return m_pipeline.CollectMemOpStatistics(nr, nw, nrb, nwb); }
 
     float GetRegFileAsyncPortActivity() const {
-        return (float)m_registerFile.p_asyncW.GetBusyCycles() / (float)m_kernel.GetCycleNo();
+        return (float)m_registerFile.p_asyncW.GetBusyCycles() / (float)GetKernel()->GetCycleNo();
     }
 	
     uint64_t GetMinPipelineIdleTime() const { return m_pipeline.GetMinIdleTime(); }
@@ -104,7 +105,6 @@ public:
 
 private:
     GPID                           m_pid;
-    Kernel&                        m_kernel;
     IMemory&	                   m_memory;
     const std::vector<Processor*>& m_grid;
     PSize                          m_gridSize;

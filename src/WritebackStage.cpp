@@ -1,6 +1,6 @@
 /*
 mgsim: Microgrid Simulator
-Copyright (C) 2006,2007,2008,2009  The Microgrid Project.
+Copyright (C) 2006,2007,2008,2009,2010  The Microgrid Project.
 
 This library is free software; you can redistribute it and/or
 modify it under the terms of the GNU Library General Public
@@ -224,9 +224,9 @@ Pipeline::PipeAction Pipeline::WritebackStage::OnCycle()
             {
                 // Forward the value to the next CPU.
                 RemoteRegAddr rrc(m_input.Rrc);
-			    rrc.reg.index += writebackOffset;
+                            rrc.reg.index += writebackOffset;
                 
-			    if (!m_network.SendRegister(rrc, value))
+                            if (!m_network.SendRegister(rrc, value))
                 {
                     return PIPE_STALL;
                 }
@@ -307,7 +307,7 @@ Pipeline::PipeAction Pipeline::WritebackStage::OnCycle()
 }
 
 Pipeline::WritebackStage::WritebackStage(Pipeline& parent, const MemoryWritebackLatch& input, RegisterFile& regFile, Network& network, Allocator& alloc, ThreadTable& threadTable, const Config& /*config*/)
-  : Stage(parent, "writeback"),
+  : Stage("writeback", parent),
     m_input(input),
     m_stall(false),
     m_regFile(regFile),

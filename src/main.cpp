@@ -47,6 +47,7 @@ const char* semaphore_journal = "/tmp/simx-sem-journal";
 #include <iostream>
 #include <iomanip>
 #include <limits>
+#include <stdint.h>
 #include <typeinfo>
 #include <cmath>
 #include <algorithm>

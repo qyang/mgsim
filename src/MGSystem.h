@@ -81,6 +81,8 @@ namespace Simulator {
 
         ~MGSystem();
 
+        void DumpState(std::ostream& os);
+
     };
 
 }

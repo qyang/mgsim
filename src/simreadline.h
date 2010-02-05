@@ -19,6 +19,8 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
 #ifndef SIMREADLINE_H
 #define SIMREADLINE_H
 
+#include "sys_config.h"
+
 #include <cstdio>
 
 #ifdef HAVE_LIBREADLINE
@@ -30,7 +32,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
 extern "C" char *readline ();
 #endif /* !defined(HAVE_READLINE_H) */
 extern "C" {
-char *cmdline = NULL;
+extern char* cmdline;
 extern int (*rl_event_hook)(void);
 }
 #else /* !defined(HAVE_READLINE_READLINE_H) */
@@ -52,5 +54,24 @@ extern int read_history (const char*);
 /* no history */
 #endif /* HAVE_READLINE_HISTORY */
 
+#include "display.h"
+#include <string>
+#include <vector>
+
+class CommandLineReader {
+    std::string   m_histfilename;
+    static Simulator::Display* m_display;
+
+    static int ReadLineHook(void);
+public:
+    CommandLineReader(Simulator::Display& d);
+    ~CommandLineReader();
+
+    char* GetCommandLine(const std::string& prompt);
+    void CheckPointHistory();
+
+};
+
+std::vector<std::string> Tokenize(const std::string& str, const std::string& sep);
 
 #endif

@@ -43,6 +43,8 @@ namespace Simulator {
         IMemoryAdmin*      m_memory;
         void*              m_pmemory;  // Will be used by CMLink if COMA is enabled.
         SymbolTable        m_symtable;
+        std::string        m_objdump_cmd;
+        std::string        m_program;
 
         // Writes the current configuration into memory and returns its address
         MemAddr WriteConfiguration(const Config& config);
@@ -58,6 +60,7 @@ namespace Simulator {
 
         std::string GetSymbol(MemAddr addr) const;
 
+        void Disassemble(MemAddr addr, size_t sz = 64) const;
         void PrintAllSymbols(std::ostream& os, const std::string& pat = "*") const;
         void PrintMemoryStatistics(std::ostream& os) const;
         void PrintState(const std::vector<std::string>& arguments) const;

@@ -20,6 +20,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
 #include "Processor.h"
 #include "config.h"
 #include "range.h"
+#include "symtable.h"
 #include <cassert>
 #include <iomanip>
 using namespace std;
@@ -167,8 +168,8 @@ void FamilyTable::Cmd_Read(ostream& out, const vector<string>& arguments) const
         return;
     }
 
-    out << "    |         PC         |   Allocated    | P/N/A/Rd/Sh |   Parent  | Prev | Next | State" << endl;
-    out << "----+--------------------+----------------+-------------+-----------+------+------+-----------" << endl;
+    out << "    |         PC         |   Allocated    | P/N/A/Rd/Sh |   Parent  | Prev | Next | State     | Symbol" << endl;
+    out << "----+--------------------+----------------+-------------+-----------+------+------+-----------+--------" << endl;
     for (set<LFID>::const_iterator p = fids.begin(); p != fids.end(); ++p)
     {
         const Family& family = m_families[*p];
@@ -176,7 +177,7 @@ void FamilyTable::Cmd_Read(ostream& out, const vector<string>& arguments) const
         out << dec << right << setw(3) << setfill(' ') << *p << " | ";
         if (family.state == FST_EMPTY)
         {
-            out << "                   |                |             |           |      |      |";
+            out << "                   |                |             |           |      |      |           |";
         }
         else
         {
@@ -246,7 +247,8 @@ void FamilyTable::Cmd_Read(ostream& out, const vector<string>& arguments) const
                     out << "  - ";
                 }
             }
-            out << " | " << FamilyStates[family.state];
+            out << " | " << left << setw(9) << setfill(' ') << FamilyStates[family.state]
+                << " | " << GetKernel()->GetSymbolTable()[family.pc];
         }
         out << endl;
     }

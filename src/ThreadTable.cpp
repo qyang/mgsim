@@ -20,6 +20,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
 #include "Processor.h"
 #include "config.h"
 #include "range.h"
+#include "symtable.h"
 #include <cassert>
 #include <iomanip>
 using namespace std;
@@ -188,8 +189,8 @@ void ThreadTable::Cmd_Read(ostream& out, const vector<string>& arguments) const
         return;
     }
 
-    out << "    |         PC         | Fam | Index | Prev | Next | Int. | Flt. | Flags | WR | State" << endl;
-    out << "----+--------------------+-----+-------+------+------+------+------+-------+----+----------" << endl;
+    out << "    |         PC         | Fam | Index | Prev | Next | Int. | Flt. | Flags | WR | State     | Symbol" << endl;
+    out << "----+--------------------+-----+-------+------+------+------+------+-------+----+-----------+--------" << endl;
     for (set<TID>::const_iterator p = tids.begin(); p != tids.end(); ++p)
     {
         out << dec << setw(3) << setfill(' ') << *p << " | ";
@@ -222,11 +223,12 @@ void ThreadTable::Cmd_Read(ostream& out, const vector<string>& arguments) const
                 << setw(2) << setfill(' ') << thread.dependencies.numPendingWrites
                 << " | ";
 
-            out << ThreadStates[thread.state];
+            out << left << setfill(' ') << setw(9) <<  ThreadStates[thread.state]
+                << " | " << GetKernel()->GetSymbolTable()[thread.pc];
         }
         else
         {
-            out << "                   |     |       |      |      |      |      |       |    |";
+            out << "                   |     |       |      |      |      |      |       |    |          |";
         }
         out << endl;
     }

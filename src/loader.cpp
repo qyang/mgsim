@@ -22,6 +22,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
 #include <fstream>
 #include <iostream>
 #include <vector>
+
 using namespace std;
 using namespace Simulator;
 
@@ -36,7 +37,7 @@ static void Verify(bool expr, const char* error = "invalid ELF file")
 }
 
 // Load a data file into the memory
-MemAddr LoadDataFile(IMemoryAdmin* memory, const string& path, bool quiet)
+std::pair<MemAddr, size_t> LoadDataFile(IMemoryAdmin* memory, const string& path, bool quiet)
 {
     ifstream input(path.c_str(), ios::binary);
     if (!input.is_open() || !input.good())
@@ -64,7 +65,7 @@ MemAddr LoadDataFile(IMemoryAdmin* memory, const string& path, bool quiet)
         cout << "Loaded " << dec << dsize << " bytes of data at address 0x" << hex << base
              << " from: \"" << path << "\"" << endl;
     }
-    return base;
+    return make_pair(base, dsize);
 }
 
 static bool IsReserved(MemAddr address, MemSize size)

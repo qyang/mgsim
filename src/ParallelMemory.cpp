@@ -33,6 +33,7 @@ struct ParallelMemory::Request
     bool             write;
     MemAddr          address;
     MemData          data;
+    TID              tid;
 };
 
 class ParallelMemory::Port : public Object
@@ -66,7 +67,7 @@ class ParallelMemory::Port : public Object
             if (request.write)
             {
                 m_memory.Write(request.address, request.data.data, request.data.size);
-                if (!request.callback->OnMemoryWriteCompleted(request.data.tag))
+                if (!request.callback->OnMemoryWriteCompleted(request.tid))
                 {
                     return FAILED;
                 }
@@ -75,7 +76,7 @@ class ParallelMemory::Port : public Object
             {
                 MemData data(request.data);
                 m_memory.Read(request.address, data.data, data.size);
-                if (!request.callback->OnMemoryReadCompleted(data))
+                if (!request.callback->OnMemoryReadCompleted(request.address, data))
                 {
                     return FAILED;
                 }
@@ -100,8 +101,8 @@ public:
             }
             out << endl;
         
-            out << "      Address       | Size |  CID  |    Type    " << endl;
-            out << "--------------------+------+-------+------------" << endl;
+            out << "      Address       | Size | Type  " << endl;
+            out << "--------------------+------+-------" << endl;
 
             for (Buffer<Request>::const_iterator p = m_requests.begin(); p != m_requests.end(); ++p)
             {
@@ -109,18 +110,10 @@ public:
                     << " 0x" << setw(16) << p->address << " | "
                     << setfill(' ') << setw(4) << dec << p->data.size << " | ";
     
-                if (p->data.tag.cid == INVALID_CID) {
-                    out << " N/A  | ";
-                } else {
-                    out << setw(5) << p->data.tag.cid << " | ";
-                }
-
                 if (p->write) {
-                    out << "Data write";
-                } else if (p->data.tag.cid != INVALID_CID) {
-                    out << "Cache-line";
+                    out << "Write";
                 } else {
-                    out << "Data read ";
+                    out << "Read ";
                 }
                 
                 out << endl;
@@ -177,7 +170,7 @@ void ParallelMemory::UnregisterClient(PSize pid)
     client.callback = NULL;
 }
 
-bool ParallelMemory::Read(PSize pid, MemAddr address, MemSize size, MemTag tag)
+bool ParallelMemory::Read(PSize pid, MemAddr address, MemSize size)
 {
     if (size > MAX_MEMORY_OPERATION_SIZE)
     {
@@ -191,7 +184,6 @@ bool ParallelMemory::Read(PSize pid, MemAddr address, MemSize size, MemTag tag)
     request.address   = address;
     request.callback  = m_clients[pid].callback;
     request.data.size = size;
-    request.data.tag  = tag;
     request.write     = false;
     
     if (!m_clients[pid].port->AddRequest(request))
@@ -203,7 +195,7 @@ bool ParallelMemory::Read(PSize pid, MemAddr address, MemSize size, MemTag tag)
     return true;
 }
 
-bool ParallelMemory::Write(PSize pid, MemAddr address, const void* data, MemSize size, MemTag tag)
+bool ParallelMemory::Write(PSize pid, MemAddr address, const void* data, MemSize size, TID tid)
 {
     if (size > MAX_MEMORY_OPERATION_SIZE)
     {
@@ -217,7 +209,7 @@ bool ParallelMemory::Write(PSize pid, MemAddr address, const void* data, MemSize
     request.address   = address;
     request.callback  = m_clients[pid].callback;
     request.data.size = size;
-    request.data.tag  = tag;
+    request.tid       = tid;
     request.write     = true;
     memcpy(request.data.data, data, (size_t)size);
 

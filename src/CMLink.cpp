@@ -73,7 +73,7 @@ void CMLink::UnregisterClient(PSize pid)
     m_clients[pid] = NULL;
 }
 
-bool CMLink::Read(PSize pid, MemAddr address, MemSize size, MemTag tag)
+bool CMLink::Read(PSize pid, MemAddr address, MemSize size)
 {
     assert(m_clients[pid] != NULL);
     IMemoryCallback& callback = *m_clients[pid];
@@ -83,7 +83,6 @@ bool CMLink::Read(PSize pid, MemAddr address, MemSize size, MemTag tag)
     requestact.callback  = &callback;
     requestact.address   = address;
     requestact.data.size = size;
-    requestact.data.tag  = tag;
     requestact.write     = false;
     // FIXME: the following 3 were initialized, is this correct?
     requestact.done = false;
@@ -105,7 +104,6 @@ bool CMLink::Read(PSize pid, MemAddr address, MemSize size, MemTag tag)
         prequest->address   = address;
         //prequest->data.data = new char[ (size_t)size ];
         prequest->data.size = size;
-        prequest->data.tag  = tag;
         prequest->done      = 0;
         prequest->write     = false;
         prequest->starttime = GetKernel()->GetCycleNo();
@@ -126,7 +124,7 @@ bool CMLink::Read(PSize pid, MemAddr address, MemSize size, MemTag tag)
     return true;
 }
 
-bool CMLink::Write(PSize pid, MemAddr address, const void* data, MemSize size, MemTag tag)
+bool CMLink::Write(PSize pid, MemAddr address, const void* data, MemSize size, TID tid)
 {
     assert(m_clients[pid] != NULL);
     IMemoryCallback& callback = *m_clients[pid];
@@ -136,7 +134,7 @@ bool CMLink::Write(PSize pid, MemAddr address, const void* data, MemSize size, M
     requestact.callback  = &callback;
     requestact.address   = address;
     requestact.data.size = size;
-    requestact.data.tag  = tag;
+    requestact.tid       = tid;
     requestact.write     = true;
     // FIXME: the following 3 were not initialized! is this correct?
     requestact.done = false;
@@ -159,7 +157,7 @@ bool CMLink::Write(PSize pid, MemAddr address, const void* data, MemSize size, M
         prequest->address   = address;
         //prequest->data.data = new char[ (size_t)size ];
         prequest->data.size = size;
-        prequest->data.tag  = tag;
+        prequest->tid       = tid;
         prequest->done      = 0;
         prequest->write     = true;
         prequest->starttime = GetKernel()->GetCycleNo();
@@ -228,11 +226,11 @@ Result CMLink::DoRequests()
 
         // The current request has completed
 
-        if (!preq->write && !preq->callback->OnMemoryReadCompleted(preq->data))
+        if (!preq->write && !preq->callback->OnMemoryReadCompleted(preq->address, preq->data))
         {
             return FAILED;
         }
-        else if (preq->write && !preq->callback->OnMemoryWriteCompleted(preq->data.tag))
+        else if (preq->write && !preq->callback->OnMemoryWriteCompleted(preq->tid))
         {
             return FAILED;
         }

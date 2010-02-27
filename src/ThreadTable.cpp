@@ -193,7 +193,7 @@ void ThreadTable::Cmd_Read(ostream& out, const vector<string>& arguments) const
     out << "----+--------------------+-----+-------+------+------+------+------+-------+----+-----------+--------" << endl;
     for (set<TID>::const_iterator p = tids.begin(); p != tids.end(); ++p)
     {
-        out << dec << setw(3) << setfill(' ') << *p << " | ";
+        out << right << dec << setw(3) << setfill(' ') << *p << " | ";
         const Thread& thread = m_threads[*p];
 
         if (thread.state != TST_EMPTY)
@@ -214,6 +214,7 @@ void ThreadTable::Cmd_Read(ostream& out, const vector<string>& arguments) const
                     out << "  - ";
                 out << " | ";
             }
+            out << dec;
 
             out << (thread.dependencies.prevCleanedUp ? 'P' : '.')
                 << (thread.dependencies.killed        ? 'K' : '.')

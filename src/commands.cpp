@@ -18,7 +18,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
 */
 #include "commands.h"
 
-#ifdef ENABLE_COMA
+#ifdef ENABLE_COMA_ZL
 # include "CMLink.h"
 #else
 # include "SerialMemory.h"
@@ -103,7 +103,7 @@ static const struct
     {"help", new bind_cmd_C<DCache            >(&DCache            ::Cmd_Help) },
     {"help", new bind_cmd_C<Pipeline          >(&Pipeline          ::Cmd_Help) },
     {"help", new bind_cmd_C<Allocator         >(&Allocator         ::Cmd_Help) },
-#ifndef ENABLE_COMA
+#ifndef ENABLE_COMA_ZL
     {"help", new bind_cmd_C<SerialMemory      >(&SerialMemory      ::Cmd_Help) },
     {"help", new bind_cmd_C<ParallelMemory    >(&ParallelMemory    ::Cmd_Help) },
     {"help", new bind_cmd_C<RandomBankedMemory>(&RandomBankedMemory::Cmd_Help) },
@@ -124,7 +124,7 @@ static const struct
     {"read", new bind_cmd_C<DCache            >(&DCache            ::Cmd_Read) },
     {"read", new bind_cmd_C<Pipeline          >(&Pipeline          ::Cmd_Read) },
     {"read", new bind_cmd_C<Allocator         >(&Allocator         ::Cmd_Read) },
-#ifndef ENABLE_COMA
+#ifndef ENABLE_COMA_ZL
     {"read", new bind_cmd_C<SerialMemory      >(&SerialMemory      ::Cmd_Read) },
     {"read", new bind_cmd_C<ParallelMemory    >(&ParallelMemory    ::Cmd_Read) },
     {"read", new bind_cmd_C<RandomBankedMemory>(&RandomBankedMemory::Cmd_Read) },
@@ -350,8 +350,8 @@ void PrintUsage(std::ostream& out, const char* cmd)
 {
     out <<
         "Microgrid Simulator"
-#ifdef ENABLE_COMA
-        " with COMA memory enabled"
+#ifdef ENABLE_COMA_ZL
+        " with ZL's COMA memory enabled"
 #endif
         ".\n"
         "Each simulated core implements the " CORE_ISA_NAME " ISA.\n\n"

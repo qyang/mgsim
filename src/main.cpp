@@ -20,7 +20,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
 #include "sys_config.h"
 #endif
 
-#ifdef ENABLE_COMA
+#ifdef ENABLE_COMA_ZL
 # include "coma/simlink/th.h"
 # include "coma/simlink/linkmgs.h"
 const char* semaphore_journal = "/tmp/simx-sem-journal";
@@ -42,7 +42,7 @@ const char* semaphore_journal = "/tmp/simx-sem-journal";
 
 using namespace Simulator;
 using namespace std;
-#ifdef ENABLE_COMA
+#ifdef ENABLE_COMA_ZL
 using namespace MemSim;
 #endif
 
@@ -62,7 +62,7 @@ struct ProgramConfig
 };
 
 static void ParseArguments(int argc, const char ** argv, ProgramConfig& config
-#ifdef ENABLE_COMA
+#ifdef ENABLE_COMA_ZL
                , LinkConfig& lkconfig
 #endif
     )
@@ -159,7 +159,7 @@ static void ParseArguments(int argc, const char ** argv, ProgramConfig& config
 
 
 
-#ifdef ENABLE_COMA
+#ifdef ENABLE_COMA_ZL
 void ConfigureCOMA(ProgramConfig& config, Config& configfile, LinkConfig& lkconfig) 
 {
     // Get total number of cores
@@ -189,7 +189,7 @@ void ConfigureCOMA(ProgramConfig& config, Config& configfile, LinkConfig& lkconf
 
 Config* g_Config = NULL;
 
-#ifdef ENABLE_COMA
+#ifdef ENABLE_COMA_ZL
 int mgs_main(int argc, char const** argv)
 #else    
 # ifdef USE_SDL
@@ -202,7 +202,7 @@ int mgs_main(int argc, char const** argv)
     {
         // Parse command line arguments
         ProgramConfig config;
-#ifdef ENABLE_COMA
+#ifdef ENABLE_COMA_ZL
         ParseArguments(argc, (const char**)argv, config, LinkMGS::s_oLinkConfig);
 #else
         ParseArguments(argc, (const char**)argv, config);
@@ -225,13 +225,13 @@ int mgs_main(int argc, char const** argv)
             configfile.dumpConfiguration(std::clog, config.m_configFile);
         }
 
-#ifdef ENABLE_COMA
+#ifdef ENABLE_COMA_ZL
         ConfigureCOMA(config, configfile, LinkMGS::s_oLinkConfig);
         if (config.m_dumpconf)
             LinkMGS::s_oLinkConfig.dumpConfiguration(std::clog);
 #endif
 
-#ifdef ENABLE_COMA
+#ifdef ENABLE_COMA_ZL
         // finishing parsing config, now wait untile systemc topology is setup
         sem_post(&thpara.sem_sync);
         sem_wait(&thpara.sem_mgs);
@@ -260,7 +260,7 @@ int mgs_main(int argc, char const** argv)
                     sys.PrintAllStatistics(clog);
                     clog << "### end end-of-simulation statistics" << endl;
                 }
-#ifdef ENABLE_COMA
+#ifdef ENABLE_COMA_ZL
                 // stop the systemc and unlock the signal if it's locked
                 thpara.bterm = true;
                 sem_post(&thpara.sem_sync);

@@ -18,7 +18,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
 */
 #include "MGSystem.h"
 
-#ifdef ENABLE_COMA
+#ifdef ENABLE_COMA_ZL
 # include "CMLink.h"
 # include "coma/simlink/th.h"
 # include "coma/simlink/linkmgs.h"
@@ -43,7 +43,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
 
 using namespace Simulator;
 using namespace std;
-#ifdef ENABLE_COMA
+#ifdef ENABLE_COMA_ZL
 using namespace MemSim;
 #endif
 
@@ -381,7 +381,7 @@ void MGSystem::PrintAllStatistics(std::ostream& os) const
     PrintPipelineEfficiency(os);
     PrintFamilyCompletions(os);
     PrintAllFamilyCompletions(os);
-#ifdef ENABLE_COMA
+#ifdef ENABLE_COMA_ZL
     os << LinkMGS::s_oLinkConfig.m_nProcs << "\t# COMA: number of connected cores" << endl
        << LinkMGS::s_oLinkConfig.m_nProcessorsPerCache << "\t# COMA: number of processors per L2 cache" << endl
        << LinkMGS::s_oLinkConfig.m_nCachesPerDirectory << "\t# COMA: number of L2 caches per directory" << endl
@@ -566,7 +566,7 @@ MGSystem::MGSystem(const Config& config, Display& display, const string& program
         numFPUs       += placeSizes[i] / numProcessorsPerFPU;
     }
 
-#ifdef ENABLE_COMA
+#ifdef ENABLE_COMA_ZL
     m_objects.resize(numProcessors * 2 + numFPUs);
     CMLink** &m_pmemory = (CMLink**&)this->m_pmemory;
     m_pmemory = new CMLink*[LinkMGS::s_oLinkConfig.m_nProcs];
@@ -631,7 +631,7 @@ MGSystem::MGSystem(const Config& config, Display& display, const string& program
 
             stringstream name;
             name << "cpu" << pid;
-#ifdef ENABLE_COMA
+#ifdef ENABLE_COMA_ZL
             stringstream namem;
             namem << "memory" << pid;
             m_pmemory[pid] = new CMLink(namem.str(), *this, config, g_pLinks[i]);

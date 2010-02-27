@@ -18,6 +18,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
 */
 #include "Pipeline.h"
 #include "Processor.h"
+#include "breakpoints.h"
 #include <cassert>
 using namespace std;
 
@@ -40,6 +41,9 @@ Pipeline::PipeAction Pipeline::MemoryStage::OnCycle()
         if (rcv.m_state == RST_FULL)
         {
             // Memory write
+
+            // Check for breakpoints
+            GetKernel()->GetBreakPoints().Check(BreakPoints::WRITE, m_input.address, *this);
 
             // Serialize and store data
             char data[MAX_MEMORY_OPERATION_SIZE];
@@ -82,6 +86,8 @@ Pipeline::PipeAction Pipeline::MemoryStage::OnCycle()
                 rcv.m_state = RST_FULL;
                 rcv.m_size  = m_input.Rcv.m_size;
                 rcv.m_integer.set( m_parent.GetProcessor().GetProfileWord(i), rcv.m_size);
+                // Check for breakpoints
+                GetKernel()->GetBreakPoints().Check(BreakPoints::READ, m_input.address, *this);
             }
 
             // We don't count pseudo-loads
@@ -90,6 +96,10 @@ Pipeline::PipeAction Pipeline::MemoryStage::OnCycle()
         else if (m_input.Rc.valid())
         {
             // Memory read
+
+            // Check for breakpoints
+            GetKernel()->GetBreakPoints().Check(BreakPoints::READ, m_input.address, *this);
+
             char data[MAX_MEMORY_OPERATION_SIZE];
             RegAddr reg = m_input.Rc;
             if ((result = m_dcache.Read(m_input.address, data, m_input.size, m_input.fid, &reg)) == FAILED)

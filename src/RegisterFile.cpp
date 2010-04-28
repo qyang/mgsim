@@ -31,7 +31,7 @@ namespace Simulator
 // RegisterFile implementation
 //
 
-RegisterFile::RegisterFile(const std::string& name, Processor& parent, Allocator& alloc, Network& network, const Config& config)
+RegisterFile::RegisterFile(const std::string& name, Processor& parent, Allocator& alloc, const Config& config)
   : Structure<RegAddr>(name, parent),
     Storage(*parent.GetKernel()),
     p_pipelineR1(*this, "p_pipelineR1"),
@@ -39,7 +39,7 @@ RegisterFile::RegisterFile(const std::string& name, Processor& parent, Allocator
     p_pipelineW (*this, "p_pipelineW"),
     p_asyncR    (*this, "p_asyncR"),
     p_asyncW    (*this, "p_asyncW"),
-    m_parent(parent), m_allocator(alloc), m_network(network),
+    m_parent(parent), m_allocator(alloc),
     m_nUpdates(0),
     m_integers(config.getInteger<size_t>("NumIntRegisters", 1024)),
     m_floats  (config.getInteger<size_t>("NumFltRegisters", 128))
@@ -161,16 +161,6 @@ bool RegisterFile::WriteRegister(const RegAddr& addr, const RegValue& data, bool
                     return false;
                 }
             }
-
-            if (value.m_remote.fid != INVALID_LFID)
-            {
-                // Writing data to a register that has a remote suspension. Send the data to the other processor.
-                if (!m_network.SendRegister(value.m_remote, data))
-                {
-                    DeadlockWrite("Unable to send register from %s", addr.str().c_str());
-                    return false;
-                }
-            }
         }
     }
     
@@ -289,8 +279,8 @@ void RegisterFile::Cmd_Read(std::ostream& out, const std::vector<std::string>& a
         "", "Empty", "Pending", "Waiting", "Full"
     };
 
-    out << "      |  State  | MR |       Value      | Fam | Thread | Type"       << endl;
-    out << "------+---------+----+------------------+-----+--------+-----------" << endl;
+    out << "      |  State  | M |       Value      | Fam | Thread | Type" << endl;
+    out << "------+---------+---+------------------+-----+--------+----------------" << endl;
     for (set<RegIndex>::const_reverse_iterator p = indices.rbegin(); p != indices.rend(); ++p)
     {
         RegAddr  addr = MAKE_REGADDR(type, *p);
@@ -300,12 +290,11 @@ void RegisterFile::Cmd_Read(std::ostream& out, const std::vector<std::string>& a
         out << addr << " | " << setw(7) << setfill(' ') << RegisterStateNames[value.m_state] << " | ";
         if (value.m_state != RST_FULL)
         {
-            out << (value.m_memory.size != 0            ? 'M' : ' ');
-            out << (value.m_remote.fid  != INVALID_LFID ? 'R' : ' ');
+            out << (value.m_memory.size != 0 ? 'M' : ' ');
         }
         else
         {
-            out << "  ";
+            out << " ";
         }
         out << " | ";
 

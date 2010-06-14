@@ -157,6 +157,8 @@ private:
     Processor&          m_parent;
     std::vector<Family> m_families;
     FSize               m_free[NUM_CONTEXT_TYPES];
+    
+    void CheckStateSanity() const;
 };
 
 }

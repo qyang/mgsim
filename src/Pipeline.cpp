@@ -58,8 +58,7 @@ Pipeline::Pipeline(
     m_active(*parent.GetKernel()),
     
     m_nStagesRunnable(0), m_nStagesRun(0),
-    m_maxPipelineIdleTime(0), m_minPipelineIdleTime(numeric_limits<uint64_t>::max()),
-    m_totalPipelineIdleTime(0), m_pipelineIdleEvents(0), m_pipelineIdleTime(0), m_pipelineBusyTime(0)
+    m_pipelineBusyTime(0)
 {
     static const size_t NUM_FIXED_STAGES = 6;
     
@@ -244,7 +243,6 @@ Result Pipeline::DoPipeline()
     if (m_nStagesRunnable == 0) {
         // Nothing to do anymore
         m_active.Clear();
-        COMMIT{ m_pipelineIdleTime++; }
         return SUCCESS;
     }
     
@@ -252,16 +250,6 @@ Result Pipeline::DoPipeline()
     {
         m_nStagesRun += m_nStagesRunnable;
         m_pipelineBusyTime++;
-        
-        if (m_pipelineIdleTime > 0)
-        {
-            // Process this pipeline idle streak
-            m_maxPipelineIdleTime    = max(m_maxPipelineIdleTime, m_pipelineIdleTime);
-            m_minPipelineIdleTime    = min(m_minPipelineIdleTime, m_pipelineIdleTime);
-            m_totalPipelineIdleTime += m_pipelineIdleTime;
-            m_pipelineIdleEvents++;
-            m_pipelineIdleTime = 0;
-        }
     }
     
     m_active.Write(true);

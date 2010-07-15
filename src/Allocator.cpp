@@ -29,6 +29,18 @@ using namespace std;
 namespace Simulator
 {
 
+void Allocator::UpdateStats()
+{
+    CycleNo cycle = GetKernel()->GetCycleNo();
+    CycleNo elapsed = cycle - m_lastcycle;
+    m_lastcycle = cycle;
+    
+    BufferSize cur_alloc = m_allocationsEx.size();
+    
+    m_totalallocex += cur_alloc * elapsed;
+    m_maxallocex = std::max(m_maxallocex, cur_alloc);       
+}
+
 RegAddr Allocator::GetRemoteRegisterAddress(const RemoteRegAddr& addr) const
 {
     const Family&          family = m_familyTable[addr.fid.lfid];
@@ -1027,6 +1039,7 @@ Result Allocator::AllocateFamily(const PlaceID& place, GPID src, RegIndex reg, F
     request.reg   = reg;
     
     Buffer<AllocRequest>& allocations = place.exclusive ? m_allocationsEx : m_allocations;
+    if (place.exclusive) UpdateStats();
     if (!allocations.Push(request))
     {
         return FAILED;
@@ -1369,6 +1382,7 @@ Result Allocator::DoFamilyAllocate()
 {
     // Pick an allocation queue to allocate from
     Buffer<AllocRequest>* buffer = NULL;
+
     if (!m_familyTable.IsExclusiveUsed() && !m_allocationsEx.Empty())
     {
         buffer = &m_allocationsEx;
@@ -1450,6 +1464,7 @@ Result Allocator::DoFamilyAllocate()
             return FAILED;
         }
     }
+    UpdateStats();
     buffer->Pop();
     return SUCCESS;
 }
@@ -1924,6 +1939,8 @@ Allocator::Allocator(const string& name, Processor& parent,
     m_createState   (CREATE_INITIAL),
     m_readyThreads1 (*parent.GetKernel(), threadTable),
     m_readyThreads2 (*parent.GetKernel(), threadTable),
+
+    m_maxallocex(0), m_totalallocex(0), m_lastcycle(0),
 
     p_ThreadAllocate  ("thread-allocate",   delegate::create<Allocator, &Allocator::DoThreadAllocate  >(*this) ),
     p_FamilyAllocate  ("family-allocate",   delegate::create<Allocator, &Allocator::DoFamilyAllocate  >(*this) ),

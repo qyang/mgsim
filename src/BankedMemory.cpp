@@ -30,8 +30,8 @@ namespace Simulator
 
 struct BankedMemory::ClientInfo
 {
-    IMemoryCallback*   callback;
-    ArbitratedService* service;
+    IMemoryCallback*     callback;
+    ArbitratedService<>* service;
 };
 
 struct BankedMemory::Request
@@ -46,15 +46,15 @@ struct BankedMemory::Request
 
 class BankedMemory::Bank : public Object
 {
-    BankedMemory&     m_memory;
-    ArbitratedService p_incoming;
-    Buffer<Request>   m_incoming;
-    Buffer<Request>   m_outgoing;
-    SingleFlag        m_busy;
-    Request           m_request;
-    Process           p_Incoming;
-    Process           p_Outgoing;
-    Process           p_Bank;
+    BankedMemory&       m_memory;
+    ArbitratedService<> p_incoming;
+    Buffer<Request>     m_incoming;
+    Buffer<Request>     m_outgoing;
+    SingleFlag          m_busy;
+    Request             m_request;
+    Process             p_Incoming;
+    Process             p_Outgoing;
+    Process             p_Bank;
     
     bool AddRequest(Buffer<Request>& queue, Request& request, bool data)
     {
@@ -187,7 +187,7 @@ class BankedMemory::Bank : public Object
     }
 
 public:
-    void RegisterClient(ArbitratedService& client_arbitrator, const Process* processes[])
+    void RegisterClient(ArbitratedService<>& client_arbitrator, const Process* processes[])
     {
         for (size_t i = 0; processes[i] != NULL; ++i)
         {
@@ -274,7 +274,7 @@ void BankedMemory::RegisterClient(PSize pid, IMemoryCallback& callback, const Pr
 
     stringstream name;
     name << "client-" << pid;
-    client.service = new ArbitratedService(*this, name.str());
+    client.service = new ArbitratedService<>(*this, name.str());
     client.callback = &callback;
         
     for (size_t i = 0; i < m_banks.size(); ++i)

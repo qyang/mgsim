@@ -19,6 +19,9 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
 #ifndef COMMANDS_H
 #define COMMANDS_H
 
+#ifdef ENABLE_MONITOR
+# include "monitor.h"
+#endif
 #include "simreadline.h"
 #include "MGSystem.h"
 #include <vector>
@@ -30,6 +33,9 @@ void ExecuteCommand(Simulator::MGSystem& sys,
 
 void HandleCommandLine(CommandLineReader& clr,
                        Simulator::MGSystem& sys,
+#ifdef ENABLE_MONITOR
+                       Monitor& mo,
+#endif
                        bool &quit);
 
 

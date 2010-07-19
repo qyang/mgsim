@@ -21,6 +21,8 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
 
 #include "MGSystem.h"
 #include "config.h"
+#include "sampling.h"
+
 #include <iostream>
 #include <pthread.h>
 #include <time.h>
@@ -39,6 +41,8 @@ class Monitor
     pthread_mutex_t       m_runlock;
     bool                  m_running;
     volatile bool         m_enabled;
+
+    BinarySampler*        m_sampler;
 
     friend void* runmonitor(void*);
     void run();

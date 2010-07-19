@@ -22,6 +22,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
 #include "Network.h"
 #include "config.h"
 #include "symtable.h"
+#include "sampling.h"
 #include <cassert>
 #include <iomanip>
 using namespace std;
@@ -1963,6 +1964,9 @@ Allocator::Allocator(const string& name, Processor& parent,
     m_readyThreads1 .Sensitive(p_ThreadActivation);
     m_readyThreads2 .Sensitive(p_ThreadActivation);
     m_activeThreads .Sensitive(pipeline.p_Pipeline); // Fetch Stage is sensitive on this list
+
+    RegisterSampleVariableInObject(m_totalallocex, SVC_CUMULATIVE);
+    RegisterSampleVariableInObject(m_maxallocex, SVC_WATERMARK);
 }
 
 void Allocator::AllocateInitialFamily(MemAddr pc, bool legacy)

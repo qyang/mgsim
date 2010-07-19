@@ -20,6 +20,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
 #include "Processor.h"
 #include "display.h"
 #include "symtable.h"
+#include "sampling.h"
 
 #include <cassert>
 #include <cmath>
@@ -842,6 +843,8 @@ Pipeline::ExecuteStage::ExecuteStage(Pipeline& parent, const ReadExecuteLatch& i
 {
     m_flop = 0;
     m_op   = 0;
+    RegisterSampleVariableInObject(m_flop, SVC_CUMULATIVE);
+    RegisterSampleVariableInObject(m_op, SVC_CUMULATIVE);
 }
 
 }

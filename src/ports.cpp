@@ -17,6 +17,7 @@ License along with this library; if not, write to the Free Software
 Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
 */
 #include "ports.h"
+#include "sampling.h"
 #include <sstream>
 #include <algorithm>
 
@@ -41,6 +42,15 @@ void ArbitratedPort::AddRequest(const Process& process)
 
     m_requests.push_back(&process);
 }
+
+ArbitratedPort::ArbitratedPort(const Object& object, const std::string& name) 
+  : m_busyCycles(0), 
+    m_object(object), 
+    m_name(name) 
+{
+    RegisterSampleVariable(m_busyCycles, object.GetFQN() + '.' + name + ".busyCycles", SVC_CUMULATIVE);
+}
+
 
 void PriorityArbitratedPort::Arbitrate()
 {

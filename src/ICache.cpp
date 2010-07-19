@@ -19,6 +19,8 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
 #include "ICache.h"
 #include "Processor.h"
 #include "config.h"
+#include "sampling.h"
+
 #include <cassert>
 #include <cstring>
 #include <iomanip>
@@ -47,6 +49,9 @@ ICache::ICache(const std::string& name, Processor& parent, Allocator& alloc, con
     p_Incoming("incoming", delegate::create<ICache, &ICache::DoIncoming>(*this)),
     p_service(*this, "p_service")
 {
+    RegisterSampleVariableInObject(m_numHits, SVC_CUMULATIVE);
+    RegisterSampleVariableInObject(m_numMisses, SVC_CUMULATIVE);
+
     m_outgoing.Sensitive( p_Outgoing );
     m_incoming.Sensitive( p_Incoming );
 

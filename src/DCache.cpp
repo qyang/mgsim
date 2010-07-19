@@ -19,6 +19,8 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
 #include "DCache.h"
 #include "Processor.h"
 #include "config.h"
+#include "sampling.h"
+
 #include <cassert>
 #include <cstring>
 #include <iomanip>
@@ -53,6 +55,10 @@ DCache::DCache(const std::string& name, Processor& parent, Allocator& alloc, Fam
 
     p_service        (*this, "p_service")
 {
+    RegisterSampleVariableInObject(m_numHits, SVC_CUMULATIVE);
+    RegisterSampleVariableInObject(m_numMisses, SVC_CUMULATIVE);
+
+
     m_returned       .Sensitive(p_IncomingReads);
     m_completedWrites.Sensitive(p_IncomingWrites);
     m_outgoing       .Sensitive(p_Outgoing);

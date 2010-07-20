@@ -18,6 +18,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
 */
 #include "display.h"
 #include "config.h"
+#include "sampling.h"
 #include <stdexcept>
 #include <cassert>
 
@@ -33,8 +34,17 @@ Display::Display(const Config& config)
       m_refreshDelay_orig(config.getInteger<unsigned int>("GfxRefreshDelay", 30)),
       m_refreshDelay(m_refreshDelay_orig),
       m_screen(NULL),
-      m_max_screen_h(768), m_max_screen_w(1024)
+      m_max_screen_h(768), m_max_screen_w(1024),
+      m_nGfxOps(0)
 {
+    RegisterSampleVariable(m_width, "display.width", SVC_LEVEL);
+    RegisterSampleVariable(m_height, "display.height", SVC_LEVEL);
+    RegisterSampleVariable(m_scalex, "display.scalex", SVC_LEVEL);
+    RegisterSampleVariable(m_scaley, "display.scaley", SVC_LEVEL);
+    RegisterSampleVariable(m_refreshDelay, "display.refreshDelay", SVC_LEVEL);
+    RegisterSampleVariable(m_lastRefresh, "display.lastRefresh", SVC_CUMULATIVE);
+    RegisterSampleVariable(m_nGfxOps, "display.nGfxOps", SVC_CUMULATIVE);
+    
 #ifdef USE_SDL
     if (config.getBoolean("GfxEnableOutput", false))
     {
@@ -250,6 +260,7 @@ void Display::Resize(unsigned int w, unsigned int h)
     m_height = h;
     m_framebuffer.resize(m_width * m_height);
     std::fill(m_framebuffer.begin(), m_framebuffer.end(), 0);
+    ++m_nGfxOps;
     
 #ifdef USE_SDL
     // Try to resize the screen as well

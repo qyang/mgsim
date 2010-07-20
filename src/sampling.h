@@ -19,6 +19,8 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
 #ifndef SAMPLING_H
 #define SAMPLING_H
 
+#include "MGSystem.h"
+
 #include <vector>
 #include <utility>
 #include <string>
@@ -66,7 +68,8 @@ class BinarySampler
 
 public:
 
-    BinarySampler(std::ostream& os, const std::vector<std::string>& pats);
+    BinarySampler(std::ostream& os, const Simulator::MGSystem& sys, 
+                  const std::vector<std::string>& pats);
 
     size_t GetBufferSize() const { return m_datasize; }
     void   SampleToBuffer(char *buf) const

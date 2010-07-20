@@ -19,6 +19,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
 #include "Cache.h"
 #include "RootDirectory.h"
 #include "../config.h"
+#include "../sampling.h"
 #include <cassert>
 #include <cstring>
 using namespace std;
@@ -110,6 +111,12 @@ COMA::COMA(const std::string& name, Simulator::Object& parent, const Config& con
     
     m_nreads(0), m_nwrites(0), m_nread_bytes(0), m_nwrite_bytes(0)
 {
+
+    RegisterSampleVariableInObject(m_nreads, SVC_CUMULATIVE);
+    RegisterSampleVariableInObject(m_nread_bytes, SVC_CUMULATIVE);
+    RegisterSampleVariableInObject(m_nwrites, SVC_CUMULATIVE);
+    RegisterSampleVariableInObject(m_nwrite_bytes, SVC_CUMULATIVE);
+
     // Create the caches
     size_t numProcs = GetNumProcessors(config);
     m_caches.resize( (numProcs + m_numProcsPerCache - 1) / m_numProcsPerCache );
@@ -134,7 +141,7 @@ COMA::COMA(const std::string& name, Simulator::Object& parent, const Config& con
     
     // Create the root directories
     m_roots.resize(1);
-    m_roots[0] = new RootDirectory("dir-root", *this, *this, m_caches.size(), config);
+    m_roots[0] = new RootDirectory("rootdir", *this, *this, m_caches.size(), config);
     
     // Initialize the caches
     for (size_t i = 0; i < m_caches.size(); ++i)

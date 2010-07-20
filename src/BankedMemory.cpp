@@ -273,7 +273,7 @@ void BankedMemory::RegisterClient(PSize pid, IMemoryCallback& callback, const Pr
     assert(client.callback == NULL);
 
     stringstream name;
-    name << "client-" << pid;
+    name << "client" << pid;
     client.service = new ArbitratedService<>(*this, name.str());
     client.callback = &callback;
         

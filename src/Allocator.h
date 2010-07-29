@@ -209,6 +209,7 @@ private:
     BufferSize m_maxallocex;
     BufferSize m_totalallocex;
     CycleNo    m_lastcycle;
+    BufferSize m_curallocex;
     void       UpdateStats();
 
 public:

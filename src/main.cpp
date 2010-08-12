@@ -46,9 +46,6 @@ const char* semaphore_journal = "/tmp/simx-sem-journal";
 
 using namespace Simulator;
 using namespace std;
-#ifdef ENABLE_COMA_ZL
-using namespace MemSim;
-#endif
 
 struct ProgramConfig
 {
@@ -68,11 +65,7 @@ struct ProgramConfig
     vector<pair<RegAddr, string> >   m_loads;
 };
 
-static void ParseArguments(int argc, const char ** argv, ProgramConfig& config
-#ifdef ENABLE_COMA_ZL
-               , LinkConfig& lkconfig
-#endif
-    )
+static void ParseArguments(int argc, const char ** argv, ProgramConfig& config)
 {
     config.m_configFile = MGSIM_CONFIG_PATH;
     config.m_enableMonitor = false;
@@ -217,11 +210,7 @@ int mgs_main(int argc, char const** argv)
     {
         // Parse command line arguments
         ProgramConfig config;
-#ifdef ENABLE_COMA_ZL
-        ParseArguments(argc, (const char**)argv, config, LinkMGS::s_oLinkConfig);
-#else
         ParseArguments(argc, (const char**)argv, config);
-#endif
 
         if (config.m_interactive)
         {

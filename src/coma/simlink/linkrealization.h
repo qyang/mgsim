@@ -26,7 +26,6 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
 #include "th.h"
 
 Simulator::VirtualMemory* g_pMemoryDataContainer;
-LinkMGS** g_pLinks;
 LinkConfig LinkMGS::s_oLinkConfig;
 
 th_t thpara;

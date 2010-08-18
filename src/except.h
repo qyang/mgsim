@@ -22,6 +22,8 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
 #include <string>
 #include <stdexcept>
 #include <list>
+#include <cstdarg>
+#include <cstdio>
 
 namespace Simulator
 {
@@ -41,16 +43,18 @@ public:
     virtual ~SimulationException() throw() {}
 };
 
-class InvalidArgumentException : public std::runtime_error
+class InvalidArgumentException : public SimulationException
 {
 public:
-    InvalidArgumentException(const std::string& msg) : std::runtime_error(msg) {}
+    InvalidArgumentException(const Object& object, const std::string& msg) : SimulationException(msg, object) {}
+    InvalidArgumentException(const std::string& msg) : SimulationException(msg) {}
 };
 
 class IllegalInstructionException : public SimulationException
 {
 public:
-    IllegalInstructionException(const Object& , const std::string& msg) : SimulationException(msg) {}
+    IllegalInstructionException(const Object& object, const std::string& msg) : SimulationException(msg, object) {}
+    IllegalInstructionException(const std::string& msg) : SimulationException(msg) {}
 };
 
 class IOException : public std::runtime_error
@@ -68,8 +72,45 @@ public:
 class SecurityException : public SimulationException
 {
 public:
-    SecurityException(const std::string& msg, const Object& object) : SimulationException(msg, object) {}
+    SecurityException(const Object& object, const std::string& msg) : SimulationException(msg, object) {}
 };
+
+template<typename Except>
+Except exceptf(const char* fmt, ...)
+#ifdef __GNUC__
+__attribute__((format (printf, 1, 2)))
+#endif
+;
+
+template<typename Except>
+Except exceptf(const Object& obj, const char* fmt, ...)
+#ifdef __GNUC__
+__attribute__((format (printf, 2, 3)))
+#endif
+;
+
+template<typename Except>
+Except exceptf(const char* fmt, ...)
+{
+    va_list ap;
+    char buf[1024];
+    va_start(ap, fmt);
+    vsnprintf(buf, 1024, fmt, ap);
+    va_end(ap);
+    return Except(std::string(buf));
+}
+
+template<typename Except>
+Except exceptf(const Object& obj, const char* fmt, ...)
+{
+    va_list ap;
+    char buf[1024];
+    va_start(ap, fmt);
+    vsnprintf(buf, 1024, fmt, ap);
+    va_end(ap);
+    return Except(obj, std::string(buf));
+}
+
 
 }
 #endif

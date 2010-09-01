@@ -90,8 +90,11 @@ void ThreadTable::CheckStateSanity() const
         }
     }
 
-    // At most one exclusive thread free
+    // Check that each single counter is within limits
+    assert(m_free[CONTEXT_NORMAL] <= m_threads.size());
+    assert(m_free[CONTEXT_RESERVED] <= m_threads.size());
     assert(m_free[CONTEXT_EXCLUSIVE] <= 1);
+    assert(used <= m_threads.size());
 
     // All counts must add up
     assert(m_free[CONTEXT_NORMAL] + m_free[CONTEXT_RESERVED] + m_free[CONTEXT_EXCLUSIVE] + used == m_threads.size());
@@ -118,6 +121,9 @@ void ThreadTable::ReserveThread()
         m_free[CONTEXT_NORMAL]--;
         m_free[CONTEXT_RESERVED]++;
     }
+
+    // Check that we leave a sane state
+    CheckStateSanity();
 }
 
 void ThreadTable::UnreserveThread()
@@ -132,6 +138,9 @@ void ThreadTable::UnreserveThread()
         m_free[CONTEXT_NORMAL]++;
         m_free[CONTEXT_RESERVED]--;
     }
+
+    // Check that we leave a sane state
+    CheckStateSanity();
 }
 
 TID ThreadTable::PopEmpty(ContextType context)
@@ -156,7 +165,9 @@ TID ThreadTable::PopEmpty(ContextType context)
             m_free[context]--;
         }
     }
-    CycleNo             m_lastcycle;
+
+    // Check that we leave a sane state
+    CheckStateSanity();
     return tid;
 }
 
@@ -198,6 +209,9 @@ void ThreadTable::PushEmpty(const ThreadQueue& q, ContextType context)
         
         m_free[CONTEXT_NORMAL] += size;
     }
+
+    // Check that we leave a sane state
+    CheckStateSanity();
 }
 
 void ThreadTable::Cmd_Help(ostream& out, const vector<string>& /* arguments */) const

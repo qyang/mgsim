@@ -39,6 +39,7 @@ struct ParallelMemory::Request
 class ParallelMemory::Port : public Object
 {
     ParallelMemory&     m_memory;
+    Clock&              m_clock;
     ArbitratedService<> p_requests;
     Buffer<Request>     m_requests;
     CycleNo             m_nextdone;
@@ -49,7 +50,7 @@ class ParallelMemory::Port : public Object
         assert(!m_requests.Empty());
     
         const Request& request = m_requests.Front();
-        const CycleNo  now     = GetKernel()->GetCycleNo();
+        const CycleNo  now     = m_clock.GetCycleNo();
 
         if (m_nextdone == 0)
         {
@@ -149,11 +150,12 @@ public:
         }
     }
 
-    Port(const std::string& name, ParallelMemory& memory, BufferSize buffersize)
-        : Object(name, memory),
+    Port(const std::string& name, ParallelMemory& memory, Clock& clock, BufferSize buffersize)
+        : Object(name, memory, clock),
           m_memory(memory),
-          p_requests(*this, "p_requests"),
-          m_requests(*memory.GetKernel(), buffersize), m_nextdone(0),
+          m_clock(clock),
+          p_requests(*this, clock, "p_requests"),
+          m_requests(clock, buffersize), m_nextdone(0),
           p_Requests("port", delegate::create<Port, &Port::DoRequests>(*this))
     {
         m_requests.Sensitive( p_Requests );
@@ -279,8 +281,8 @@ void ParallelMemory::Write(MemAddr address, const void* data, MemSize size)
     return VirtualMemory::Write(address, data, size);
 }
 
-ParallelMemory::ParallelMemory(const std::string& name, Object& parent, const Config& config) :
-    Object(name, parent),
+ParallelMemory::ParallelMemory(const std::string& name, Object& parent, Clock& clock, const Config& config) :
+    Object(name, parent, clock),
     m_baseRequestTime(config.getInteger<CycleNo>("MemoryBaseRequestTime", 1)),
     m_timePerLine    (config.getInteger<CycleNo>("MemoryTimePerLine", 1)),
     m_sizeOfLine     (config.getInteger<size_t> ("MemorySizeOfLine", 8)),
@@ -305,7 +307,7 @@ ParallelMemory::ParallelMemory(const std::string& name, Object& parent, const Co
         name << "port" << i;
         ClientInfo& client = m_clients[i];
         client.callback = NULL;
-        client.port     = new Port(name.str(), *this, buffersize);
+        client.port     = new Port(name.str(), *this, clock, buffersize);
     }
 }
 

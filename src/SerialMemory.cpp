@@ -141,7 +141,7 @@ Result SerialMemory::DoRequests()
     assert(!m_requests.Empty());
 
     const Request& request = m_requests.Front();
-    const CycleNo  now     = m_clock.GetCycleNo();
+    const CycleNo  now     = GetCycleNo();
         
     if (m_nextdone > 0)
     {

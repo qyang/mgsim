@@ -347,6 +347,8 @@ bool Pipeline::ExecuteStage::ExecDetach(const FID& fid)
             break;
         }
     }
+    DebugFlowWrite("Detach from %s to CPU%zd/F%zd",
+                   GetKernel()->GetSymbolTable()[m_input.pc].c_str(), fid.pid, fid.lfid);
     return true;
 }
 
@@ -383,10 +385,14 @@ bool Pipeline::ExecuteStage::ExecSync(const FID& fid)
                 m_output.Rrc.sync.fid = fid;
                 m_output.Rrc.sync.reg = m_input.Rc.index;
             
-                m_output.Rcv = MAKE_PENDING_PIPEVALUE(m_input.RcSize);
+                m_output.Rcv = MAKE_PENDING_PIPEVALUE(m_input.RcSize);            
             }
         }
     }
+    
+    DebugFlowWrite("Sync from %s to CPU%zd/F%zd",
+                   GetKernel()->GetSymbolTable()[m_input.pc].c_str(), fid.pid, fid.lfid);
+
     return true;
 }
 
@@ -508,6 +514,9 @@ Pipeline::PipeAction Pipeline::ExecuteStage::ExecCreate(const FID& fid, MemAddr 
             m_output.Rcv = MAKE_PENDING_PIPEVALUE(m_input.RcSize);
         }
     }
+    DebugFlowWrite("Create from %s to %s (CPU%zd/F%zd)",
+                   GetKernel()->GetSymbolTable()[m_input.pc].c_str(),
+                   GetKernel()->GetSymbolTable()[address].c_str(), fid.pid, fid.lfid);
     return PIPE_CONTINUE;
 }
 
@@ -866,8 +875,8 @@ void Pipeline::ExecuteStage::ExecDebug(double value, Integer stream) const
     }
 }
 
-Pipeline::ExecuteStage::ExecuteStage(Pipeline& parent, const ReadExecuteLatch& input, ExecuteMemoryLatch& output, Allocator& alloc, FamilyTable& familyTable, ThreadTable& threadTable, FPU& fpu, size_t fpu_source, const Config& /*config*/)
-  : Stage("execute", parent),
+Pipeline::ExecuteStage::ExecuteStage(Pipeline& parent, Clock& clock, const ReadExecuteLatch& input, ExecuteMemoryLatch& output, Allocator& alloc, FamilyTable& familyTable, ThreadTable& threadTable, FPU& fpu, size_t fpu_source, const Config& /*config*/)
+  : Stage("execute", parent, clock),
     m_input(input),
     m_output(output),
     m_allocator(alloc),

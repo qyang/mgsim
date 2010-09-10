@@ -20,7 +20,6 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
 #define SUSPENDED_REQUEST_QUEUE_H
 
 #include "predef.h"
-#include "simcontrol.h"
 
 namespace MemSim
 {

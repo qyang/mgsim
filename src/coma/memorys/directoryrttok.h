@@ -114,6 +114,11 @@ public:
         free(m_pSet);
     }
     
+    void BehaviorNode()
+    {
+        Network_Node::BehaviorNode();
+    }
+
 	void InitializeDirLines();
 
 	void BehaviorNET();

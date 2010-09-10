@@ -34,15 +34,17 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
 
 namespace Simulator {
 
-    class MGSystem : public Object
+    class MGSystem
     {
+        Kernel                  m_kernel;
+        Clock&                  m_clock;    ///< Master clock for the system
+        Object                  m_root;     ///< Root object for the system
         std::vector<Processor*> m_procs;
         std::vector<FPU*>       m_fpus;
         std::vector<Object*>    m_objects;
         std::vector<PlaceInfo*> m_places;
         SymbolTable        m_symtable;
         BreakPoints        m_breakpoints;
-        Kernel             m_kernel;
         IMemoryAdmin*      m_memory;
         std::string        m_objdump_cmd;
         std::string        m_program;
@@ -90,6 +92,7 @@ namespace Simulator {
         std::string GetSymbol(MemAddr addr) const;
 
         void Disassemble(MemAddr addr, size_t sz = 64) const;
+        void PrintComponents(std::ostream& os) const;
         void PrintAllSymbols(std::ostream& os, const std::string& pat = "*") const;
         void PrintMemoryStatistics(std::ostream& os) const;
         void PrintState(const std::vector<std::string>& arguments) const;

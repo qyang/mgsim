@@ -70,8 +70,8 @@ class FPU : public Object
 	    CycleNo           last_write; ///< Last time an FPU pipe wrote back to this source
 	    unsigned int      last_unit;  ///< Unit that did the last (or current) write
 	    
-	    Source(Kernel& kernel, BufferSize bufferSize)
-	        : inputs(kernel, bufferSize), regfile(NULL), last_write(0) {}
+	    Source(Clock& clock, BufferSize bufferSize)
+	        : inputs(clock, bufferSize), regfile(NULL), last_write(0) {}
 	};
 	
     /// Represents the result of an FP operation
@@ -124,7 +124,7 @@ public:
      * @param config     reference to the configuration data
      * @param num_inputs number of inputs that will be connected to this FPU
      */
-    FPU(const std::string& name, Object& parent, const Config& config, size_t num_inputs);
+    FPU(const std::string& name, Object& parent, Clock& clock, const Config& config, size_t num_inputs);
     
     /// Destroys the FPU object
     ~FPU();

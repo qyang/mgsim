@@ -23,6 +23,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
 #include "../../VirtualMemory.h"
 #include "memschedulepipeline.h"
 #include "../../config.h"
+#include <list>
 #include <queue>
 
 namespace MemSim
@@ -42,7 +43,7 @@ namespace MemSim
 // row miss r/w --  1. normal:      m_tRP + m_tRL/m_tWL
 ///////////////////////////////////////////
 
-class DDRChannel : public MemoryState
+class DDRChannel
 {
     Simulator::VirtualMemory& m_pMemoryDataContainer;   
 
@@ -84,18 +85,18 @@ class DDRChannel : public MemoryState
     unsigned int m_nBurstLength;        // maybe the burstlength is too small for one cacheline
 
     MemorySchedulePipeline* m_pMSP; // memory schedule pipeline
-    std::list<ST_request*>  m_lstReq;   // request buffer
-    std::list<ST_request*>  m_lstReqOut;   // request output buffer
+    std::list<Message*>  m_lstReq;   // request buffer
+    std::list<Message*>  m_lstReqOut;   // request output buffer
 
     uint64_t m_nLastRank;
     uint64_t m_nLastBank;
     uint64_t m_nLastRow;
     bool     m_bLastWrite;
 
-    bool ScheduleRequest(ST_request* req);
-    void ProcessRequest(ST_request*);
-    void FunRead(ST_request*);
-    void FunWrite(ST_request*);
+    bool ScheduleRequest(Message* req);
+    void ProcessRequest(Message*);
+    void FunRead(Message*);
+    void FunWrite(Message*);
 
 public:
 
@@ -141,34 +142,34 @@ public:
         m_pMSP = new MemorySchedulePipeline(MSP_DEFAULT_SIZE);
     }
 
-    uint64_t AddrBankID(__address_t addr) const
+    uint64_t AddrBankID(MemAddr addr) const
     {
         return (addr >> m_nBankBitStart) % m_nBanks;
     }
 
-    uint64_t AddrRankID(__address_t addr) const
+    uint64_t AddrRankID(MemAddr addr) const
     {
         return (addr >> m_nRankBitStart) % m_nRanks;
     }
 
-    uint64_t AddrRowID(__address_t addr) const
+    uint64_t AddrRowID(MemAddr addr) const
     {
         return (addr >> m_nRowBitStart) % m_nRows;
     }
 
-    uint64_t AddrColumnID(__address_t addr) const
+    uint64_t AddrColumnID(MemAddr addr) const
     {
         return (addr >> m_nColumnBitStart) % m_nColumns;
     }
 
     void ExecuteCycle();
     
-    void InsertRequest(ST_request* req)
+    void InsertRequest(Message* req)
     {
         m_lstReq.push_back(req);
     }
 
-    ST_request* GetOutputRequest() const
+    Message* GetOutputRequest() const
     {
         return (m_lstReqOut.size() == 0) ? NULL : m_lstReqOut.front();
     }
@@ -180,7 +181,7 @@ public:
 };
 
 
-class DDRMemorySys : public sc_module, public MemoryState
+class DDRMemorySys : public sc_module
 {
 private:
     DDRChannel m_channel;
@@ -189,8 +190,8 @@ private:
 public:
     SC_HAS_PROCESS(DDRMemorySys);
     
-    std::queue<ST_request*> m_pfifoReqIn;
-    std::queue<ST_request*> channel_fifo_slave;
+    std::queue<Message*> m_pfifoReqIn;
+    std::queue<Message*> channel_fifo_slave;
     
     DDRMemorySys(sc_module_name nm, sc_clock& clock, Simulator::VirtualMemory& pMemoryDataContainer, const Config& config)
       : sc_module(nm), m_channel(pMemoryDataContainer, config)

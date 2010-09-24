@@ -16,33 +16,31 @@ You should have received a copy of the GNU Library General Public
 License along with this library; if not, write to the Free Software
 Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
 */
-#ifndef _MERGESTOREBUFFER_H
-#define _MERGESTOREBUFFER_H
+#ifndef ZLCOMA_MERGESTOREBUFFER_H
+#define ZLCOMA_MERGESTOREBUFFER_H
 
-#include "predef.h"
+#include "Cache.h"
 
-namespace MemSim
+namespace Simulator
 {
 
-class MergeStoreBuffer
+class ZLCOMA::Cache::MergeStoreBuffer
 {
     struct Entry;
 
     std::vector<Entry> m_entries;
+    size_t m_lineSize;
 
 public:
-    MergeStoreBuffer(unsigned int size);
+    MergeStoreBuffer(unsigned int size, size_t lineSize);
     ~MergeStoreBuffer();
 
-    bool LoadBuffer(Message* req, const cache_line_t& linecache);
-    bool WriteBuffer(Message* req);
+    bool LoadBuffer(MemAddr address, MemData& data, const Line& linecache);
+    bool WriteBuffer(MemAddr address, const MemData& data, const WriteAck& ack);
     bool CleanSlot(MemAddr address);
-    bool IsAddressPresent(MemAddr address) const;
-    bool IsSlotLocked(MemAddr address) const;
+    bool IsSlotLocked(MemAddr address) const;    
+    bool DumpMergedLine(MemAddr address, char* data, bool* bitmask, std::vector<WriteAck>& ack_queue);
     
-    const Message&               GetMergedRequest(MemAddr address) const;
-    const std::vector<Message*>& GetQueuedRequestVector(MemAddr address) const;
-
 private:
           Entry* GetEmptyLine();
           Entry* FindBufferItem(MemAddr address);

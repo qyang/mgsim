@@ -73,8 +73,6 @@ public:
         return (float)m_registerFile.p_asyncW.GetBusyCycles() / (float)GetCycleNo();
     }
 	
-    CycleNo GetLocalFamilyCompletion() const { return m_localFamilyCompletion; }
-
     TSize GetMaxThreadsAllocated() const { return m_threadTable.GetMaxAllocated(); }
     TSize GetTotalThreadsAllocated() { return m_threadTable.GetTotalAllocated(); }
     TSize GetThreadTableSize() const { return m_threadTable.GetNumThreads(); }
@@ -95,8 +93,6 @@ public:
         m_registerFile.WriteRegister(addr, value);
     }
 	
-    void OnFamilyTerminatedLocally(MemAddr pc);
-
     // Configuration-dependent helpers
     MemAddr     GetTLSAddress(LFID fid, TID tid) const;
     MemSize     GetTLSSize() const;
@@ -131,10 +127,6 @@ private:
         unsigned int tid_bits;  ///< Number of bits for a TID (Thread ID)
     } m_bits;
     
-	
-    // Statistics 
-    CycleNo m_localFamilyCompletion; 
-
     // IMemoryCallback
     bool OnMemoryReadCompleted(MemAddr addr, const MemData& data);
     bool OnMemoryWriteCompleted(TID tid);

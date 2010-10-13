@@ -82,8 +82,7 @@ struct Thread
     TID          nextInBlock;
     CID          cid;
     LFID         family;
-    TID          nextState;
-    TID          nextMember;
+    TID          next;
 
     // Architecture specific per-thread stuff
 #if TARGET_ARCH == ARCH_ALPHA
@@ -111,7 +110,7 @@ public:
     const Thread& operator[](TID index) const { return m_threads[index]; }
 
     TID   PopEmpty(ContextType type);
-    void  PushEmpty(const ThreadQueue& queue, ContextType context);
+    void  PushEmpty(TID tid, ContextType context);
     void  ReserveThread();
     void  UnreserveThread();
     TSize GetNumFreeThreads() const;
@@ -126,7 +125,7 @@ public:
     TSize GetMaxAllocated() const { return m_maxalloc; }
 
 private:
-    ThreadQueue         m_empty;
+    TID                 m_empty;
     std::vector<Thread> m_threads;
     TSize               m_free[NUM_CONTEXT_TYPES];
     TSize               m_totalalloc;

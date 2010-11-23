@@ -935,7 +935,7 @@ Pipeline::PipeAction Pipeline::ExecuteStage::ExecuteInstruction()
             if (m_input.opcode == A_OP_CREATE_D)
             {
                 // Direct create
-                return ExecCreate(m_parent.GetProcessor().UnpackFID(Rav), target, m_input.Rc);
+                return ExecCreate(m_parent.GetProcessor().UnpackFID(Rav), target, m_input.Rc.index);
             }
 
             // Conditional and unconditional branches
@@ -983,7 +983,7 @@ Pipeline::PipeAction Pipeline::ExecuteStage::ExecuteInstruction()
             if (m_input.opcode == A_OP_CREATE_I)
             {
                 // Indirect create
-                return ExecCreate(m_parent.GetProcessor().UnpackFID(Rav), target, m_input.Rc);
+                return ExecCreate(m_parent.GetProcessor().UnpackFID(Rav), target, m_input.Rc.index);
             }
 
             // Unconditional Jumps
@@ -1068,14 +1068,18 @@ Pipeline::PipeAction Pipeline::ExecuteStage::ExecuteInstruction()
                 case A_UTHREAD_GETPROCS:
                     COMMIT {
                         m_output.Rcv.m_state   = RST_FULL;
-                        m_output.Rcv.m_integer = m_parent.m_parent.GetPlaceSize();
+                        m_output.Rcv.m_integer = m_input.placeSize;
                     }
                     break;
 
                 case A_UTHREAD_ALLOCATE:
+                case A_UTHREAD_ALLOCATE_S:  // Suspend
+                case A_UTHREAD_ALLOCATE_E:  // Exclusive
                 {
                     PlaceID place = m_parent.GetProcessor().UnpackPlace(m_input.Rbv.m_integer.get(m_input.Rbv.m_size));
-                    if (!ExecAllocate(place, m_input.Rc.index))
+                    bool suspend   = (m_input.function == A_UTHREAD_ALLOCATE_S || m_input.function == A_UTHREAD_ALLOCATE_E);
+                    bool exclusive = (m_input.function == A_UTHREAD_ALLOCATE_E);
+                    if (!ExecAllocate(place, m_input.Rc.index, suspend, exclusive))
                     {
                         return PIPE_STALL;
                     }
@@ -1087,7 +1091,7 @@ Pipeline::PipeAction Pipeline::ExecuteStage::ExecuteInstruction()
                 case A_UTHREAD_SETSTEP:  return SetFamilyProperty(m_parent.GetProcessor().UnpackFID(Rav), FAMPROP_STEP,  Rbv);
                 case A_UTHREAD_SETBLOCK: return SetFamilyProperty(m_parent.GetProcessor().UnpackFID(Rav), FAMPROP_BLOCK, Rbv);
 
-                case A_UTHREAD_KILL:     return ExecKill(m_parent.GetProcessor().UnpackFID(Rav));
+                case A_UTHREAD_KILL:     return ExecKill(m_parent.GetProcessor().UnpackPlace(Rav));
                 case A_UTHREAD_BREAK:    return ExecBreak();
                 
                 case A_UTHREAD_LDBP:

@@ -140,12 +140,6 @@ class Pipeline : public Object
         } types[NUM_REG_TYPES];
     };
 
-    struct SharedInfo
-    {
-        char    offset;
-        RegType type;
-    };
-    
     //
     // Latches
     //
@@ -178,15 +172,10 @@ class Pipeline : public Object
 
     struct FetchDecodeLatch : public Latch
     {
-        Instruction     instr;
-        RegInfo         regs;
-        PlaceType       place;
-        bool            legacy;
-		bool            onParent;
-		bool            onFirstCore;
-        bool            isLastThreadInBlock;
-		bool            isFirstThreadInFamily;
-        bool            isLastThreadInFamily;
+        Instruction instr;
+        RegInfo     regs;
+        bool        legacy;
+        PSize       placeSize;
     };
 
     struct DecodeReadLatch : public Latch, public ArchDecodeReadLatch
@@ -197,14 +186,11 @@ class Pipeline : public Object
         // For [f]mov[gsd], the offset in the child family's register file
         unsigned char   regofs;
 
-        // Shared write for next thread
-        SharedInfo      shared;
-
         // Registers addresses, types and sizes
         RegAddr         Ra,  Rb,  Rc;
         unsigned int    RaSize, RbSize, RcSize;
         
-        PlaceType       place;
+        PSize           placeSize;
     };
 
     struct ReadExecuteLatch : public Latch, public ArchReadExecuteLatch
@@ -218,10 +204,7 @@ class Pipeline : public Object
         // For [f]mov[gsd], the offset in the child family's register file
         unsigned char   regofs;
         
-        // Shared write for next thread
-        SharedInfo      shared;
-
-        PlaceType       place;
+        PSize           placeSize;
         
         // For debugging only
         RegAddr         Ra, Rb;
@@ -239,6 +222,8 @@ class Pipeline : public Object
         // To be written address and value
         RegAddr       Rc;
         PipeValue     Rcv;      // On loads, m_state = RST_INVALID and m_size is reg. size
+        
+        PSize         placeSize;
         
         RemoteMessage Rrc;
     };
@@ -273,7 +258,6 @@ class Pipeline : public Object
         FamilyTable&      m_familyTable;
         ThreadTable&      m_threadTable;
         ICache&           m_icache;
-        LPID              m_lpid;
         size_t            m_controlBlockSize;
         char*             m_buffer;
         bool              m_switched;
@@ -282,7 +266,7 @@ class Pipeline : public Object
         void Clear(TID tid);    
         PipeAction OnCycle();
     public:
-        FetchStage(Pipeline& parent, Clock& clock, FetchDecodeLatch& output, Allocator& allocator, FamilyTable& familyTable, ThreadTable& threadTable, ICache &icache, LPID lpid, const Config& config);
+        FetchStage(Pipeline& parent, Clock& clock, FetchDecodeLatch& output, Allocator& allocator, FamilyTable& familyTable, ThreadTable& threadTable, ICache &icache, const Config& config);
         ~FetchStage();
     };
 
@@ -357,10 +341,10 @@ class Pipeline : public Object
         bool       ExecDetach(const FID& fid);
         PipeAction SetFamilyProperty(const FID& fid, FamilyProperty property, Integer value);
         PipeAction ExecuteInstruction();
-        bool       ExecAllocate(const PlaceID& place, RegIndex reg);
-        PipeAction ExecCreate(const FID& fid, MemAddr address, RegAddr completion);
+        bool       ExecAllocate(PlaceID place, RegIndex reg, bool suspend, bool exclusive);
+        PipeAction ExecCreate(const FID& fid, MemAddr address, RegIndex completion);
         PipeAction ExecBreak();
-        PipeAction ExecKill(const FID& fid);
+        PipeAction ExecKill(const PlaceID& place);
         void       ExecDebug(Integer value, Integer stream) const;
         void       ExecDebug(double value, Integer stream) const;
         PipeAction OnCycle();
@@ -426,7 +410,7 @@ class Pipeline : public Object
     static std::string MakePipeValue(const RegType& type, const PipeValue& value);
     
 public:
-    Pipeline(const std::string& name, Processor& parent, Clock& clock, LPID lpid, RegisterFile& regFile, Network& network, Allocator& allocator, FamilyTable& familyTable, ThreadTable& threadTable, ICache& icache, DCache& dcache, FPU& fpu, const Config& config);
+    Pipeline(const std::string& name, Processor& parent, Clock& clock, RegisterFile& regFile, Network& network, Allocator& allocator, FamilyTable& familyTable, ThreadTable& threadTable, ICache& icache, DCache& dcache, FPU& fpu, const Config& config);
     ~Pipeline();
 
     Result DoPipeline();

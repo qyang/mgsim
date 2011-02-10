@@ -27,7 +27,6 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
 #include "config.h"
 #include "symtable.h"
 #include "breakpoints.h"
-#include "dummy_io.h"
 
 #include <vector>
 #include <utility>
@@ -46,7 +45,6 @@ namespace Simulator {
         std::vector<PlaceInfo*> m_places;
         SymbolTable        m_symtable;
         BreakPoints        m_breakpoints;
-        DummyIO            m_dummyio;
         IMemoryAdmin*      m_memory;
         void*              m_pmemory;  // Will be used by CMLink if COMA is enabled.
         std::string        m_objdump_cmd;
@@ -118,7 +116,6 @@ namespace Simulator {
     
         MGSystem(const Config& config, Display& display, const std::string& program,
                  const std::string& symtable,
-                 bool openworld, bool writablefs,
                  const std::vector<std::pair<RegAddr, RegValue> >& regs,
                  const std::vector<std::pair<RegAddr, std::string> >& loads,
                  bool quiet, bool doload);

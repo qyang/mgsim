@@ -326,6 +326,7 @@ bool COMA::Cache::OnMessageReceived(Message* msg)
                 {
                     msg->type   = Message::REQUEST_DATA_TOKEN;
                     msg->tokens = 1;
+                    msg->dirty  = line->dirty;
                     memcpy(msg->data.data, line->data, msg->data.size);
 
                     line->tokens -= msg->tokens;
@@ -341,7 +342,8 @@ bool COMA::Cache::OnMessageReceived(Message* msg)
 
                 COMMIT
                 {
-                    msg->type = Message::REQUEST_DATA;
+                    msg->type  = Message::REQUEST_DATA;
+                    msg->dirty = line->dirty;
                     memcpy(msg->data.data, line->data, msg->data.size);
                 }
             }
@@ -386,6 +388,7 @@ bool COMA::Cache::OnMessageReceived(Message* msg)
             }
             line->state  = LINE_FULL;
             line->tokens = msg->tokens;
+            line->dirty  = msg->dirty || line->dirty;
         }
         
         /*

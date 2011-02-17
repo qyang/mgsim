@@ -185,7 +185,6 @@ class Pipeline : public Object
 		bool            onParent;
 		bool            onFirstCore;
         bool            isLastThreadInBlock;
-		bool            isFirstThreadInFamily;
         bool            isLastThreadInFamily;
     };
 
@@ -203,6 +202,7 @@ class Pipeline : public Object
         // Registers addresses, types and sizes
         RegAddr         Ra,  Rb,  Rc;
         unsigned int    RaSize, RbSize, RcSize;
+        bool            RaNotPending; // Ra is only used to check for Not Pending
         
         PlaceType       place;
     };
@@ -325,11 +325,12 @@ class Pipeline : public Object
         ReadExecuteLatch&           m_output;
         std::vector<BypassInfo>     m_bypasses;
         OperandInfo                 m_operand1, m_operand2;
+        bool                        m_RaNotPending;
         
 #if TARGET_ARCH == ARCH_SPARC
         // Sparc memory stores require three registers so takes two cycles.
         // First cycle calculates the address and stores it here.
-        bool      m_isMemoryStore;
+        bool      m_isMemoryOp;
         PipeValue m_rsv;
 #endif
 

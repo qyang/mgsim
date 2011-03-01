@@ -18,8 +18,8 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
 */
 #include "Cache.h"
 #include "RootDirectory.h"
-#include "../../config.h"
-#include "../../sampling.h"
+#include "../config.h"
+#include "../sampling.h"
 #include <cassert>
 #include <cstring>
 using namespace std;

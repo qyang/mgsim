@@ -27,10 +27,10 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
 #include "coma/Cache.h"
 #include "coma/Directory.h"
 #include "coma/RootDirectory.h"
-#include "coma/memorys/COMA.h"
-#include "coma/memorys/Cache.h"
-#include "coma/memorys/Directory.h"
-#include "coma/memorys/RootDirectory.h"
+#include "zlcoma/COMA.h"
+#include "zlcoma/Cache.h"
+#include "zlcoma/Directory.h"
+#include "zlcoma/RootDirectory.h"
 
 #include <csignal>
 #include <sstream>

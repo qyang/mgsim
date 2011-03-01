@@ -21,7 +21,6 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
 
 #include "Directory.h"
 #include "DDR.h"
-#include "evicteddirlinebuffer.h"
 #include <queue>
 #include <set>
 
@@ -39,10 +38,10 @@ public:
     {
         bool         valid;             // is this line used?
         MemAddr      tag;               // tag of the address of the line that's stored
-        bool         reserved;          // the cacheline cannot be processed immediately
+        bool         loading;           // the cacheline is being loaded from off-chip
+        bool         data;              // has the line been loaded into the system?
         unsigned int tokens;            // the number of tokens that the directory itself has
         bool         priority;          // represent the priority token
-        size_t       source;            // Source of the pending read
         std::queue<Message*> requests;  // Suspended requests
     };
 
@@ -51,7 +50,9 @@ private:
     size_t            m_lineSize;   ///< The size of a cache-line
     size_t            m_assoc;      ///< Number of lines in a set
     size_t            m_sets;       ///< Number of sets
-    size_t            m_numTokens;
+    size_t            m_numTokens;  ///< Number of tokens per line in the COMA system
+    size_t            m_id;         ///< Which root directory we are (0 <= m_id < m_numRoots)
+    size_t            m_numRoots;   ///< Number of root directories on the top-level ring
 
     ArbitratedService<> p_lines;      ///< Arbitrator for lines and output
 
@@ -62,7 +63,6 @@ private:
     Message*          m_activeMsg; ///< Currently active message to the memory
 
 	std::queue<Line*>    m_activelines;
-    EvictedDirLineBuffer m_evictedlinebuffer;
 
     // Processes
     Process p_Incoming;
@@ -80,8 +80,7 @@ private:
     Result DoResponses();
 
 public:
-public:
-    RootDirectory(const std::string& name, ZLCOMA& parent, Clock& clock, VirtualMemory& memory, size_t numTokens, const Config& config);
+    RootDirectory(const std::string& name, ZLCOMA& parent, Clock& clock, VirtualMemory& memory, size_t numTokens, size_t id, size_t numRoots, const Config& config);
     ~RootDirectory();
 
     // Administrative

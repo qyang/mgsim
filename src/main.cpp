@@ -20,12 +20,6 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
 #include "sys_config.h"
 #endif
 
-#ifdef ENABLE_COMA_ZL
-# include "coma/simlink/th.h"
-# include "coma/simlink/linkmgs.h"
-const char* semaphore_journal = "/tmp/simx-sem-journal";
-#endif
-
 #include "MGSystem.h"
 #include "simreadline.h"
 #include "commands.h"
@@ -46,9 +40,6 @@ const char* semaphore_journal = "/tmp/simx-sem-journal";
 
 using namespace Simulator;
 using namespace std;
-#ifdef ENABLE_COMA_ZL
-using namespace MemSim;
-#endif
 
 struct ProgramConfig
 {
@@ -68,11 +59,7 @@ struct ProgramConfig
     vector<pair<RegAddr, string> >   m_loads;
 };
 
-static void ParseArguments(int argc, const char ** argv, ProgramConfig& config
-#ifdef ENABLE_COMA_ZL
-               , LinkConfig& lkconfig
-#endif
-    )
+static void ParseArguments(int argc, const char ** argv, ProgramConfig& config)
 {
     config.m_configFile = MGSIM_CONFIG_PATH;
     config.m_enableMonitor = false;
@@ -122,7 +109,10 @@ static void ParseArguments(int argc, const char ** argv, ProgramConfig& config
         }
         else if (toupper(arg[1]) == 'L')  
         { 
-            string filename(argv[++i]); 
+            if (argv[++i] == NULL) {
+                throw runtime_error("Error: expected filename");
+            }
+            string filename(argv[i]);
             char* endptr; 
             RegAddr  addr; 
             unsigned long index = strtoul(&arg[2], &endptr, 0); 
@@ -134,8 +124,11 @@ static void ParseArguments(int argc, const char ** argv, ProgramConfig& config
         } 
         else if (toupper(arg[1]) == 'R' || toupper(arg[1]) == 'F')
         {
+            if (argv[++i] == NULL) {
+                throw runtime_error("Error: expected register value");
+            }
             stringstream value;
-            value << argv[++i];
+            value << argv[i];
 
             RegAddr  addr;
             RegValue val;
@@ -170,46 +163,12 @@ static void ParseArguments(int argc, const char ** argv, ProgramConfig& config
 
 }
 
-
-
-#ifdef ENABLE_COMA_ZL
-void ConfigureCOMA(ProgramConfig& config, Config& configfile, LinkConfig& lkconfig) 
-{
-    // Get total number of cores
-    lkconfig.m_nProcs = 0;
-    const vector<PSize> placeSizes = configfile.getIntegerList<PSize>("NumProcessors");
-    for (size_t i = 0; i < placeSizes.size(); ++i) 
-        lkconfig.m_nProcs += placeSizes[i];
-
-    // Get cache and directory configuration:
-    lkconfig.m_nCachesPerDirectory = configfile.getInteger<size_t>("NumCachesPerDirectory", 8);
-    lkconfig.m_nProcessorsPerCache = configfile.getInteger<size_t>("NumProcessorsPerCache", 4);
-    lkconfig.m_nNumRootDirs        = configfile.getInteger<size_t>("NumRootDirectories", 4); 
-    lkconfig.m_nMemoryChannels     = configfile.getInteger<size_t>("NumMemoryChannels", lkconfig.m_nNumRootDirs);
-
-    lkconfig.m_nLineSize           = configfile.getInteger<size_t>("CacheLineSize", 64);
-
-    // Cache properties:  
-    lkconfig.m_nCacheAccessTime    = configfile.getInteger<size_t>("L2CacheDelay", 2);
-    lkconfig.m_nCacheAssociativity = configfile.getInteger<size_t>("L2CacheAssociativity", 4);
-    lkconfig.m_nCacheSet           = configfile.getInteger<size_t>("L2CacheNumSets", 128);
-    lkconfig.m_nInject             = configfile.getBoolean("EnableCacheInjection", true);
-    lkconfig.m_nCycleTimeCore      = 1000000 / configfile.getInteger<size_t>("CoreFreq",     1000); // ps per cycle
-    lkconfig.m_nCycleTimeMemory    = 1000000 / configfile.getInteger<size_t>("DDRMemoryFreq", 800); // ps per cycle
-}
-#endif
-
-
 Config* g_Config = NULL;
 
-#ifdef ENABLE_COMA_ZL
-int mgs_main(int argc, char const** argv)
-#else    
-# ifdef USE_SDL
-    extern "C"
-# endif
-    int main(int argc, char** argv)
+#ifdef USE_SDL
+extern "C"
 #endif
+int main(int argc, char** argv)
 {
     srand(time(NULL));
     
@@ -217,11 +176,7 @@ int mgs_main(int argc, char const** argv)
     {
         // Parse command line arguments
         ProgramConfig config;
-#ifdef ENABLE_COMA_ZL
-        ParseArguments(argc, (const char**)argv, config, LinkMGS::s_oLinkConfig);
-#else
         ParseArguments(argc, (const char**)argv, config);
-#endif
 
         if (config.m_interactive)
         {
@@ -239,19 +194,6 @@ int mgs_main(int argc, char const** argv)
             std::clog << "### simulator version: " PACKAGE_VERSION << std::endl;
             configfile.dumpConfiguration(std::clog, config.m_configFile);
         }
-
-#ifdef ENABLE_COMA_ZL
-        ConfigureCOMA(config, configfile, LinkMGS::s_oLinkConfig);
-        if (config.m_dumpconf)
-            LinkMGS::s_oLinkConfig.dumpConfiguration(std::clog);
-#endif
-
-#ifdef ENABLE_COMA_ZL
-        // finishing parsing config, now wait untile systemc topology is setup
-        sem_post(&thpara.sem_sync);
-        sem_wait(&thpara.sem_mgs);
-        sem_post(&thpara.sem_sync);
-#endif
 
         // Create the display
         Display display(configfile);

@@ -19,6 +19,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
 #include "sampling.h"
 #include "config.h"
 #include "sys_config.h"
+#include "MGSystem.h"
 
 #include <algorithm>
 #include <map>

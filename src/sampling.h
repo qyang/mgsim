@@ -19,7 +19,9 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
 #ifndef SAMPLING_H
 #define SAMPLING_H
 
-#include "MGSystem.h"
+namespace Simulator {
+    class MGSystem;
+}
 
 #include <vector>
 #include <utility>

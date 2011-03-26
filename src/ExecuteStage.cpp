@@ -134,7 +134,7 @@ Pipeline::PipeAction Pipeline::ExecuteStage::OnCycle()
     return action;
 }
 
-bool Pipeline::ExecuteStage::ExecAllocate(PlaceID place, RegIndex reg, bool suspend, bool exclusive)
+bool Pipeline::ExecuteStage::ExecAllocate(PlaceID place, RegIndex reg, bool suspend, bool exclusive, bool exact)
 {
     if (place.size == 0)
     {
@@ -162,6 +162,7 @@ bool Pipeline::ExecuteStage::ExecAllocate(PlaceID place, RegIndex reg, bool susp
         m_output.Rrc.allocate.place          = place;
         m_output.Rrc.allocate.suspend        = suspend;
         m_output.Rrc.allocate.exclusive      = exclusive;
+        m_output.Rrc.allocate.exact          = exact;
         m_output.Rrc.allocate.completion_reg = reg;
             
         m_output.Rcv = MAKE_PENDING_PIPEVALUE(m_input.RcSize);
@@ -218,8 +219,6 @@ Pipeline::PipeAction Pipeline::ExecuteStage::ExecCreate(const FID& fid, MemAddr 
 
 bool Pipeline::ExecuteStage::MoveFamilyRegister(RemoteRegType kind, RegType type, const FID& fid, unsigned char reg)
 {
-    assert(m_input.Rbv.m_size == sizeof(Integer));
-    
     COMMIT
     {
         m_output.Rrc.type = RemoteMessage::MSG_FAM_REGISTER;
@@ -234,6 +233,7 @@ bool Pipeline::ExecuteStage::MoveFamilyRegister(RemoteRegType kind, RegType type
             m_output.Rcv = MAKE_PENDING_PIPEVALUE(m_input.RcSize);
         } else {
             // Register send
+            assert(m_input.Rbv.m_size == sizeof(Integer));
             m_output.Rrc.famreg.value = PipeValueToRegValue(type, m_input.Rbv);
         }
     }

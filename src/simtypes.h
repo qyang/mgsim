@@ -130,7 +130,6 @@ struct PlaceID
 {
     PID         pid;
     PSize       size;
-    bool        exact;
     PCapability capability;
 };
 

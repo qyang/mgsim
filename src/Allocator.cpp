@@ -901,7 +901,7 @@ Result Allocator::DoThreadAllocate()
 }
 
 /// Queues an allocation request for a family entry and context
-bool Allocator::QueueFamilyAllocation(const RemoteMessage& msg, PID src)
+bool Allocator::QueueFamilyAllocation(const RemoteMessage& msg)
 {
     // Place the request in the appropriate buffer
     AllocRequest request;
@@ -910,7 +910,7 @@ bool Allocator::QueueFamilyAllocation(const RemoteMessage& msg, PID src)
     request.placeSize      = msg.allocate.place.size;
     request.exact          = msg.allocate.exact;
     request.completion_reg = msg.allocate.completion_reg;
-    request.completion_pid = src;
+    request.completion_pid = msg.allocate.completion_pid;
     
     Buffer<AllocRequest>& allocations = msg.allocate.exclusive
         ? m_allocRequestsExclusive

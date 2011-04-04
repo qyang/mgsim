@@ -134,7 +134,7 @@ Pipeline::PipeAction Pipeline::ExecuteStage::OnCycle()
     return action;
 }
 
-bool Pipeline::ExecuteStage::ExecAllocate(PlaceID place, RegIndex reg, bool suspend, bool exclusive, bool exact, bool balance)
+bool Pipeline::ExecuteStage::ExecAllocate(PlaceID place, RegIndex reg, bool suspend, bool exclusive, Integer flags)
 {
     if (place.size == 0)
     {
@@ -162,8 +162,7 @@ bool Pipeline::ExecuteStage::ExecAllocate(PlaceID place, RegIndex reg, bool susp
         m_output.Rrc.allocate.place          = place;
         m_output.Rrc.allocate.suspend        = suspend;
         m_output.Rrc.allocate.exclusive      = exclusive;
-        m_output.Rrc.allocate.exact          = exact;
-        m_output.Rrc.allocate.balance        = balance;
+        m_output.Rrc.allocate.type           = (AllocationType)(flags & 3);
         m_output.Rrc.allocate.completion_pid = m_parent.GetProcessor().GetPID();
         m_output.Rrc.allocate.completion_reg = reg;
             
@@ -286,8 +285,13 @@ Pipeline::PipeAction Pipeline::ExecuteStage::ExecBreak()
     // Send message to the family on the first core
     COMMIT
     {
+        PID pid = m_parent.GetProcessor().GetPID();
+        
+        // If the numCores is 1, the family can start inside a place,
+        // so we can't use placeSize to calculate the start of the
+        // family. The start is ourselves in that case.
         m_output.Rrc.type    = RemoteMessage::MSG_BREAK;
-        m_output.Rrc.brk.pid = (m_parent.GetProcessor().GetPID() / family.placeSize) * family.placeSize;
+        m_output.Rrc.brk.pid = (family.numCores > 1) ? pid & -family.placeSize : pid;
         m_output.Rrc.brk.fid = family.first_lfid;
     }
     return PIPE_CONTINUE; 

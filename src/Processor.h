@@ -29,6 +29,8 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
 #include "FamilyTable.h"
 #include "ThreadTable.h"
 #include "RAUnit.h"
+#include "MMIO.h"
+#include "counters.h"
 
 class Config;
 
@@ -36,6 +38,7 @@ namespace Simulator
 {
 
 class FPU;
+class PerfCounters;
 
 class Processor : public Object, public IMemoryCallback
 {
@@ -51,6 +54,7 @@ public:
 
 
     Pipeline& GetPipeline() { return m_pipeline; }
+    MMIOInterface& GetMMIOInterface() { return m_mmio; }
     
     float GetRegFileAsyncPortActivity() const {
         return (float)m_registerFile.p_asyncW.GetBusyCycles() / (float)GetCycleNo();
@@ -70,8 +74,6 @@ public:
 
     unsigned int GetNumSuspendedRegisters() const;
     
-    Integer GetProfileWord(unsigned int i, PSize placeSize) const;
-	
     void WriteRegister(const RegAddr& addr, const RegValue& value) {
         m_registerFile.WriteRegister(addr, value);
     }
@@ -125,6 +127,10 @@ private:
     FamilyTable     m_familyTable;
     ThreadTable     m_threadTable;
     Network         m_network;
+    MMIOInterface   m_mmio;
+    PerfCounters    m_perfcounters;
+
+    friend class PerfCounters;
 };
 
 }

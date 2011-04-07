@@ -57,6 +57,13 @@ public:
     IllegalInstructionException(const std::string& msg) : SimulationException(msg) {}
 };
 
+class VirtualIOException : public SimulationException
+{
+public:
+    VirtualIOException(const Object& object, const std::string& msg) : SimulationException(msg, object) {}
+    VirtualIOException(const std::string& msg) : SimulationException(msg) {}
+};
+
 class IOException : public std::runtime_error
 {
 public:

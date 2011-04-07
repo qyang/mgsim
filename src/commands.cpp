@@ -31,6 +31,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
 #include "zlcoma/Cache.h"
 #include "zlcoma/Directory.h"
 #include "zlcoma/RootDirectory.h"
+#include "MMIO.h"
 
 #include <csignal>
 #include <sstream>
@@ -116,7 +117,9 @@ static const struct
     {"help", new bind_cmd_C<ZLCOMA::Directory   >(&ZLCOMA::Directory    ::Cmd_Help) },
     {"help", new bind_cmd_C<ZLCOMA::RootDirectory>(&ZLCOMA::RootDirectory::Cmd_Help) },
     {"help", new bind_cmd_C<FPU               >(&FPU               ::Cmd_Help) },
+    {"help", new bind_cmd_C<MMIOInterface     >(&MMIOInterface     ::Cmd_Help) },
     {"info", new bind_cmd_C<VirtualMemory     >(&VirtualMemory     ::Cmd_Info) },
+    {"info", new bind_cmd_C<MMIOInterface     >(&MMIOInterface     ::Cmd_Info) },
     {"line", new bind_cmd_C<COMA              >(&COMA              ::Cmd_Line) },
     {"line", new bind_cmd_C<ZLCOMA            >(&ZLCOMA            ::Cmd_Line) },
     {"read", new bind_cmd_C<RAUnit            >(&RAUnit            ::Cmd_Read) },

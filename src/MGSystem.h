@@ -28,6 +28,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
 #include "symtable.h"
 #include "breakpoints.h"
 #include "MMIO.h"
+#include "lcd.h"
 
 #include <vector>
 #include <utility>
@@ -42,6 +43,7 @@ namespace Simulator {
         Object                      m_root;     ///< Root object for the system
         std::vector<Processor*>     m_procs;
         std::vector<FPU*>           m_fpus;
+        std::vector<LCD*>           m_lcds;
         SymbolTable                 m_symtable;
         BreakPoints                 m_breakpoints;
         IMemoryAdmin*               m_memory;

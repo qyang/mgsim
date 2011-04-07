@@ -16,27 +16,27 @@ You should have received a copy of the GNU Library General Public
 License along with this library; if not, write to the Free Software
 Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
 */
-#ifndef COUNTERS_H
-#define COUNTERS_H
+#ifndef LINEPRINTER_H
+#define LINEPRINTER_H
 
 #include "MMIO.h"
 
 namespace Simulator
 {
 
-class Processor;
-
-class PerfCounters : public MMIOComponent
+class LinePrinter : public MMIOComponent
 {
+    std::ostream&  m_output;
+    unsigned       m_floatprecision;
+
 public:
+    LinePrinter(const std::string& name, MMIOInterface& parent, std::ostream& output);
 
     size_t GetSize() const;
-    Result Read (MemAddr address, void* data, MemSize size, LFID fid, TID tid);
-    Result Write(MemAddr address, const void* data, MemSize size, LFID fid, TID tid) { return FAILED; };
+    Result Read (MemAddr address, void* data, MemSize size, LFID fid, TID tid) { return FAILED; }
+    Result Write(MemAddr address, const void* data, MemSize size, LFID fid, TID tid);
     
-    PerfCounters(MMIOInterface& parent);
-
-    ~PerfCounters() {}
+    ~LinePrinter() {}
 };
 
 

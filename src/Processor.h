@@ -31,6 +31,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
 #include "RAUnit.h"
 #include "MMIO.h"
 #include "counters.h"
+#include "lineprinter.h"
 
 class Config;
 
@@ -128,7 +129,11 @@ private:
     ThreadTable     m_threadTable;
     Network         m_network;
     MMIOInterface   m_mmio;
+
+    // Pseudo I/O devices
     PerfCounters    m_perfcounters;
+    LinePrinter     m_lpout;
+    LinePrinter     m_lperr;
 
     friend class PerfCounters;
 };

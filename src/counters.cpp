@@ -24,6 +24,8 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
 namespace Simulator
 {
 
+size_t PerfCounters::GetSize() const { return  18 * sizeof(Integer);  }
+
 Result PerfCounters::Read(MemAddr address, void *data, MemSize size, LFID fid, TID tid)
 {
     if (size != sizeof(Integer))

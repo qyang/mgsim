@@ -117,7 +117,7 @@ Result PerfCounters::Read(MemAddr address, void *data, MemSize size, LFID fid, T
     case 7:
     {
         // Return the number of memory loads overall from L1 to L2 (cache lines)
-        uint64_t n, dummy;
+        uint64_t n = 0, dummy;
         cpu.m_memory.GetMemoryStatistics(n, dummy, dummy, dummy, dummy, dummy);
         value = (Integer)n;
     }
@@ -125,7 +125,7 @@ Result PerfCounters::Read(MemAddr address, void *data, MemSize size, LFID fid, T
     case 8:
     {
         // Return the number of memory stores overall from L1 to L2 (cache lines)
-        uint64_t n, dummy;
+        uint64_t n = 0, dummy;
         cpu.m_memory.GetMemoryStatistics(dummy, n, dummy, dummy, dummy, dummy);
         value = (Integer)n;
     }
@@ -206,7 +206,7 @@ Result PerfCounters::Read(MemAddr address, void *data, MemSize size, LFID fid, T
     case 16:
     {
         // Return the number of memory loads overall from external memory (cache lines)
-        uint64_t n, dummy;
+        uint64_t n = 0, dummy;
         cpu.m_memory.GetMemoryStatistics(dummy, dummy, dummy, dummy, n, dummy);
         value = (Integer)n;
     }
@@ -214,7 +214,7 @@ Result PerfCounters::Read(MemAddr address, void *data, MemSize size, LFID fid, T
     case 17:
     {
         // Return the number of memory stores overall to external memory (cache lines)
-        uint64_t n, dummy;
+        uint64_t n = 0, dummy;
         cpu.m_memory.GetMemoryStatistics(dummy, dummy, dummy, dummy, dummy, n);
         value = (Integer)n;
     }

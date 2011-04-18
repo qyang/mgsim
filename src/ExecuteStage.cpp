@@ -16,7 +16,6 @@ You should have received a copy of the GNU Library General Public
 License along with this library; if not, write to the Free Software
 Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
 */
-#include "Pipeline.h"
 #include "Processor.h"
 #include "display.h"
 #include "symtable.h"
@@ -41,7 +40,8 @@ static bool IsPowerOfTwo(const T& x)
     return (x & (x - 1)) == 0;
 }
 
-static RegValue PipeValueToRegValue(RegType type, const PipeValue& v)
+/*static*/
+RegValue Processor::Pipeline::ExecuteStage::PipeValueToRegValue(RegType type, const PipeValue& v)
 {
     RegValue r;
     r.m_state = RST_FULL;
@@ -53,7 +53,7 @@ static RegValue PipeValueToRegValue(RegType type, const PipeValue& v)
     return r;
 }
 
-bool Pipeline::ExecuteStage::MemoryWriteBarrier(TID tid) const
+bool Processor::Pipeline::ExecuteStage::MemoryWriteBarrier(TID tid) const
 {
     Thread& thread = m_threadTable[tid];
     if (thread.dependencies.numPendingWrites != 0)
@@ -65,7 +65,7 @@ bool Pipeline::ExecuteStage::MemoryWriteBarrier(TID tid) const
     return true;
 }
 
-Pipeline::PipeAction Pipeline::ExecuteStage::OnCycle()
+Processor::Pipeline::PipeAction Processor::Pipeline::ExecuteStage::OnCycle()
 {
     COMMIT
     {
@@ -134,7 +134,7 @@ Pipeline::PipeAction Pipeline::ExecuteStage::OnCycle()
     return action;
 }
 
-bool Pipeline::ExecuteStage::ExecAllocate(PlaceID place, RegIndex reg, bool suspend, bool exclusive, bool exact)
+bool Processor::Pipeline::ExecuteStage::ExecAllocate(PlaceID place, RegIndex reg, bool suspend, bool exclusive, bool exact)
 {
     if (place.size == 0)
     {
@@ -170,7 +170,7 @@ bool Pipeline::ExecuteStage::ExecAllocate(PlaceID place, RegIndex reg, bool susp
     return true;
 }
 
-Pipeline::PipeAction Pipeline::ExecuteStage::SetFamilyProperty(const FID& fid, FamilyProperty property, Integer value)
+Processor::Pipeline::PipeAction Processor::Pipeline::ExecuteStage::SetFamilyProperty(const FID& fid, FamilyProperty property, Integer value)
 {
     COMMIT
     {
@@ -182,7 +182,7 @@ Pipeline::PipeAction Pipeline::ExecuteStage::SetFamilyProperty(const FID& fid, F
     return PIPE_CONTINUE;
 }
 
-Pipeline::PipeAction Pipeline::ExecuteStage::ExecCreate(const FID& fid, MemAddr address, RegIndex completion)
+Processor::Pipeline::PipeAction Processor::Pipeline::ExecuteStage::ExecCreate(const FID& fid, MemAddr address, RegIndex completion)
 {
     // Create
     if (!MemoryWriteBarrier(m_input.tid))
@@ -217,7 +217,7 @@ Pipeline::PipeAction Pipeline::ExecuteStage::ExecCreate(const FID& fid, MemAddr 
     return PIPE_CONTINUE;
 }
 
-bool Pipeline::ExecuteStage::MoveFamilyRegister(RemoteRegType kind, RegType type, const FID& fid, unsigned char reg)
+bool Processor::Pipeline::ExecuteStage::MoveFamilyRegister(RemoteRegType kind, RegType type, const FID& fid, unsigned char reg)
 {
     COMMIT
     {
@@ -240,7 +240,7 @@ bool Pipeline::ExecuteStage::MoveFamilyRegister(RemoteRegType kind, RegType type
     return true;
 }
 
-bool Pipeline::ExecuteStage::ExecSync(const FID& fid)
+bool Processor::Pipeline::ExecuteStage::ExecSync(const FID& fid)
 {
     assert(m_input.Rc.type == RT_INTEGER);
     
@@ -262,7 +262,7 @@ bool Pipeline::ExecuteStage::ExecSync(const FID& fid)
     return true;
 }
 
-bool Pipeline::ExecuteStage::ExecDetach(const FID& fid)
+bool Processor::Pipeline::ExecuteStage::ExecDetach(const FID& fid)
 {
     // Send the detach message
     COMMIT
@@ -277,7 +277,7 @@ bool Pipeline::ExecuteStage::ExecDetach(const FID& fid)
     return true;
 }
 
-Pipeline::PipeAction Pipeline::ExecuteStage::ExecBreak()
+Processor::Pipeline::PipeAction Processor::Pipeline::ExecuteStage::ExecBreak()
 { 
     const Family& family = m_familyTable[m_input.fid];
     
@@ -291,14 +291,14 @@ Pipeline::PipeAction Pipeline::ExecuteStage::ExecBreak()
     return PIPE_CONTINUE; 
 }
 
-Pipeline::PipeAction Pipeline::ExecuteStage::ExecKill(const PlaceID& /* place */)
+Processor::Pipeline::PipeAction Processor::Pipeline::ExecuteStage::ExecKill(const PlaceID& /* place */)
 {
     // Not yet implemented
     assert(false);
     return PIPE_CONTINUE;
 }
 
-void Pipeline::ExecuteStage::ExecDebugOutput(Integer value, int command, int flags) const
+void Processor::Pipeline::ExecuteStage::ExecDebugOutput(Integer value, int command, int flags) const
 {
     // command:
     //  0 -> unsigned decimal
@@ -334,7 +334,7 @@ void Pipeline::ExecuteStage::ExecDebugOutput(Integer value, int command, int fla
     }
 }
 
-void Pipeline::ExecuteStage::ExecOutputGraphics(Integer value, int command, int flags) const
+void Processor::Pipeline::ExecuteStage::ExecOutputGraphics(Integer value, int command, int flags) const
 {
     // command
     //  00 -> putpixel
@@ -429,7 +429,7 @@ void Pipeline::ExecuteStage::ExecOutputGraphics(Integer value, int command, int 
 
 }
 
-void Pipeline::ExecuteStage::ExecStatusAction(Integer value, int command, int flags) const
+void Processor::Pipeline::ExecuteStage::ExecStatusAction(Integer value, int command, int flags) const
 {
     // command:
     //  00: status and continue
@@ -484,7 +484,7 @@ void Pipeline::ExecuteStage::ExecStatusAction(Integer value, int command, int fl
     }    
 }
 
-void Pipeline::ExecuteStage::ExecMemoryControl(Integer value, int command, int flags) const
+void Processor::Pipeline::ExecuteStage::ExecMemoryControl(Integer value, int command, int flags) const
 {
     // command:
     //  00: mmap
@@ -505,7 +505,7 @@ void Pipeline::ExecuteStage::ExecMemoryControl(Integer value, int command, int f
     }    
 }
 
-void Pipeline::ExecuteStage::ExecDebug(Integer value, Integer stream) const
+void Processor::Pipeline::ExecuteStage::ExecDebug(Integer value, Integer stream) const
 {
     // pattern: x x 1 x x - x x = graphics output
 
@@ -564,7 +564,7 @@ void Pipeline::ExecuteStage::ExecDebug(Integer value, Integer stream) const
         ExecDebugOutput(value, command, stream & 0x3);
 }
 
-void Pipeline::ExecuteStage::ExecDebug(double value, Integer stream) const
+void Processor::Pipeline::ExecuteStage::ExecDebug(double value, Integer stream) const
 {
     /* precision: bits 4-7 */
     int prec = (stream >> 4) & 0xf;
@@ -583,7 +583,7 @@ void Pipeline::ExecuteStage::ExecDebug(double value, Integer stream) const
     }
 }
 
-Pipeline::ExecuteStage::ExecuteStage(Pipeline& parent, Clock& clock, const ReadExecuteLatch& input, ExecuteMemoryLatch& output, Allocator& alloc, FamilyTable& familyTable, ThreadTable& threadTable, FPU& fpu, size_t fpu_source, const Config& /*config*/)
+Processor::Pipeline::ExecuteStage::ExecuteStage(Pipeline& parent, Clock& clock, const ReadExecuteLatch& input, ExecuteMemoryLatch& output, Allocator& alloc, FamilyTable& familyTable, ThreadTable& threadTable, FPU& fpu, size_t fpu_source, const Config& /*config*/)
   : Stage("execute", parent, clock),
     m_input(input),
     m_output(output),

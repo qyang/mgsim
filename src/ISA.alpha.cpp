@@ -16,8 +16,6 @@ You should have received a copy of the GNU Library General Public
 License along with this library; if not, write to the Free Software
 Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
 */
-#include "Pipeline.h"
-#include "ISA.alpha.h"
 #include "Processor.h"
 #include "FPU.h"
 #include "symtable.h"
@@ -90,7 +88,8 @@ unsigned char GetRegisterClass(unsigned char addr, const RegsNo& regs, RegClass*
     return 0;
 }
 
-static InstrFormat GetInstrFormat(uint8_t opcode)
+/*static*/
+Processor::Pipeline::InstrFormat Processor::Pipeline::DecodeStage::GetInstrFormat(uint8_t opcode)
 {
     if (opcode <= 0x3F)
     {
@@ -137,7 +136,7 @@ static InstrFormat GetInstrFormat(uint8_t opcode)
     return IFORMAT_INVALID;
 }
 
-void Pipeline::DecodeStage::DecodeInstruction(const Instruction& instr)
+void Processor::Pipeline::DecodeStage::DecodeInstruction(const Instruction& instr)
 {
     m_output.opcode = (uint8_t)((instr >> A_OPCODE_SHIFT) & A_OPCODE_MASK);
     m_output.format = GetInstrFormat(m_output.opcode);
@@ -298,7 +297,8 @@ void Pipeline::DecodeStage::DecodeInstruction(const Instruction& instr)
     }
 }
 
-static bool BranchTaken(uint8_t opcode, const PipeValue& value)
+/*static*/
+bool Processor::Pipeline::ExecuteStage::BranchTaken(uint8_t opcode, const PipeValue& value)
 {
     switch (opcode)
     {
@@ -364,7 +364,8 @@ static void mul128b(uint64_t op1, uint64_t op2, uint64_t *resultH, uint64_t *res
     if (resultH != NULL) *resultH = op1H * op2H + ((op1L * op2H) >> 32) + ((op1H * op2L) >> 32) + carry;
 }
 
-static bool ExecuteINTA(PipeValue& Rcv, const PipeValue& Rav, const PipeValue& Rbv, int func)
+/*static*/
+bool Processor::Pipeline::ExecuteStage::ExecuteINTA(PipeValue& Rcv, const PipeValue& Rav, const PipeValue& Rbv, int func)
 {
     Rcv.m_state  = RST_FULL;
     uint64_t      Ra = Rav.m_integer.get(Rav.m_size);
@@ -418,7 +419,8 @@ static bool ExecuteINTA(PipeValue& Rcv, const PipeValue& Rav, const PipeValue& R
     return true;
 }
 
-static bool ExecuteINTL(PipeValue& Rcv, const PipeValue& Rav, const PipeValue& Rbv, int func)
+/*static*/
+bool Processor::Pipeline::ExecuteStage::ExecuteINTL(PipeValue& Rcv, const PipeValue& Rav, const PipeValue& Rbv, int func)
 {
     Rcv.m_state      = RST_FULL;
     uint64_t      Ra = Rav.m_integer.get(Rav.m_size);
@@ -452,7 +454,8 @@ static bool ExecuteINTL(PipeValue& Rcv, const PipeValue& Rav, const PipeValue& R
     return true;
 }
 
-static bool ExecuteINTS(PipeValue& Rcv, const PipeValue& Rav, const PipeValue& Rbv, int func)
+/*static*/
+bool Processor::Pipeline::ExecuteStage::ExecuteINTS(PipeValue& Rcv, const PipeValue& Rav, const PipeValue& Rbv, int func)
 {
     Rcv.m_state      = RST_FULL;
     uint64_t      Ra = Rav.m_integer.get(Rav.m_size);
@@ -500,7 +503,8 @@ static bool ExecuteINTS(PipeValue& Rcv, const PipeValue& Rav, const PipeValue& R
     return true;
 }
 
-static bool ExecuteINTM(PipeValue& Rcv, const PipeValue& Rav, const PipeValue& Rbv, int func)
+/*static*/
+bool Processor::Pipeline::ExecuteStage::ExecuteINTM(PipeValue& Rcv, const PipeValue& Rav, const PipeValue& Rbv, int func)
 {
     Rcv.m_state = RST_FULL;
     uint64_t Ra = Rav.m_integer.get(Rav.m_size);
@@ -524,7 +528,8 @@ static bool ExecuteINTM(PipeValue& Rcv, const PipeValue& Rav, const PipeValue& R
     return true;
 }
 
-static bool ExecuteFLTV(PipeValue& Rcv, const PipeValue& /* Rav */, const PipeValue& /* Rbv */, int func)
+/*static*/
+bool Processor::Pipeline::ExecuteStage::ExecuteFLTV(PipeValue& Rcv, const PipeValue& /* Rav */, const PipeValue& /* Rbv */, int func)
 {
     Rcv.m_state = RST_FULL;
 
@@ -639,7 +644,8 @@ static bool ExecuteFLTV(PipeValue& Rcv, const PipeValue& /* Rav */, const PipeVa
    return true;
 }
 
-static bool ExecuteFLTI(PipeValue& Rcv, const PipeValue& Rav, const PipeValue& Rbv, int func)
+/*static*/
+bool Processor::Pipeline::ExecuteStage::ExecuteFLTI(PipeValue& Rcv, const PipeValue& Rav, const PipeValue& Rbv, int func)
 {
     Rcv.m_state = RST_FULL;
     const Float64& Ra = Rav.m_float._64;
@@ -733,7 +739,8 @@ static bool ExecuteFLTI(PipeValue& Rcv, const PipeValue& Rav, const PipeValue& R
     return true;
 }
 
-static bool ExecuteFLTL(PipeValue& Rcv, const PipeValue& Rav, const PipeValue& Rbv, int func)
+/*static*/
+bool Processor::Pipeline::ExecuteStage::ExecuteFLTL(PipeValue& Rcv, const PipeValue& Rav, const PipeValue& Rbv, int func)
 {
     Rcv.m_state = RST_FULL;
     const Float64& Ra = Rav.m_float._64;
@@ -770,7 +777,8 @@ static bool ExecuteFLTL(PipeValue& Rcv, const PipeValue& Rav, const PipeValue& R
     return true;
 }
 
-static bool ExecuteITFP(PipeValue& Rcv, const PipeValue& Rav, const PipeValue& /* Rbv */, int func)
+/*static*/
+bool Processor::Pipeline::ExecuteStage::ExecuteITFP(PipeValue& Rcv, const PipeValue& Rav, const PipeValue& /* Rbv */, int func)
 {
     Rcv.m_state = RST_FULL;
     switch (func)
@@ -797,10 +805,10 @@ static bool ExecuteITFP(PipeValue& Rcv, const PipeValue& Rav, const PipeValue& /
 }
 
 template <typename T>
-static T BITS(const PipeValue& val, int offset, int size)
+static T BITS(const T& val, int offset, int size)
 {
     const size_t s = (sizeof(T) * 8) - size;
-    return (static_cast<T>(val.m_integer.get(val.m_size)) << (s - offset)) >> s;
+    return (val << (s - offset)) >> s;
 }
 
 static uint64_t MASK1(int offset, int size)
@@ -808,8 +816,12 @@ static uint64_t MASK1(int offset, int size)
     return ((1ULL << size) - 1) << offset;
 }
 
-static bool ExecuteFPTI(PipeValue& Rcv, const PipeValue& Rav, const PipeValue& Rbv, int func)
+/*static*/
+bool Processor::Pipeline::ExecuteStage::ExecuteFPTI(PipeValue& Rcv, const PipeValue& Rav_, const PipeValue& Rbv_, int func)
 {
+    uint64_t Rav = Rav_.m_integer.get(Rav_.m_size);
+    uint64_t Rbv = Rbv_.m_integer.get(Rbv_.m_size);
+    
     Rcv.m_state   = RST_FULL;
     Rcv.m_integer = 0;
     switch (func)
@@ -819,7 +831,7 @@ static bool ExecuteFPTI(PipeValue& Rcv, const PipeValue& Rav, const PipeValue& R
         {
             unsigned int count = 0;
             for (int i = 63; i > 0; i--) {
-                if ((Rbv.m_integer.get(Rbv.m_size) >> i) & 1) {
+                if ((Rbv >> i) & 1) {
                     break;
                 }
                 ++count;
@@ -833,7 +845,7 @@ static bool ExecuteFPTI(PipeValue& Rcv, const PipeValue& Rav, const PipeValue& R
         {
             unsigned int count = 0;
             for (int i = 0; i < 63; ++i) {
-                if ((Rbv.m_integer.get(Rbv.m_size) >> i) & 1) {
+                if ((Rbv >> i) & 1) {
                     ++count;
                 }
             }
@@ -846,7 +858,7 @@ static bool ExecuteFPTI(PipeValue& Rcv, const PipeValue& Rav, const PipeValue& R
         {
             unsigned int count = 0;
             for (int i = 0; i < 63; ++i) {
-                if ((Rbv.m_integer.get(Rbv.m_size) >> i) & 1) {
+                if ((Rbv >> i) & 1) {
                     break;
                 }
                 ++count;
@@ -856,8 +868,8 @@ static bool ExecuteFPTI(PipeValue& Rcv, const PipeValue& Rav, const PipeValue& R
         }
         
         // Sign Extend
-        case A_FPTIFUNC_SEXTB: Rcv.m_integer = (int64_t)( int8_t)Rbv.m_integer.get(Rbv.m_size); break;
-        case A_FPTIFUNC_SEXTW: Rcv.m_integer = (int64_t)(int16_t)Rbv.m_integer.get(Rbv.m_size); break;
+        case A_FPTIFUNC_SEXTB: Rcv.m_integer = (int64_t)( int8_t)Rbv; break;
+        case A_FPTIFUNC_SEXTW: Rcv.m_integer = (int64_t)(int16_t)Rbv; break;
 
         // Floating-Point Register to Integer Register Move
         case A_FPTIFUNC_FTOIS:
@@ -865,7 +877,7 @@ static bool ExecuteFPTI(PipeValue& Rcv, const PipeValue& Rav, const PipeValue& R
             {
                 int size = (func == A_FPTIFUNC_FTOIS) ? 4 : 8;
                 char data[8];
-                SerializeRegister(RT_FLOAT, Rav.m_float._64.integer, data, size);
+                SerializeRegister(RT_FLOAT, Rav_.m_float._64.integer, data, size);
                 Rcv.m_integer = UnserializeRegister(RT_INTEGER, data, size);
                 break;
             }
@@ -924,7 +936,7 @@ static bool ExecuteFPTI(PipeValue& Rcv, const PipeValue& Rav, const PipeValue& R
     return true;
 }
 
-Pipeline::PipeAction Pipeline::ExecuteStage::ExecuteInstruction()
+Processor::Pipeline::PipeAction Processor::Pipeline::ExecuteStage::ExecuteInstruction()
 {
     uint64_t Rav = m_input.Rav.m_integer.get(m_input.Rav.m_size);
     uint64_t Rbv = m_input.Rbv.m_integer.get(m_input.Rbv.m_size);

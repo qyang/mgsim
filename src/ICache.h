@@ -19,16 +19,9 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
 #ifndef ICACHE_H
 #define ICACHE_H
 
-#include "storage.h"
-#include "Memory.h"
-
-class Config;
-
-namespace Simulator
-{
-
-class Processor;
-class Allocator;
+#ifndef PROCESSOR_H
+#error This file should be included in Processor.h
+#endif
 
 class ICache : public Object
 {
@@ -95,6 +88,4 @@ public:
     void Cmd_Read(std::ostream& out, const std::vector<std::string>& arguments) const;
 };
 
-}
 #endif
-

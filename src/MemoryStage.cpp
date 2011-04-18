@@ -16,19 +16,15 @@ You should have received a copy of the GNU Library General Public
 License along with this library; if not, write to the Free Software
 Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
 */
-#include "Pipeline.h"
 #include "Processor.h"
 #include "breakpoints.h"
 #include "sampling.h"
-#include "MMIO.h"
-
 #include <cassert>
-using namespace std;
 
 namespace Simulator
 {
 
-Pipeline::PipeAction Pipeline::MemoryStage::OnCycle()
+Processor::Pipeline::PipeAction Processor::Pipeline::MemoryStage::OnCycle()
 {
     PipeValue rcv = m_input.Rcv;
 
@@ -218,7 +214,7 @@ Pipeline::PipeAction Pipeline::MemoryStage::OnCycle()
     return PIPE_CONTINUE;
 }
 
-Pipeline::MemoryStage::MemoryStage(Pipeline& parent, Clock& clock, const ExecuteMemoryLatch& input, MemoryWritebackLatch& output, DCache& dcache, Allocator& alloc, const Config& /*config*/)
+Processor::Pipeline::MemoryStage::MemoryStage(Pipeline& parent, Clock& clock, const ExecuteMemoryLatch& input, MemoryWritebackLatch& output, DCache& dcache, Allocator& alloc, const Config& /*config*/)
     : Stage("memory", parent, clock),
       m_input(input),
       m_output(output),

@@ -19,19 +19,11 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
 #ifndef REGISTERFILE_H
 #define REGISTERFILE_H
 
-#include "storage.h"
+#ifndef PROCESSOR_H
+#error This file should be included in Processor.h
+#endif
 
-class Config;
-
-namespace Simulator
-{
-
-class Processor;
-class ICache;
-class DCache;
-class Allocator;
-
-/**
+/*
  * @brief Register File with R/W ports.
  *
  * Represents a register file with R/W ports, arbitration and wake-up semantics.
@@ -135,6 +127,5 @@ private:
     std::vector<RegValue> m_floats;   ///< Floating point register file    
 };
 
-}
 #endif
 

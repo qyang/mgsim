@@ -16,7 +16,6 @@ You should have received a copy of the GNU Library General Public
 License along with this library; if not, write to the Free Software
 Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
 */
-#include "DCache.h"
 #include "Processor.h"
 #include "config.h"
 #include "sampling.h"
@@ -36,7 +35,7 @@ static bool IsPowerOfTwo(const T& x)
     return (x & (x - 1)) == 0;
 }
 
-DCache::DCache(const std::string& name, Processor& parent, Clock& clock, Allocator& alloc, FamilyTable& familyTable, RegisterFile& regFile, const Config& config)
+Processor::DCache::DCache(const std::string& name, Processor& parent, Clock& clock, Allocator& alloc, FamilyTable& familyTable, RegisterFile& regFile, const Config& config)
 :   Object(name, parent, clock), m_parent(parent),
     m_allocator(alloc), m_familyTable(familyTable), m_regFile(regFile),
 
@@ -49,9 +48,9 @@ DCache::DCache(const std::string& name, Processor& parent, Clock& clock, Allocat
     m_numHits        (0),
     m_numMisses      (0),
 
-    p_IncomingReads ("completed-reads",  delegate::create<DCache, &DCache::DoCompletedReads  >(*this) ),
-    p_IncomingWrites("completed-writes", delegate::create<DCache, &DCache::DoCompletedWrites >(*this) ),
-    p_Outgoing      ("outgoing",         delegate::create<DCache, &DCache::DoOutgoingRequests>(*this) ),
+    p_IncomingReads ("completed-reads",  delegate::create<DCache, &Processor::DCache::DoCompletedReads  >(*this) ),
+    p_IncomingWrites("completed-writes", delegate::create<DCache, &Processor::DCache::DoCompletedWrites >(*this) ),
+    p_Outgoing      ("outgoing",         delegate::create<DCache, &Processor::DCache::DoOutgoingRequests>(*this) ),
 
     p_service        (*this, clock, "p_service")
 {
@@ -97,7 +96,7 @@ DCache::DCache(const std::string& name, Processor& parent, Clock& clock, Allocat
     m_wbstate.offset = 0;
 }
 
-DCache::~DCache()
+Processor::DCache::~DCache()
 {
     for (size_t i = 0; i < m_lines.size(); ++i)
     {
@@ -106,7 +105,7 @@ DCache::~DCache()
     }
 }
 
-Result DCache::FindLine(MemAddr address, Line* &line, bool check_only)
+Result Processor::DCache::FindLine(MemAddr address, Line* &line, bool check_only)
 {
     const MemAddr tag  = (address / m_lineSize) / m_sets;
     const size_t  set  = (size_t)((address / m_lineSize) % m_sets) * m_assoc;
@@ -164,7 +163,7 @@ Result DCache::FindLine(MemAddr address, Line* &line, bool check_only)
     return DELAYED;
 }
 
-Result DCache::Read(MemAddr address, void* data, MemSize size, LFID /* fid */, RegAddr* reg)
+Result Processor::DCache::Read(MemAddr address, void* data, MemSize size, LFID /* fid */, RegAddr* reg)
 {
     size_t offset = (size_t)(address % m_lineSize);
     if (offset + size > m_lineSize)
@@ -273,7 +272,7 @@ Result DCache::Read(MemAddr address, void* data, MemSize size, LFID /* fid */, R
     return DELAYED;
 }
 
-Result DCache::Write(MemAddr address, void* data, MemSize size, LFID fid, TID tid)
+Result Processor::DCache::Write(MemAddr address, void* data, MemSize size, LFID fid, TID tid)
 {
     assert(fid != INVALID_LFID);
     assert(tid != INVALID_TID);
@@ -351,7 +350,7 @@ Result DCache::Write(MemAddr address, void* data, MemSize size, LFID fid, TID ti
     return DELAYED;
 }
 
-bool DCache::OnMemoryReadCompleted(MemAddr addr, const MemData& data)
+bool Processor::DCache::OnMemoryReadCompleted(MemAddr addr, const MemData& data)
 {
     assert(data.size == m_lineSize);
     
@@ -385,7 +384,7 @@ bool DCache::OnMemoryReadCompleted(MemAddr addr, const MemData& data)
     return true;
 }
 
-bool DCache::OnMemoryWriteCompleted(TID tid)
+bool Processor::DCache::OnMemoryWriteCompleted(TID tid)
 {
     // Data has been written
     if (!m_completedWrites.Push(tid))
@@ -396,7 +395,7 @@ bool DCache::OnMemoryWriteCompleted(TID tid)
     return true;
 }
 
-bool DCache::OnMemorySnooped(MemAddr address, const MemData& data)
+bool Processor::DCache::OnMemorySnooped(MemAddr address, const MemData& data)
 {
     COMMIT
     {
@@ -419,7 +418,7 @@ bool DCache::OnMemorySnooped(MemAddr address, const MemData& data)
     return true;
 }
 
-bool DCache::OnMemoryInvalidated(MemAddr address)
+bool Processor::DCache::OnMemoryInvalidated(MemAddr address)
 {
     COMMIT
     {
@@ -440,7 +439,7 @@ bool DCache::OnMemoryInvalidated(MemAddr address)
     return true;
 }
 
-Result DCache::DoCompletedReads()
+Result Processor::DCache::DoCompletedReads()
 {
     assert(!m_returned.Empty());
 
@@ -577,7 +576,7 @@ Result DCache::DoCompletedReads()
     return SUCCESS;
 }
         
-Result DCache::DoCompletedWrites()
+Result Processor::DCache::DoCompletedWrites()
 {
     assert(!m_completedWrites.Empty());
     TID tid = m_completedWrites.Front();
@@ -590,7 +589,7 @@ Result DCache::DoCompletedWrites()
     return SUCCESS;
 }
 
-Result DCache::DoOutgoingRequests()
+Result Processor::DCache::DoOutgoingRequests()
 {
     assert(!m_outgoing.Empty());
     const Request& request = m_outgoing.Front();
@@ -614,7 +613,7 @@ Result DCache::DoOutgoingRequests()
     return SUCCESS;
 }
 
-void DCache::Cmd_Help(std::ostream& out, const std::vector<std::string>& /*arguments*/) const
+void Processor::DCache::Cmd_Help(std::ostream& out, const std::vector<std::string>& /*arguments*/) const
 {
     out <<
     "The Data Cache stores data from memory that has been used in loads and stores\n"
@@ -626,7 +625,7 @@ void DCache::Cmd_Help(std::ostream& out, const std::vector<std::string>& /*argum
     "  and cache configuration.\n";
 }
 
-void DCache::Cmd_Read(std::ostream& out, const std::vector<std::string>& /*arguments*/) const
+void Processor::DCache::Cmd_Read(std::ostream& out, const std::vector<std::string>& /*arguments*/) const
 {
     out << "Cache type:          ";
     if (m_assoc == 1) {

@@ -19,19 +19,9 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
 #ifndef DCACHE_H
 #define DCACHE_H
 
-#include "storage.h"
-#include "Memory.h"
-#include <queue>
-
-class Config;
-
-namespace Simulator
-{
-
-class Processor;
-class Allocator;
-class FamilyTable;
-class RegisterFile;
+#ifndef PROCESSOR_H
+#error This file should be included in Processor.h
+#endif
 
 class DCache : public Object
 {
@@ -132,6 +122,5 @@ public:
     const Line& GetLine(size_t i) const { return m_lines[i];  }
 };
 
-}
 #endif
 

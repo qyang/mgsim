@@ -25,12 +25,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
   data. Afterwards, we may still need to read parts from the Register
   File.
 */
-#include "Pipeline.h"
 #include "Processor.h"
-#include "Network.h"
-#if TARGET_ARCH == ARCH_SPARC
-#include "ISA.sparc.h"
-#endif
 #include <cassert>
 #include <sstream>
 #include <iomanip>
@@ -40,7 +35,8 @@ namespace Simulator
 {
 
 // Convert a RegValue into a PipeValue
-static PipeValue RegToPipeValue(RegType type, const RegValue& src_value)
+/*static*/
+Processor::Pipeline::PipeValue Processor::Pipeline::ReadStage::RegToPipeValue(RegType type, const RegValue& src_value)
 {
     PipeValue dest_value;
     dest_value.m_state = src_value.m_state;
@@ -76,7 +72,7 @@ static PipeValue RegToPipeValue(RegType type, const RegValue& src_value)
  * @param[in,out] operand persistent information about the reading of the operand for multi-cycle reads
  * @return true if the operation succeeded. This does not have to indicate the entire register has been read.
  */
-bool Pipeline::ReadStage::ReadRegister(OperandInfo& operand, uint32_t literal)
+bool Processor::Pipeline::ReadStage::ReadRegister(OperandInfo& operand, uint32_t literal)
 {
     if (operand.offset == -2)
     {
@@ -124,7 +120,7 @@ bool Pipeline::ReadStage::ReadRegister(OperandInfo& operand, uint32_t literal)
     return true;
 }
 
-bool Pipeline::ReadStage::ReadBypasses(OperandInfo& operand)
+bool Processor::Pipeline::ReadStage::ReadBypasses(OperandInfo& operand)
 {
     // We don't perform this function in the ACQUIRE phase because
     // we don't have to acquire any ports, but it can still 'fail' in
@@ -276,7 +272,7 @@ bool Pipeline::ReadStage::ReadBypasses(OperandInfo& operand)
  @param [in]  operand The operand to check
  @param [in]  addr    The base address of the operand
  */
-bool Pipeline::ReadStage::CheckOperandForSuspension(const OperandInfo& operand, const RegAddr& addr)
+bool Processor::Pipeline::ReadStage::CheckOperandForSuspension(const OperandInfo& operand, const RegAddr& addr)
 {
     if (operand.value.m_state != RST_FULL)
     {
@@ -298,7 +294,7 @@ bool Pipeline::ReadStage::CheckOperandForSuspension(const OperandInfo& operand, 
     return false;
 }
 
-Pipeline::PipeAction Pipeline::ReadStage::OnCycle()
+Processor::Pipeline::PipeAction Processor::Pipeline::ReadStage::OnCycle()
 {
     OperandInfo operand1( m_operand1 );
     OperandInfo operand2( m_operand2 );
@@ -462,7 +458,7 @@ Pipeline::PipeAction Pipeline::ReadStage::OnCycle()
     return PIPE_CONTINUE;
 }
 
-void Pipeline::ReadStage::Clear(TID tid)
+void Processor::Pipeline::ReadStage::Clear(TID tid)
 {
     if (m_input.tid == tid)
     {
@@ -471,7 +467,7 @@ void Pipeline::ReadStage::Clear(TID tid)
     }
 }
 
-Pipeline::ReadStage::ReadStage(Pipeline& parent, Clock& clock, const DecodeReadLatch& input, ReadExecuteLatch& output, RegisterFile& regFile,
+Processor::Pipeline::ReadStage::ReadStage(Pipeline& parent, Clock& clock, const DecodeReadLatch& input, ReadExecuteLatch& output, RegisterFile& regFile,
     const vector<BypassInfo>& bypasses,
     const Config& /*config*/
   )

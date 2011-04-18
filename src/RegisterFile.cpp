@@ -16,7 +16,6 @@ You should have received a copy of the GNU Library General Public
 License along with this library; if not, write to the Free Software
 Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
 */
-#include "RegisterFile.h"
 #include "Processor.h"
 #include "config.h"
 #include "range.h"
@@ -31,7 +30,7 @@ namespace Simulator
 // RegisterFile implementation
 //
 
-RegisterFile::RegisterFile(const std::string& name, Processor& parent, Clock& clock, Allocator& alloc, const Config& config)
+Processor::RegisterFile::RegisterFile(const std::string& name, Processor& parent, Clock& clock, Allocator& alloc, const Config& config)
   : Object(name, parent, clock),
     Structure<RegAddr>(name, parent, clock),
     Storage("storage", *this, clock),
@@ -61,13 +60,13 @@ RegisterFile::RegisterFile(const std::string& name, Processor& parent, Clock& cl
     AddPort(p_asyncW);
 }
 
-RegSize RegisterFile::GetSize(RegType type) const
+RegSize Processor::RegisterFile::GetSize(RegType type) const
 {
     const vector<RegValue>& regs = (type == RT_FLOAT) ? m_floats : m_integers;
     return regs.size();
 }
 
-bool RegisterFile::ReadRegister(const RegAddr& addr, RegValue& data) const
+bool Processor::RegisterFile::ReadRegister(const RegAddr& addr, RegValue& data) const
 {
     const vector<RegValue>& regs = (addr.type == RT_FLOAT) ? m_floats : m_integers;
     if (addr.index >= regs.size())
@@ -79,7 +78,7 @@ bool RegisterFile::ReadRegister(const RegAddr& addr, RegValue& data) const
 }
 
 // Admin version
-bool RegisterFile::WriteRegister(const RegAddr& addr, const RegValue& data)
+bool Processor::RegisterFile::WriteRegister(const RegAddr& addr, const RegValue& data)
 {
     vector<RegValue>& regs = (addr.type == RT_FLOAT) ? m_floats : m_integers;
     if (addr.index < regs.size())
@@ -90,7 +89,7 @@ bool RegisterFile::WriteRegister(const RegAddr& addr, const RegValue& data)
     return false;
 }
 
-bool RegisterFile::Clear(const RegAddr& addr, RegSize size)
+bool Processor::RegisterFile::Clear(const RegAddr& addr, RegSize size)
 {
     std::vector<RegValue>& regs = (addr.type == RT_FLOAT) ? m_floats : m_integers;
     if (addr.index + size > regs.size())
@@ -110,7 +109,7 @@ bool RegisterFile::Clear(const RegAddr& addr, RegSize size)
     return true;
 }
 
-bool RegisterFile::WriteRegister(const RegAddr& addr, const RegValue& data, bool from_memory)
+bool Processor::RegisterFile::WriteRegister(const RegAddr& addr, const RegValue& data, bool from_memory)
 {
     std::vector<RegValue>& regs = (addr.type == RT_FLOAT) ? m_floats : m_integers;
     if (addr.index >= regs.size())
@@ -187,7 +186,7 @@ bool RegisterFile::WriteRegister(const RegAddr& addr, const RegValue& data, bool
     return true;
 }
 
-void RegisterFile::Update()
+void Processor::RegisterFile::Update()
 {
     // Commit the queued updates to registers
     assert(m_nUpdates > 0);
@@ -199,7 +198,7 @@ void RegisterFile::Update()
     m_nUpdates = 0;
 }
 
-void RegisterFile::Cmd_Help(std::ostream& out, const std::vector<std::string>& /*arguments*/) const
+void Processor::RegisterFile::Cmd_Help(std::ostream& out, const std::vector<std::string>& /*arguments*/) const
 {
     out <<
     "The Register File stores the register for all threads running on a processor.\n"
@@ -214,7 +213,7 @@ void RegisterFile::Cmd_Help(std::ostream& out, const std::vector<std::string>& /
     "  \"1\", \"1-4,15,7-8\", \"all\"\n";
 }
 
-void RegisterFile::Cmd_Read(std::ostream& out, const std::vector<std::string>& arguments) const
+void Processor::RegisterFile::Cmd_Read(std::ostream& out, const std::vector<std::string>& arguments) const
 {
     const RAUnit*    rau    = NULL;
     const Allocator* alloc  = NULL;

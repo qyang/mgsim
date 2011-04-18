@@ -19,27 +19,9 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
 #ifndef ALLOCATOR_H
 #define ALLOCATOR_H
 
-#include "ThreadTable.h"
-#include "FamilyTable.h"
-#include "storage.h"
-#include <queue>
-
-class Config;
-
-namespace Simulator
-{
-
-class Processor;
-class FamilyTable;
-class ThreadTable;
-class RegisterFile;
-class RAUnit;
-class ICache;
-class Network;
-class Pipeline;
-struct Family;
-struct RemoteMessage;
-struct LinkMessage;
+#ifndef PROCESSOR_H
+#error This file should be included in Processor.h
+#endif
 
 // A list of dependencies that prevent a family from being
 // terminated or cleaned up
@@ -222,6 +204,5 @@ public:
     BufferSize GetMaxAllocatedEx() const { return m_maxallocex; }
 };
 
-}
 #endif
 

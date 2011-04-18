@@ -16,15 +16,13 @@ You should have received a copy of the GNU Library General Public
 License along with this library; if not, write to the Free Software
 Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
 */
-#include "Pipeline.h"
 #include "Processor.h"
 #include <cassert>
-using namespace std;
 
 namespace Simulator
 {
 
-Pipeline::PipeAction Pipeline::WritebackStage::OnCycle()
+Processor::Pipeline::PipeAction Processor::Pipeline::WritebackStage::OnCycle()
 {
     int  writebackOffset  = m_writebackOffset;
     int  size             = -1;
@@ -274,7 +272,7 @@ Pipeline::PipeAction Pipeline::WritebackStage::OnCycle()
         : PIPE_DELAY;       // We still have data to write back next cycle
 }
 
-Pipeline::WritebackStage::WritebackStage(Pipeline& parent, Clock& clock, const MemoryWritebackLatch& input, RegisterFile& regFile, Allocator& alloc, ThreadTable& threadTable, Network& network, const Config& /*config*/)
+Processor::Pipeline::WritebackStage::WritebackStage(Pipeline& parent, Clock& clock, const MemoryWritebackLatch& input, RegisterFile& regFile, Allocator& alloc, ThreadTable& threadTable, Network& network, const Config& /*config*/)
   : Stage("writeback", parent, clock),
     m_input(input),
     m_stall(false),

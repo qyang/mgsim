@@ -17,7 +17,7 @@ License along with this library; if not, write to the Free Software
 Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
 */
 #include "FPU.h"
-#include "RegisterFile.h"
+#include "Processor.h"
 #include "config.h"
 #include <cassert>
 #include <cmath>
@@ -31,7 +31,7 @@ static const char* const OperationNames[FPU_NUM_OPS] = {
     "ADD", "SUB", "MUL", "DIV", "SQRT"
 };
 
-size_t FPU::RegisterSource(RegisterFile& regfile)
+size_t FPU::RegisterSource(Processor::RegisterFile& regfile)
 {
     for (size_t i = 0; i < m_sources.size(); ++i)
     {

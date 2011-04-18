@@ -16,7 +16,6 @@ You should have received a copy of the GNU Library General Public
 License along with this library; if not, write to the Free Software
 Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
 */
-#include "ICache.h"
 #include "Processor.h"
 #include "config.h"
 #include "sampling.h"
@@ -36,7 +35,7 @@ static bool IsPowerOfTwo(const T& x)
     return (x & (x - 1)) == 0;
 }
 
-ICache::ICache(const std::string& name, Processor& parent, Clock& clock, Allocator& alloc, const Config& config)
+Processor::ICache::ICache(const std::string& name, Processor& parent, Clock& clock, Allocator& alloc, const Config& config)
 :   Object(name, parent, clock),
     m_parent(parent), m_allocator(alloc),
     m_outgoing("b_outgoing", *this, clock, config.getValue<BufferSize>("ICacheOutgoingBufferSize", 1)),
@@ -45,8 +44,8 @@ ICache::ICache(const std::string& name, Processor& parent, Clock& clock, Allocat
     m_numMisses(0),
     m_lineSize(config.getValue<size_t>("CacheLineSize", 64)),
     m_assoc   (config.getValue<size_t>("ICacheAssociativity", 4)),
-    p_Outgoing("outgoing", delegate::create<ICache, &ICache::DoOutgoing>(*this)),
-    p_Incoming("incoming", delegate::create<ICache, &ICache::DoIncoming>(*this)),
+    p_Outgoing("outgoing", delegate::create<ICache, &Processor::ICache::DoOutgoing>(*this)),
+    p_Incoming("incoming", delegate::create<ICache, &Processor::ICache::DoIncoming>(*this)),
     p_service(*this, clock, "p_service")
 {
     RegisterSampleVariableInObject(m_numHits, SVC_CUMULATIVE);
@@ -92,11 +91,11 @@ ICache::ICache(const std::string& name, Processor& parent, Clock& clock, Allocat
     }
 }
 
-ICache::~ICache()
+Processor::ICache::~ICache()
 {
 }
 
-bool ICache::IsEmpty() const
+bool Processor::ICache::IsEmpty() const
 {
     for (size_t i = 0; i < m_lines.size(); ++i)
     {
@@ -114,7 +113,7 @@ bool ICache::IsEmpty() const
 // DELAYED - Line not found (miss), but empty one allocated
 // FAILED  - Line not found (miss), no empty lines to allocate
 //
-Result ICache::FindLine(MemAddr address, Line* &line, bool check_only)
+Result Processor::ICache::FindLine(MemAddr address, Line* &line, bool check_only)
 {
     size_t  sets = m_lines.size() / m_assoc;
     MemAddr tag  = (address / m_lineSize) / sets;
@@ -166,7 +165,7 @@ Result ICache::FindLine(MemAddr address, Line* &line, bool check_only)
     return DELAYED;
 }
 
-bool ICache::ReleaseCacheLine(CID cid)
+bool Processor::ICache::ReleaseCacheLine(CID cid)
 {
     if (cid != INVALID_CID)
     {
@@ -184,7 +183,7 @@ bool ICache::ReleaseCacheLine(CID cid)
     return true;
 }
 
-bool ICache::Read(CID cid, MemAddr address, void* data, MemSize size) const
+bool Processor::ICache::Read(CID cid, MemAddr address, void* data, MemSize size) const
 {
     size_t  sets   = m_lines.size() / m_assoc;
     MemAddr tag    = (address / m_lineSize) / sets;
@@ -220,18 +219,18 @@ bool ICache::Read(CID cid, MemAddr address, void* data, MemSize size) const
 }
 
 // For family creation
-Result ICache::Fetch(MemAddr address, MemSize size, CID& cid)
+Result Processor::ICache::Fetch(MemAddr address, MemSize size, CID& cid)
 {
     return Fetch(address, size, NULL, &cid);
 }
 
 // For thread activation
-Result ICache::Fetch(MemAddr address, MemSize size, TID& tid, CID& cid)
+Result Processor::ICache::Fetch(MemAddr address, MemSize size, TID& tid, CID& cid)
 {
     return Fetch(address, size, &tid, &cid);
 }
 
-Result ICache::Fetch(MemAddr address, MemSize size, TID* tid, CID* cid)
+Result Processor::ICache::Fetch(MemAddr address, MemSize size, TID* tid, CID* cid)
 {
     // Check that we're fetching executable memory
     if (!m_parent.CheckPermissions(address, size, IMemory::PERM_EXECUTE))
@@ -362,7 +361,7 @@ Result ICache::Fetch(MemAddr address, MemSize size, TID* tid, CID* cid)
     return DELAYED;
 }
 
-bool ICache::OnMemoryReadCompleted(MemAddr addr, const MemData& data)
+bool Processor::ICache::OnMemoryReadCompleted(MemAddr addr, const MemData& data)
 {
     // Instruction cache line returned, store in cache and Buffer
     assert(data.size == m_lineSize);
@@ -389,7 +388,7 @@ bool ICache::OnMemoryReadCompleted(MemAddr addr, const MemData& data)
     return true;
 }
 
-bool ICache::OnMemorySnooped(MemAddr address, const MemData& data)
+bool Processor::ICache::OnMemorySnooped(MemAddr address, const MemData& data)
 {
     Line* line;
     // Cache coherency: check if we have the same address
@@ -402,7 +401,7 @@ bool ICache::OnMemorySnooped(MemAddr address, const MemData& data)
     return true;
 }
 
-bool ICache::OnMemoryInvalidated(MemAddr address)
+bool Processor::ICache::OnMemoryInvalidated(MemAddr address)
 {
     COMMIT
     {
@@ -423,7 +422,7 @@ bool ICache::OnMemoryInvalidated(MemAddr address)
     return true;
 }
 
-Result ICache::DoOutgoing()
+Result Processor::ICache::DoOutgoing()
 {
     assert(!m_outgoing.Empty());
     const MemAddr& address = m_outgoing.Front();
@@ -437,7 +436,7 @@ Result ICache::DoOutgoing()
     return SUCCESS;
 }
 
-Result ICache::DoIncoming()
+Result Processor::ICache::DoIncoming()
 {
     assert(!m_incoming.Empty());
 
@@ -482,7 +481,7 @@ Result ICache::DoIncoming()
     return SUCCESS;
 }        
 
-void ICache::Cmd_Help(std::ostream& out, const std::vector<std::string>& /*arguments*/) const
+void Processor::ICache::Cmd_Help(std::ostream& out, const std::vector<std::string>& /*arguments*/) const
 {
     out <<
     "The Instruction Cache stores data from memory that contains instructions for\n"
@@ -494,7 +493,7 @@ void ICache::Cmd_Help(std::ostream& out, const std::vector<std::string>& /*argum
     "  and cache configuration.\n";
 }
 
-void ICache::Cmd_Read(std::ostream& out, const std::vector<std::string>& /*arguments*/) const
+void Processor::ICache::Cmd_Read(std::ostream& out, const std::vector<std::string>& /*arguments*/) const
 {
     out << "Cache type:          ";
     if (m_assoc == 1) {

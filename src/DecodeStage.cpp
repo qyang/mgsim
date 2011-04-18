@@ -16,7 +16,6 @@ You should have received a copy of the GNU Library General Public
 License along with this library; if not, write to the Free Software
 Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
 */
-#include "Pipeline.h"
 #include "Processor.h"
 #include <cassert>
 #include <sstream>
@@ -42,7 +41,7 @@ struct IllegalInstruction
  \param[in] writing Indicates if this register is used in a write
  \returns the physical register address to use for the read or write
  */
-RegAddr Pipeline::DecodeStage::TranslateRegister(unsigned char reg, RegType type, unsigned int size, bool writing) const
+RegAddr Processor::Pipeline::DecodeStage::TranslateRegister(unsigned char reg, RegType type, unsigned int size, bool writing) const
 {
     // We're always dealing with whole registers
     assert(size % sizeof(Integer) == 0);
@@ -117,7 +116,7 @@ RegAddr Pipeline::DecodeStage::TranslateRegister(unsigned char reg, RegType type
     return MAKE_REGADDR(type, INVALID_REG_INDEX);
 }
 
-Pipeline::PipeAction Pipeline::DecodeStage::OnCycle()
+Processor::Pipeline::PipeAction Processor::Pipeline::DecodeStage::OnCycle()
 {
     COMMIT
     {
@@ -157,7 +156,7 @@ Pipeline::PipeAction Pipeline::DecodeStage::OnCycle()
     return PIPE_CONTINUE;
 }
 
-Pipeline::DecodeStage::DecodeStage(Pipeline& parent, Clock& clock, const FetchDecodeLatch& input, DecodeReadLatch& output, const Config& /*config*/)
+Processor::Pipeline::DecodeStage::DecodeStage(Pipeline& parent, Clock& clock, const FetchDecodeLatch& input, DecodeReadLatch& output, const Config& /*config*/)
   : Stage("decode", parent, clock),
     m_input(input),
     m_output(output)

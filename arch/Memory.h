@@ -20,7 +20,8 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
 #define MEMORY_H
 
 #include "simtypes.h"
-#include "ports.h"
+#include "sim/ports.h"
+#include "sim/storage.h"
 
 namespace Simulator
 {

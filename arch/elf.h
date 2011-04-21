@@ -19,7 +19,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
 #ifndef ELF_H
 #define ELF_H
 
-#include "types.h"
+#include "sim/types.h"
 
 // Some ELF types
 typedef uint32_t Elf32_Addr;

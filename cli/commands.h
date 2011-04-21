@@ -20,10 +20,10 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
 #define COMMANDS_H
 
 #ifdef ENABLE_MONITOR
-# include "monitor.h"
+# include "sim/monitor.h"
 #endif
 #include "simreadline.h"
-#include "MGSystem.h"
+#include "arch/MGSystem.h"
 #include <vector>
 #include <string>
 

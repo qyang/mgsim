@@ -18,8 +18,8 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
 */
 #include "VirtualMemory.h"
 #include "Memory.h"
-#include "except.h"
-#include "sampling.h"
+#include "sim/except.h"
+#include "sim/sampling.h"
 #include <cstring>
 #include <limits>
 #include <iomanip>

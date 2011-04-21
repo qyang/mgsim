@@ -20,14 +20,14 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
 #include "sys_config.h"
 #endif
 
-#include "MGSystem.h"
+#include "arch/MGSystem.h"
 #include "simreadline.h"
 #include "commands.h"
-#include "display.h"
-#include "config.h"
+#include "sim/display.h"
+#include "sim/config.h"
 
 #ifdef ENABLE_MONITOR
-# include "monitor.h"
+# include "sim/monitor.h"
 #endif
 
 #include <sstream>

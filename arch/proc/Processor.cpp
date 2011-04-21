@@ -18,9 +18,9 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
 */
 #include "Processor.h"
 #include "FPU.h"
-#include "sampling.h"
-#include "log2.h"
-#include "config.h"
+#include "sim/sampling.h"
+#include "sim/log2.h"
+#include "sim/config.h"
 
 #include <cassert>
 

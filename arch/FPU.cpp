@@ -17,8 +17,7 @@ License along with this library; if not, write to the Free Software
 Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
 */
 #include "FPU.h"
-#include "Processor.h"
-#include "config.h"
+#include "sim/config.h"
 #include <cassert>
 #include <cmath>
 #include <iomanip>

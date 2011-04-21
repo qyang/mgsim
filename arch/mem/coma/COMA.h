@@ -19,9 +19,8 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
 #ifndef COMA_COMA_H
 #define COMA_COMA_H
 
-#include "../Memory.h"
-#include "../storage.h"
-#include "../VirtualMemory.h"
+#include "arch/Memory.h"
+#include "arch/VirtualMemory.h"
 #include <queue>
 #include <set>
 
@@ -32,6 +31,7 @@ namespace Simulator
 
 class COMA : public Object, public IMemoryAdmin, public VirtualMemory
 {
+    class DDRChannel;
 public:
     class Node;
     class DirectoryTop;

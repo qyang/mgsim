@@ -17,9 +17,9 @@ License along with this library; if not, write to the Free Software
 Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
 */
 #include "DDR.h"
-#include "../VirtualMemory.h"
-#include "../config.h"
-#include "../log2.h"
+#include "VirtualMemory.h"
+#include "sim/config.h"
+#include "sim/log2.h"
 #include <limits>
 #include <cstdio>
 

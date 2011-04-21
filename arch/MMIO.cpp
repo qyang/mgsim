@@ -17,9 +17,7 @@ License along with this library; if not, write to the Free Software
 Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
 */
 #include <iomanip>
-#include "MMIO.h"
-#include "kernel.h"
-#include "Processor.h"
+#include "proc/Processor.h"
 
 namespace Simulator
 {

@@ -59,7 +59,7 @@ extern "C" {
 #endif /* HAVE_LIBREADLINE */
 
 
-#include "display.h"
+#include "sim/display.h"
 #include <string>
 #include <vector>
 

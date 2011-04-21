@@ -19,9 +19,8 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
 #ifndef ZLCOMA_COMA_H
 #define ZLCOMA_COMA_H
 
-#include "../Memory.h"
-#include "../storage.h"
-#include "../VirtualMemory.h"
+#include "arch/Memory.h"
+#include "arch/VirtualMemory.h"
 #include <queue>
 #include <set>
 

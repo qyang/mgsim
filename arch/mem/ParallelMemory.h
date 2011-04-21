@@ -19,15 +19,15 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
 #ifndef PARALLELMEMORY_H
 #define PARALLELMEMORY_H
 
-#include "Memory.h"
-#include "kernel.h"
-#include "Processor.h"
-#include "VirtualMemory.h"
+#include "arch/Memory.h"
+#include "arch/VirtualMemory.h"
 #include <queue>
 #include <deque>
 #include <set>
 #include <map>
 #include <vector>
+
+class Config;
 
 namespace Simulator
 {

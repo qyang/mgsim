@@ -20,14 +20,9 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
 #define DISPLAY_H
 
 #include "types.h"
-#include "simtypes.h"
 #include <string>
 #include <iostream>
 #include <vector>
-
-#ifndef GRAPHICS_SENSITIVE_COMPILE
-#error "This header is not included where it should."
-#endif
 
 #ifdef USE_SDL
 #include <SDL.h>
@@ -84,7 +79,7 @@ public:
 
 #ifdef USE_SDL
     void Refresh();
-    void OnCycle(CycleNo cycle) 
+    void OnCycle(unsigned long long cycle) 
     {
         if (cycle - m_lastRefresh > m_refreshDelay) 
         {

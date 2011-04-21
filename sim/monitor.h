@@ -19,7 +19,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
 #ifndef MONITOR_H
 # define MONITOR_H
 
-#include "MGSystem.h"
+#include "arch/MGSystem.h"
 #include "sampling.h"
 
 #include <fstream>

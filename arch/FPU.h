@@ -19,7 +19,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
 #ifndef FPU_H
 #define FPU_H
 
-#include "Processor.h"
+#include "proc/Processor.h"
 #include <deque>
 #include <map>
 

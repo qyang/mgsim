@@ -18,7 +18,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
 */
 #include "loader.h"
 #include "elf.h"
-#include "except.h"
+#include "sim/except.h"
 #include <fstream>
 #include <iostream>
 #include <vector>

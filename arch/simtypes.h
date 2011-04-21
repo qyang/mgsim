@@ -19,7 +19,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
 #ifndef SIMTYPES_H
 #define SIMTYPES_H
 
-#include "types.h"
+#include "sim/types.h"
 #include "Archures.h"
 #include <string>
 #include <cassert>
@@ -42,7 +42,6 @@ typedef size_t   TID;           ///< Thread index
 typedef size_t   CID;           ///< Cache index
 typedef size_t   PSize;         ///< Processor list size
 typedef size_t   TSize;         ///< Thread list size
-typedef uint64_t CycleNo;       ///< Cycle Number
 typedef size_t   RegIndex;      ///< Index into a register file
 typedef size_t   RegSize;       ///< Size of something in the register file
 typedef size_t   FSize;         ///< Family list size
@@ -230,8 +229,6 @@ static const RegType RT_INTEGER    = 0;
 static const RegType RT_FLOAT      = 1;
 static const RegType NUM_REG_TYPES = 2;
 
-static const CycleNo INFINITE_CYCLES = (CycleNo)-1;
-
 // These fields only have to be 5 bits wide
 struct RegsNo
 {
@@ -343,13 +340,6 @@ struct RemoteRegAddr
     RemoteRegType type; ///< The type of register
     FID           fid;  ///< The global FID of the family
     RegAddr       reg;  ///< The type and (logical) index of the register
-};
-
-enum Result
-{
-    FAILED,
-    DELAYED,
-    SUCCESS
 };
 
 enum FamilyProperty {

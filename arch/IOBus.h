@@ -43,6 +43,7 @@ public:
     virtual bool OnWriteRequestReceived(IODeviceID from, MemAddr address, const IOData& data) = 0;
     virtual bool OnReadResponseReceived(IODeviceID from, const IOData& data) = 0;
     virtual bool OnInterruptRequestReceived(IODeviceID from) = 0;
+    virtual bool OnInterruptAckReceived(IODeviceID from) = 0;
 
     /* for debugging */
     virtual std::string GetIODeviceName() = 0;
@@ -59,6 +60,7 @@ public:
     virtual bool SendWriteRequest(IODeviceID from, IODeviceID to, MemAddr address, const IOData& data) = 0;
     virtual bool SendReadResponse(IODeviceID from, IODeviceID to, const IOData& data) = 0;
     virtual bool SendInterruptRequest(IODeviceID from, IODeviceID to) = 0;
+    virtual bool SendInterruptAck(IODeviceID from, IODeviceID to) = 0;
 
     virtual ~IIOBus() {}
 };

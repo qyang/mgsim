@@ -67,7 +67,7 @@ public:
     bool OnInterruptAckReceived(IODeviceID from);
 
     /* for debugging */
-    std::string GetIODeviceName() { return GetFQN(); };
+    std::string GetIODeviceName() const { return GetFQN(); };
 
 };
 

@@ -32,7 +32,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
 #include "arch/mem/zlcoma/Directory.h"
 #include "arch/mem/zlcoma/RootDirectory.h"
 #include "arch/dev/NullIO.h"
-#include "arch/MMIO.h"
+#include "arch/proc/Processor.h"
 
 #include <cerrno>
 #include <csignal>
@@ -119,9 +119,9 @@ static const struct
     {"help", new bind_cmd_C<ZLCOMA::Directory>(&ZLCOMA::Directory::Cmd_Help) },
     {"help", new bind_cmd_C<ZLCOMA::RootDirectory>(&ZLCOMA::RootDirectory::Cmd_Help) },
     {"help", new bind_cmd_C<FPU>(&FPU::Cmd_Help) },
-    {"help", new bind_cmd_C<MMIOInterface>(&MMIOInterface::Cmd_Help) },
+    {"help", new bind_cmd_C<Processor::IOMatchUnit>(&Processor::IOMatchUnit::Cmd_Help) },
     {"info", new bind_cmd_C<VirtualMemory>(&VirtualMemory::Cmd_Info) },
-    {"info", new bind_cmd_C<MMIOInterface>(&MMIOInterface::Cmd_Info) },
+    {"info", new bind_cmd_C<Processor::IOMatchUnit>(&Processor::IOMatchUnit::Cmd_Info) },
     {"line", new bind_cmd_C<COMA>(&COMA::Cmd_Line) },
     {"line", new bind_cmd_C<ZLCOMA>(&ZLCOMA::Cmd_Line) },
     {"read", new bind_cmd_C<Processor::RAUnit>(&Processor::RAUnit::Cmd_Read) },

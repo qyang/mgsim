@@ -30,6 +30,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
 #include <vector>
 #include <utility>
 #include <string>
+#include <map>
 
 namespace Simulator {
 
@@ -40,6 +41,9 @@ namespace Simulator {
         Object                      m_root;     ///< Root object for the system
         std::vector<Processor*>     m_procs;
         std::vector<FPU*>           m_fpus;
+        std::vector<IIOBus*>        m_iobuses;
+        std::vector<IIOBusClient*>  m_devices;
+        std::map<size_t, size_t>    m_procbusmapping;
 
         SymbolTable                 m_symtable;
         BreakPoints                 m_breakpoints;
@@ -90,7 +94,7 @@ namespace Simulator {
         std::string GetSymbol(MemAddr addr) const;
 
         void Disassemble(MemAddr addr, size_t sz = 64) const;
-        void PrintComponents(std::ostream& os) const;
+        void PrintComponents(std::ostream& os, const std::string& pat = "*", size_t levels = 0) const;
         void PrintAllSymbols(std::ostream& os, const std::string& pat = "*") const;
         void PrintMemoryStatistics(std::ostream& os) const;
         void PrintState(const std::vector<std::string>& arguments) const;

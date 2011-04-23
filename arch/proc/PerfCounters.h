@@ -16,8 +16,8 @@ You should have received a copy of the GNU Library General Public
 License along with this library; if not, write to the Free Software
 Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
 */
-#ifndef COUNTERS_H
-#define COUNTERS_H
+#ifndef PERFCOUNTERS_H
+#define PERFCOUNTERS_H
 
 #ifndef PROCESSOR_H
 #error This file should be included in Processor.h
@@ -36,7 +36,7 @@ public:
     Result Read (MemAddr address, void* data, MemSize size, LFID fid, TID tid, const RegAddr& writeback);
     Result Write(MemAddr address, const void* data, MemSize size, LFID fid, TID tid) { return FAILED; };
     
-    PerfCounters(IOMatchUnit& parent);
+    PerfCounters(Processor& parent);
 
     ~PerfCounters() {}
 };

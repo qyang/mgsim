@@ -25,7 +25,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
 namespace Simulator
 {
 
-class LCD : public IIOBusClientCallback, public Object
+class LCD : public IIOBusClient, public Object
 {
     char*     m_buffer;
 

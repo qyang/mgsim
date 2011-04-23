@@ -26,7 +26,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
 class IOResponseMultiplexer;
 class IOInterruptMultiplexer;
 
-class IOBusInterface : public IIOBusClientCallback, public Object
+class IOBusInterface : public IIOBusClient, public Object
 {
 public:
     struct IORequest

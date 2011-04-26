@@ -29,10 +29,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
 
 class IOInterface : public Object
 {
-private:
-    size_t                      m_numDevices;
-    size_t                      m_numInterrupts;
-
+public:
     class AsyncIOInterface : public MMIOComponent
     {
     private:
@@ -47,10 +44,9 @@ private:
 
         Result Read (MemAddr address, void* data, MemSize size, LFID fid, TID tid, const RegAddr& writeback);
         Result Write(MemAddr address, const void* data, MemSize size, LFID fid, TID tid);
-    };
 
-    friend class AsyncIOInterface;
-    AsyncIOInterface m_async_io;
+        void Cmd_Info(std::ostream& out, const std::vector<std::string>& args) const;
+    };
 
     class PICInterface : public MMIOComponent
     {
@@ -65,8 +61,18 @@ private:
 
         Result Read (MemAddr address, void* data, MemSize size, LFID fid, TID tid, const RegAddr& writeback);
         Result Write(MemAddr address, const void* data, MemSize size, LFID fid, TID tid);
+
+        void Cmd_Info(std::ostream& out, const std::vector<std::string>& args) const;
     };
     
+
+private:
+    size_t                      m_numDevices;
+    size_t                      m_numInterrupts;
+
+    friend class AsyncIOInterface;
+    AsyncIOInterface m_async_io;
+
     friend class PICInterface;
     PICInterface m_pic;        
 
@@ -83,6 +89,10 @@ public:
 
     MMIOComponent& GetAsyncIOInterface() { return m_async_io; }
     MMIOComponent& GetPICInterface() { return m_pic; }
+
+    IOResponseMultiplexer& GetReadResponseMultiplexer() { return m_rrmux; }
+    IOInterruptMultiplexer& GetInterruptMultiplexer() { return m_intmux; }
+    
 
 };
 

@@ -90,7 +90,7 @@ struct Thread
     ThreadState state;
 };
 
-class ThreadTable : public Object
+class ThreadTable : public Object, public Inspect::Interface<Inspect::Read>
 {
 public:
     ThreadTable(const std::string& name, Processor& parent, Clock& clock, const Config& config);

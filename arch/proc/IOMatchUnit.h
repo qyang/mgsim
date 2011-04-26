@@ -25,7 +25,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
 
 class MMIOComponent;
 
-class IOMatchUnit : public Object
+class IOMatchUnit : public Object, public Inspect::Interface<Inspect::Info>
 {    
 public:
     enum AccessMode

@@ -21,6 +21,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
 
 #include "arch/Memory.h"
 #include "arch/VirtualMemory.h"
+#include "sim/inspect.h"
 #include <queue>
 #include <deque>
 #include <set>

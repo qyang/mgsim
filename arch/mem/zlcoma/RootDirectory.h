@@ -31,7 +31,7 @@ namespace Simulator
 
 class DDRChannel;
 
-class ZLCOMA::RootDirectory : public ZLCOMA::DirectoryBottom, public DDRChannel::ICallback
+class ZLCOMA::RootDirectory : public ZLCOMA::DirectoryBottom, public DDRChannel::ICallback, public Inspect::Interface<Inspect::Read>
 {
 public:
     struct Line

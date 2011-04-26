@@ -19,6 +19,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
 #ifndef PROCESSOR_H
 #define PROCESSOR_H
 
+#include "sim/inspect.h"
 #include "arch/IOBus.h"
 #include "arch/Memory.h"
 

@@ -16,30 +16,29 @@ You should have received a copy of the GNU Library General Public
 License along with this library; if not, write to the Free Software
 Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
 */
-#ifndef LINEPRINTER_H
-#define LINEPRINTER_H
+#ifndef PERFCOUNTERS_H
+#define PERFCOUNTERS_H
 
-#include "arch/MMIO.h"
+#ifndef PROCESSOR_H
+#error This file should be included in Processor.h
+#endif
 
-namespace Simulator
+class PerfCounters : public MMIOComponent
 {
 
-class LinePrinter : public MMIOComponent
-{
-    std::ostream&  m_output;
-    unsigned       m_floatprecision;
+    uint64_t                  m_nCycleSampleOps; // nr of samplings of the cycle counter by program
+    uint64_t                  m_nOtherSampleOps; // nr of samplings of other counters
 
 public:
-    LinePrinter(const std::string& name, MMIOInterface& parent, std::ostream& output);
 
     size_t GetSize() const;
-    Result Read (MemAddr address, void* data, MemSize size, LFID fid, TID tid) { return FAILED; }
-    Result Write(MemAddr address, const void* data, MemSize size, LFID fid, TID tid);
+
+    Result Read (MemAddr address, void* data, MemSize size, LFID fid, TID tid, const RegAddr& writeback);
+    Result Write(MemAddr address, const void* data, MemSize size, LFID fid, TID tid) { return FAILED; };
     
-    ~LinePrinter() {}
+    PerfCounters(Processor& parent);
+
+    ~PerfCounters() {}
 };
-
-
-}
 
 #endif

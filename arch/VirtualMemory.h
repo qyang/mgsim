@@ -20,6 +20,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
 #define VIRTUALMEMORY_H
 
 #include "simtypes.h"
+#include "sim/inspect.h"
 #include <map>
 #include <vector>
 
@@ -28,7 +29,7 @@ namespace Simulator
 
 // This class presents as large, sparse memory region as a linear memory region.
 // It allocates blocks of memory as they are read or written.
-class VirtualMemory
+class VirtualMemory : public Inspect::Interface<Inspect::Info|Inspect::Read>
 {
 public:
     // We allocate per block, this is the size of each block. Must be a power of two

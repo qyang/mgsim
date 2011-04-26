@@ -23,7 +23,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
 #error This file should be included in Processor.h
 #endif
 
-class RAUnit : public Object
+class RAUnit : public Object, public Inspect::Interface<Inspect::Read>
 {
     friend class RegisterFile;
     

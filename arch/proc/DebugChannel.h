@@ -16,30 +16,29 @@ You should have received a copy of the GNU Library General Public
 License along with this library; if not, write to the Free Software
 Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
 */
-#include "except.h"
-#include "kernel.h"
-#include <algorithm>
+#ifndef DEBUGCHANNEL_H
+#define DEBUGCHANNEL_H
 
-namespace Simulator
+
+#ifndef PROCESSOR_H
+#error This file should be included in Processor.h
+#endif
+
+class DebugChannel : public MMIOComponent
 {
+    std::ostream&  m_output;
+    unsigned       m_floatprecision;
 
-static std::string MakeMessage(const Object& object, const std::string& msg)
-{
-    std::string name = object.GetFQN();
-    std::transform(name.begin(), name.end(), name.begin(), toupper);
-    return name + ": " + msg;
-}
+public:
+    DebugChannel(const std::string& name, Object& parent, std::ostream& output);
 
-SimulationException::SimulationException(const std::string& msg, const Object& object)
-    : std::runtime_error(MakeMessage(object, msg))
-{
-    
-}
+    size_t GetSize() const;
 
-SimulationException::SimulationException(const Object& object, const std::string& msg)
-    : std::runtime_error(MakeMessage(object, msg))
-{
-    
-}
+    Result Read (MemAddr address, void* data, MemSize size, LFID fid, TID tid, const RegAddr& writeback) { return FAILED; }
+    Result Write(MemAddr address, const void* data, MemSize size, LFID fid, TID tid);
 
-}
+};
+
+
+
+#endif

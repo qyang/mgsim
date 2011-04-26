@@ -16,30 +16,20 @@ You should have received a copy of the GNU Library General Public
 License along with this library; if not, write to the Free Software
 Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
 */
-#include "except.h"
-#include "kernel.h"
-#include <algorithm>
+#include "inspect.h"
 
-namespace Simulator
+namespace Inspect
 {
 
-static std::string MakeMessage(const Object& object, const std::string& msg)
+void
+ListCommands::ListSupportedCommands(std::ostream& out) const
 {
-    std::string name = object.GetFQN();
-    std::transform(name.begin(), name.end(), name.begin(), toupper);
-    return name + ": " + msg;
-}
-
-SimulationException::SimulationException(const std::string& msg, const Object& object)
-    : std::runtime_error(MakeMessage(object, msg))
-{
-    
-}
-
-SimulationException::SimulationException(const Object& object, const std::string& msg)
-    : std::runtime_error(MakeMessage(object, msg))
-{
-    
+    out << (dynamic_cast<const Interface_<Help>*>(this)  ? "h " : "  ")
+        << (dynamic_cast<const Interface_<Info>*>(this)  ? "i " : "  ")
+        << (dynamic_cast<const Interface_<Read>*>(this)  ? "p " : "  ")
+        << (dynamic_cast<const Interface_<Line>*>(this)  ? "l " : "  ")
+        << (dynamic_cast<const Interface_<Trace>*>(this) ? "t " : "  ");
 }
 
 }
+

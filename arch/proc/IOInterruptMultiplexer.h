@@ -16,24 +16,39 @@ You should have received a copy of the GNU Library General Public
 License along with this library; if not, write to the Free Software
 Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
 */
-#ifndef COUNTERS_H
-#define COUNTERS_H
+#ifndef IOINTMUX_H
+#define IOINTMUX_H
 
 #ifndef PROCESSOR_H
 #error This file should be included in Processor.h
 #endif
 
-class PerfCounters : public MMIOComponent
+class IOBusInterface;
+
+class IOInterruptMultiplexer : public Object
 {
+private:
+    RegisterFile&                   m_regFile;
+
+    std::vector<Register<RegAddr>*> m_writebacks;
+    std::vector<SingleFlag*>        m_interrupts;
+
+    size_t                          m_lastNotified;
+
 public:
+    IOInterruptMultiplexer(const std::string& name, Object& parent, Clock& clock, RegisterFile& rf, size_t numInterrupts);
 
-    size_t GetSize() const;
-    Result Read (MemAddr address, void* data, MemSize size, LFID fid, TID tid);
-    Result Write(MemAddr address, const void* data, MemSize size, LFID fid, TID tid) { return FAILED; };
+    // sent by device select upon an I/O read from the processor
+    bool SetWriteBackAddress(IOInterruptID which, const RegAddr& addr);
+
+    // triggered by the IOBusInterface
+    bool OnInterruptRequestReceived(IOInterruptID which);
+
+    Process p_IncomingInterrupts;
     
-    PerfCounters(MMIOInterface& parent);
-
-    ~PerfCounters() {}
+    // upon interrupt received
+    Result DoReceivedInterrupts();
 };
+
 
 #endif

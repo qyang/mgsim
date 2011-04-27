@@ -46,9 +46,8 @@ namespace Simulator
     static clock_delay_t clockResolution = 0;
     static volatile precise_time_t currentTime = 0;
 
-    static void alarm_handler(int)
+    static void set_time(void)
     {
-        clockSemaphore = clockListeners;
         struct timeval tv;
         int gtod_status = gettimeofday(&tv, NULL);
         assert(gtod_status == 0);
@@ -56,11 +55,19 @@ namespace Simulator
         currentTime = newTime;
     }
 
+    static void alarm_handler(int)
+    {
+        clockSemaphore = clockListeners;
+        set_time();
+    }
+
     static void setup_clocks(const Config& config)
     {
         static bool initialized = false;
         if (!initialized)
         {
+            set_time(); // need to have a non-zero value before the RTC starts
+
             // update delay in microseconds
             clockResolution = config.getValue<clock_delay_t>("RTCMeatSpaceUpdateInterval", 20000);
 
@@ -106,6 +113,7 @@ namespace Simulator
           p_checkTime("time-update", delegate::create<RTC, &RTC::DoCheckTime>(*this))
     {
         setup_clocks(config);
+        m_timeOfLastInterrupt = currentTime;
         ++clockListeners;
         m_enableCheck.Sensitive(p_checkTime);
     }

@@ -174,7 +174,7 @@ Instruction UnserializeInstruction(const void* _data)
     return i;
 }
 
-#if TARGET_ARCH == ARCH_ALPHA
+#if defined(TARGET_MTALPHA)
 // This function maps an 8-bit exponent to an 11-bit exponent, as described
 // in the Alpha Handbook, section 2.2.6.1.
 static uint64_t MAP_S(uint64_t exp)
@@ -193,7 +193,7 @@ uint64_t UnserializeRegister(RegType type, const void* data, size_t size)
         case RT_INTEGER:
         {
             uint64_t value = EndianToInteger(data, size);
-#if TARGET_ARCH == ARCH_ALPHA
+#if defined(TARGET_MTALPHA)
             // The Alpha sign-extends 32-bits to 64-bits
             if (size == 4) {
                 // Sign-extend
@@ -206,7 +206,7 @@ uint64_t UnserializeRegister(RegType type, const void* data, size_t size)
         case RT_FLOAT:
         {
             uint64_t value = EndianToInteger(data, size);
-#if TARGET_ARCH == ARCH_ALPHA
+#if defined(TARGET_MTALPHA)
             // The Alpha returns 32-bit S_Floatings as 64-bit T_Floatings
             // See Alpha Manual, 4.8.3, Load S_Floating
             if (size == 4) {
@@ -226,7 +226,7 @@ void SerializeRegister(RegType type, uint64_t value, void* data, size_t size)
     switch (type)
     {
         case RT_FLOAT:
-#if TARGET_ARCH == ARCH_ALPHA
+#if defined(TARGET_MTALPHA)
             // The Alpha stores 32-bit S_Floatings internally as 64-bit T_Floatings
             // See Alpha Manual, 4.8.7, Store S_Floating
             if (size == 4)

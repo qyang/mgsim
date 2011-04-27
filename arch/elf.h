@@ -67,10 +67,10 @@ static const unsigned char ELFMAG3 = 'F';  // e_ident[EI_MAG3]
 static const unsigned char EV_NONE    = 0; // Invalid version
 static const unsigned char EV_CURRENT = 1; // Current version
 
-#if TARGET_ARCH == ARCH_ALPHA
+#if defined(TARGET_MTALPHA)
 #define ELFCLASS ELFCLASS64
 #define ELFDATA  ELFDATA2LSB
-#elif TARGET_ARCH == ARCH_SPARC
+#elif defined(TARGET_MTSPARC)
 #define ELFCLASS ELFCLASS32
 #define ELFDATA  ELFDATA2MSB
 #endif
@@ -172,10 +172,10 @@ static const Elf_Half EM_ALPHA       = 0x9026; // Alpha
 static const Elf_Half EM_MTALPHA     = 0xafef; // Microthreaded Alpha
 static const Elf_Half EM_MTSPARC     = 0xaff0; // Microthreaded Sparc V8
 
-#if TARGET_ARCH == ARCH_ALPHA
+#if defined(TARGET_MTALPHA)
 #define MACHINE_NORMAL EM_MTALPHA
 #define MACHINE_LEGACY EM_ALPHA
-#elif TARGET_ARCH == ARCH_SPARC
+#elif defined(TARGET_MTSPARC)
 #define MACHINE_NORMAL EM_MTSPARC
 #define MACHINE_LEGACY EM_SPARC
 #endif

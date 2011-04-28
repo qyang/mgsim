@@ -67,7 +67,7 @@ bool DoCommand(vector<string>& args, cli_context& ctx)
     
     if (!match)
         cout << "Unknown command." << endl;
-    return false;
+    return quit;
 }
 
 

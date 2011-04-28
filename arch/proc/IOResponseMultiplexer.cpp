@@ -17,7 +17,7 @@ License along with this library; if not, write to the Free Software
 Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
 */
 #include "Processor.h"
-#include "sim/config.h"
+#include "config.h"
 #include <sstream>
 
 namespace Simulator
@@ -32,7 +32,11 @@ Processor::IOResponseMultiplexer::IOResponseMultiplexer(const std::string& name,
 {
     m_incoming.Sensitive(p_IncomingReadResponses);
 
-    BufferSize wbqsize = config.getValue<BufferSize>("AsyncIOWritebackQueueSize", 1);
+    BufferSize wbqsize = config.getValue<BufferSize>("AsyncIOWritebackQueueSize", 3); 
+    if (wbqsize < 3)
+    {
+        throw InvalidArgumentException(*this, "AsyncIOWritebackQueueSize must be at least 3 to accomodate pipeline hazards");
+    }
 
     m_wb_buffers.resize(numDevices, 0);
     for (size_t i = 0; i < numDevices; ++i)

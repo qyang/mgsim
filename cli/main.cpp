@@ -23,7 +23,6 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
 #include "arch/MGSystem.h"
 #include "simreadline.h"
 #include "commands.h"
-#include "sim/display.h"
 #include "sim/config.h"
 
 #ifdef ENABLE_MONITOR
@@ -195,11 +194,8 @@ int main(int argc, char** argv)
             configfile.dumpConfiguration(std::clog, config.m_configFile);
         }
 
-        // Create the display
-        Display display(configfile);
-
         // Create the system
-        MGSystem sys(configfile, display, 
+        MGSystem sys(configfile, 
                      config.m_programFile, config.m_symtableFile,
                      config.m_regs, config.m_loads, !config.m_interactive, !config.m_earlyquit);
 
@@ -265,12 +261,13 @@ int main(int argc, char** argv)
         {
             // Command loop
             cout << endl;
-            CommandLineReader clr(display);
+            CommandLineReader clr;
             cli_context ctx = { clr, sys
 #ifdef ENABLE_MONITOR
-                                , mo };
+                                , mo 
 #endif
-            
+            };
+
             while (HandleCommandLine(ctx) == false)
                 /* just loop */;
         }

@@ -18,7 +18,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
 */
 #include "kernel.h"
 #include "storage.h"
-#include "display.h"
+#include "arch/dev/Display.h"
 #include "sampling.h"
 
 #include <cassert>
@@ -352,9 +352,8 @@ RunState Kernel::Step(CycleNo cycles)
                 }
             }
             
-#ifdef CHECK_DISPLAY_EVENTS
-            m_display.OnCycle(m_cycle);
-#endif
+            if (Display::GetDisplay())
+                Display::GetDisplay()->OnCycle(m_cycle);
 
             if (!idle)
             {
@@ -467,10 +466,9 @@ void Kernel::ToggleDebugMode(int flags)
     m_debugMode ^= flags;
 }
 
-Kernel::Kernel(Display& display, SymbolTable& symtable, BreakPoints& breakpoints)
+Kernel::Kernel(SymbolTable& symtable, BreakPoints& breakpoints)
  : m_debugMode(0),
    m_cycle(0),
-   m_display(display),
    m_symtable(symtable),
    m_breakpoints(breakpoints),
    m_phase(PHASE_COMMIT),

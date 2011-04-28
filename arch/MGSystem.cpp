@@ -28,6 +28,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
 #include "arch/dev/NullIO.h"
 #include "arch/dev/lcd.h"
 #include "arch/dev/RTC.h"
+#include "arch/dev/Display.h"
 
 #include "loader.h"
 
@@ -758,12 +759,12 @@ void MGSystem::Disassemble(MemAddr addr, size_t sz) const
     system(cmd.str().c_str());
 }
 
-MGSystem::MGSystem(const Config& config, Display& display, const string& program,
+MGSystem::MGSystem(const Config& config, const string& program,
                    const string& symtable,
                    const vector<pair<RegAddr, RegValue> >& regs,
                    const vector<pair<RegAddr, string> >& loads,
                    bool quiet, bool doload)
-    : m_kernel(display, m_symtable, m_breakpoints),
+    : m_kernel(m_symtable, m_breakpoints),
       m_clock(m_kernel.CreateClock( (unsigned long long)(config.getValue<float>("CoreFreq", 1000)) )),
       m_root("system", m_clock),
       m_breakpoints(m_kernel),
@@ -896,9 +897,13 @@ MGSystem::MGSystem(const Config& config, Display& display, const string& program
             iobus.RegisterClient(devid, *lcd);
             m_devices[i] = lcd;
         } else if (dev_type == "RTC") {
-            Clock& rtcclock = m_kernel.CreateClock(config.getValue<size_t>(cfg + "UpdateInterval", 1));
+            Clock& rtcclock = m_kernel.CreateClock(config.getValue<size_t>(cfg + "UpdateFreq", 1));
             RTC *rtc = new RTC(name, m_root, rtcclock, ioclock, iobus, devid, config);
             m_devices[i] = rtc;
+        } else if (dev_type == "GFX") {
+            size_t fbdevid = config.getValue<size_t>(cfg + "FrameBufferDeviceID", devid + 1);
+            Display *disp = new Display(name, m_root, ioclock, iobus, devid, fbdevid, config);
+            m_devices[i] = disp;
         } else {
             throw std::runtime_error("Unknown I/O device type: " + dev_type);
         }

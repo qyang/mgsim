@@ -85,7 +85,7 @@ protected:
     uint64_t m_nwrite_bytes;
 
 public:
-    BankedMemory(const std::string& name, Object& parent, Clock& clock, const Config& config);
+    BankedMemory(const std::string& name, Object& parent, Clock& clock, Config& config);
     ~BankedMemory();
     
     // Debugging

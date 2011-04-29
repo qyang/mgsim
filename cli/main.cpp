@@ -42,17 +42,17 @@ using namespace std;
 
 struct ProgramConfig
 {
-    string             m_programFile;
-    string             m_configFile;
-    string             m_symtableFile;
-    bool               m_enableMonitor;
-    bool               m_interactive;
-    bool               m_terminate;
-    bool               m_dumpconf;
-    bool               m_quiet;
-    bool               m_dumpvars;
-    bool               m_earlyquit;
-    map<string,string> m_overrides;
+    string                           m_programFile;
+    string                           m_configFile;
+    string                           m_symtableFile;
+    bool                             m_enableMonitor;
+    bool                             m_interactive;
+    bool                             m_terminate;
+    bool                             m_dumpconf;
+    bool                             m_quiet;
+    bool                             m_dumpvars;
+    bool                             m_earlyquit;
+    vector<pair<string,string> >     m_overrides;
     
     vector<pair<RegAddr, RegValue> > m_regs;
     vector<pair<RegAddr, string> >   m_loads;
@@ -104,7 +104,7 @@ static void ParseArguments(int argc, const char ** argv, ProgramConfig& config)
             }
             string name = arg.substr(0, eq);
             transform(name.begin(), name.end(), name.begin(), ::toupper);
-            config.m_overrides[name] = arg.substr(eq + 1);
+            config.m_overrides.push_back(make_pair(name, arg.substr(eq + 1)));
         }
         else if (toupper(arg[1]) == 'L')  
         { 
@@ -162,8 +162,6 @@ static void ParseArguments(int argc, const char ** argv, ProgramConfig& config)
 
 }
 
-Config* g_Config = NULL;
-
 #ifdef USE_SDL
 extern "C"
 #endif
@@ -186,14 +184,6 @@ int main(int argc, char** argv)
         // Read configuration
         Config configfile(config.m_configFile, config.m_overrides);
         
-        g_Config = &configfile;
-
-        if (config.m_dumpconf)
-        {
-            std::clog << "### simulator version: " PACKAGE_VERSION << std::endl;
-            configfile.dumpConfiguration(std::clog, config.m_configFile);
-        }
-
         // Create the system
         MGSystem sys(configfile, 
                      config.m_programFile, config.m_symtableFile,
@@ -205,6 +195,12 @@ int main(int argc, char** argv)
         Monitor mo(sys, config.m_enableMonitor, 
                    mo_mdfile, config.m_earlyquit ? "" : mo_tfile, !config.m_interactive);
 #endif
+
+        if (config.m_dumpconf)
+        {
+            std::clog << "### simulator version: " PACKAGE_VERSION << std::endl;
+            configfile.dumpConfiguration(std::clog, config.m_configFile);
+        }
 
         if (config.m_dumpvars)
         {

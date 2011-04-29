@@ -34,7 +34,7 @@ static T GET_BITS(const T& value, unsigned int offset, unsigned int size)
 
 static const unsigned long INVALID_ROW = std::numeric_limits<unsigned long>::max();
 
-bool ZLCOMA::DDRChannel::Read(MemAddr address, MemSize size)
+bool DDRChannel::Read(MemAddr address, MemSize size)
 {
     if (m_busy.IsSet())
     {
@@ -62,7 +62,7 @@ bool ZLCOMA::DDRChannel::Read(MemAddr address, MemSize size)
     return true;
 }
 
-bool ZLCOMA::DDRChannel::Write(MemAddr address, const void* data, MemSize size)
+bool DDRChannel::Write(MemAddr address, const void* data, MemSize size)
 {
     if (m_busy.IsSet())
     {
@@ -92,7 +92,7 @@ bool ZLCOMA::DDRChannel::Write(MemAddr address, const void* data, MemSize size)
 }
 
 // Main process for timing the current active request
-Result ZLCOMA::DDRChannel::DoRequest()
+Result DDRChannel::DoRequest()
 {
     assert(m_busy.IsSet());
     
@@ -192,7 +192,7 @@ Result ZLCOMA::DDRChannel::DoRequest()
     return SUCCESS;
 }
 
-Result ZLCOMA::DDRChannel::DoPipeline()
+Result DDRChannel::DoPipeline()
 {
     assert(!m_pipeline.Empty());
     const CycleNo  now     = m_clock.GetCycleNo();
@@ -210,7 +210,7 @@ Result ZLCOMA::DDRChannel::DoPipeline()
     return SUCCESS;
 }
 
-ZLCOMA::DDRChannel::DDRConfig::DDRConfig(const Clock& clock, Config& config)
+DDRChannel::DDRConfig::DDRConfig(const Clock& clock, Config& config)
 {
     // DDR 3
     m_nBurstLength = config.getValue<size_t> ("DDR_BurstLength", 8);
@@ -249,7 +249,7 @@ ZLCOMA::DDRChannel::DDRConfig::DDRConfig(const Clock& clock, Config& config)
     m_nRankStart = m_nRowStart + m_nRowBits;
 }
 
-ZLCOMA::DDRChannel::DDRChannel(const std::string& name, Object& parent, Clock& clock, VirtualMemory& memory, Config& config)
+DDRChannel::DDRChannel(const std::string& name, Object& parent, Clock& clock, VirtualMemory& memory, Config& config)
     : Object(name, parent, clock),
       m_clock(clock),
       m_ddrconfig(clock, config),
@@ -263,14 +263,14 @@ ZLCOMA::DDRChannel::DDRChannel(const std::string& name, Object& parent, Clock& c
       m_next_command(0),
       m_next_precharge(0),
     
-      p_Request ("request",  delegate::create<DDRChannel, &ZLCOMA::DDRChannel::DoRequest >(*this)),
-      p_Pipeline("pipeline", delegate::create<DDRChannel, &ZLCOMA::DDRChannel::DoPipeline>(*this))
+      p_Request ("request",  delegate::create<DDRChannel, &DDRChannel::DoRequest >(*this)),
+      p_Pipeline("pipeline", delegate::create<DDRChannel, &DDRChannel::DoPipeline>(*this))
 {
     m_busy.Sensitive(p_Request);
     m_pipeline.Sensitive(p_Pipeline);
 }
 
-ZLCOMA::DDRChannel::~DDRChannel()
+DDRChannel::~DDRChannel()
 {
 }
 

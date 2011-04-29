@@ -20,7 +20,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
 #define COMA_ROOTDIRECTORY_H
 
 #include "Directory.h"
-#include "DDR.h"
+#include "mem/DDR.h"
 #include <queue>
 #include <set>
 

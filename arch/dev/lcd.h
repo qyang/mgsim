@@ -22,6 +22,8 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
 #include "arch/IOBus.h"
 #include "sim/kernel.h"
 
+class Config;
+
 namespace Simulator
 {
 
@@ -44,10 +46,7 @@ class LCD : public IIOBusClient, public Object
     void Refresh(unsigned firstrow, unsigned lastrow) const;
 
 public:
-    LCD(const std::string& name, Object& parent,
-        size_t width, size_t height,
-        size_t startrow, size_t startcolumn,
-        unsigned bgcolor, unsigned fgcolor);
+    LCD(const std::string& name, Object& parent, Config& config);
     ~LCD();
 
     bool OnReadRequestReceived(IODeviceID from, MemAddr address, MemSize size) { return false; }

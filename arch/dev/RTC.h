@@ -54,7 +54,7 @@ namespace Simulator
             RTC&            GetRTC() { return *dynamic_cast<RTC*>(GetParent()); }
 
         public:
-            RTCInterface(const std::string& name, RTC& parent, Clock &busclock, IIOBus& iobus, IODeviceID devid);
+            RTCInterface(const std::string& name, RTC& parent, IIOBus& iobus, IODeviceID devid);
 
             Process p_notifyTime;
 
@@ -76,7 +76,7 @@ namespace Simulator
         
     public:
 
-        RTC(const std::string& name, Object& parent, Clock& clock, Clock& busclock, IIOBus& iobus, IODeviceID devid, Config& config);
+        RTC(const std::string& name, Object& parent, Clock& clock, IIOBus& iobus, IODeviceID devid, Config& config);
 
         Process p_checkTime;
 

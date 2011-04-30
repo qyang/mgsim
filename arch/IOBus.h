@@ -54,6 +54,8 @@ public:
     virtual ~IIOBusClient() {}
 };
 
+class Clock;
+
 class IIOBus
 {
 public:
@@ -65,6 +67,8 @@ public:
     virtual bool SendInterruptRequest(IODeviceID from, IOInterruptID which) = 0;
 
     virtual void GetDeviceIdentity(IODeviceID which, IODeviceIdentification& id) const = 0;
+
+    virtual Clock& GetClock() = 0;
 
     virtual ~IIOBus() {}
 };

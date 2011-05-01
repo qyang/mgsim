@@ -23,42 +23,53 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
 namespace Simulator
 {
 
-Processor::IOInterruptMultiplexer::IOInterruptMultiplexer(const std::string& name, Object& parent, Clock& clock, RegisterFile& rf, size_t numInterrupts)
+Processor::IONotificationMultiplexer::IONotificationMultiplexer(const std::string& name, Object& parent, Clock& clock, RegisterFile& rf, size_t numChannels, Config& config)
     : Object(name, parent, clock),
       m_regFile(rf),
       m_lastNotified(0),
-      p_IncomingInterrupts("received-interrupts", delegate::create<IOInterruptMultiplexer, &Processor::IOInterruptMultiplexer::DoReceivedInterrupts>(*this))
+      p_IncomingNotifications("received-notifications", delegate::create<IONotificationMultiplexer, &Processor::IONotificationMultiplexer::DoReceivedNotifications>(*this))
 {
-    m_writebacks.resize(numInterrupts, 0);
-    m_interrupts.resize(numInterrupts, 0);
-    for (size_t i = 0; i < numInterrupts; ++i)
+    m_writebacks.resize(numChannels, 0);
+    m_interrupts.resize(numChannels, 0);
+    m_notifications.resize(numChannels, 0);
+
+    BufferSize nqs = config.getValue<BufferSize>(*this, "NotificationQueueSize");
+
+    for (size_t i = 0; i < numChannels; ++i)
     {
         {
             std::stringstream ss;
-            ss << "int_wb" << i;
+            ss << "wb" << i;
             m_writebacks[i] = new Register<RegAddr>(ss.str(), *this, clock);
-            m_writebacks[i]->Sensitive(p_IncomingInterrupts);
+            m_writebacks[i]->Sensitive(p_IncomingNotifications);
         }
         {
             std::stringstream ss;
-            ss << "int_latch" << i;
+            ss << "latch" << i;
             m_interrupts[i] = new SingleFlag(ss.str(), *this, clock, false);
-            m_interrupts[i]->Sensitive(p_IncomingInterrupts);
+            m_interrupts[i]->Sensitive(p_IncomingNotifications);
+        }
+        {
+            std::stringstream ss;
+            ss << "b_notification" << i;
+            m_notifications[i] = new Buffer<Integer>(ss.str(), *this, clock, nqs);
+            m_notifications[i]->Sensitive(p_IncomingNotifications);
         }
     }
 
 }
 
-Processor::IOInterruptMultiplexer::~IOInterruptMultiplexer()
+Processor::IONotificationMultiplexer::~IONotificationMultiplexer()
 {
     for (size_t i = 0; i < m_writebacks.size(); ++i)
     {
         delete m_writebacks[i];
         delete m_interrupts[i];
+        delete m_notifications[i];
     }
 }
 
-bool Processor::IOInterruptMultiplexer::SetWriteBackAddress(IOInterruptID which, const RegAddr& addr)
+bool Processor::IONotificationMultiplexer::SetWriteBackAddress(IOInterruptID which, const RegAddr& addr)
 {
     assert(which < m_writebacks.size());
 
@@ -73,22 +84,30 @@ bool Processor::IOInterruptMultiplexer::SetWriteBackAddress(IOInterruptID which,
     return true;
 }
 
-bool Processor::IOInterruptMultiplexer::OnInterruptRequestReceived(IOInterruptID from)
+bool Processor::IONotificationMultiplexer::OnInterruptRequestReceived(IOInterruptID from)
 {
     assert(from < m_interrupts.size());
     
     return m_interrupts[from]->Set();
 }
 
-Result Processor::IOInterruptMultiplexer::DoReceivedInterrupts()
+bool Processor::IONotificationMultiplexer::OnNotificationReceived(IOInterruptID from, Integer tag)
+{
+    assert(from < m_notifications.size());
+
+    return m_notifications[from]->Push(tag);
+}
+
+
+Result Processor::IONotificationMultiplexer::DoReceivedNotifications()
 {
     size_t i;
     bool   found = false;
 
-    /* Search for an interrupt to signal back to the processor */
+    /* Search for a notification to signal back to the processor */
     for (i = m_lastNotified; i < m_interrupts.size(); ++i)
     {
-        if (m_interrupts[i]->IsSet() && !m_writebacks[i]->Empty())
+        if ((m_interrupts[i]->IsSet() || !m_notifications[i]->Empty()) && !m_writebacks[i]->Empty())
         {
             found = true;
             break;
@@ -98,7 +117,7 @@ Result Processor::IOInterruptMultiplexer::DoReceivedInterrupts()
     {
         for (i = 0; i < m_lastNotified; ++i)
         {
-            if (m_interrupts[i]->IsSet() && !m_writebacks[i]->Empty())
+            if ((m_interrupts[i]->IsSet() || !m_notifications[i]->Empty()) && !m_writebacks[i]->Empty())
             {
                 found = true;
                 break;
@@ -112,7 +131,7 @@ Result Processor::IOInterruptMultiplexer::DoReceivedInterrupts()
         return SUCCESS;
     }
 
-    /* An interrupt was found, try to notify the processor */
+    /* A notification was found, try to notify the processor */
     
     const RegAddr& addr = m_writebacks[i]->Read();
 
@@ -139,16 +158,26 @@ Result Processor::IOInterruptMultiplexer::DoReceivedInterrupts()
     if (regvalue.m_state != RST_PENDING && regvalue.m_state != RST_WAITING)
     {
         // We're too fast, wait!
-        DeadlockWrite("I/O interrupt delivered before register %s was cleared", addr.str().c_str());
+        DeadlockWrite("I/O notification delivered before register %s was cleared", addr.str().c_str());
         return FAILED;
     }
     
     // Now write
     regvalue.m_state = RST_FULL;
+    Integer value;
+    if (m_interrupts[i]->IsSet())
+    {
+        // Interrupts have priority over notifications
+        value = 0;
+    }
+    else
+    {
+        value = m_notifications[i]->Front();
+    }
 
     switch (addr.type) {
-        case RT_INTEGER: regvalue.m_integer       = i; break;
-        case RT_FLOAT:   regvalue.m_float.integer = i; break;
+        case RT_INTEGER: regvalue.m_integer       = value; break;
+        case RT_FLOAT:   regvalue.m_float.integer = value; break;
     }
 
     if (!m_regFile.WriteRegister(addr, regvalue, false))
@@ -157,11 +186,20 @@ Result Processor::IOInterruptMultiplexer::DoReceivedInterrupts()
         return FAILED;
     }
     
-    DebugIOWrite("Completed notification of interrupt %zu to %s",
+    DebugIOWrite("Completed notification of channel %zu to %s",
                  i, addr.str().c_str());
 
     m_writebacks[i]->Clear();
-    m_interrupts[i]->Clear();
+
+    if (m_interrupts[i]->IsSet())
+    {
+        m_interrupts[i]->Clear();
+    }
+    else
+    {
+        m_notifications[i]->Pop();
+    }
+
     m_lastNotified = i;
 
     return SUCCESS;

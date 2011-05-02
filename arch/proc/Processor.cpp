@@ -49,7 +49,7 @@ Processor::Processor(const std::string& name, Object& parent, Clock& clock, PID 
     m_raunit      ("rau",           *this, clock, m_registerFile, config),
     m_familyTable ("families",      *this, clock, config),
     m_threadTable ("threads",       *this, clock, config),
-    m_network     ("network",       *this, clock, grid, m_allocator, m_registerFile, m_familyTable),
+    m_network     ("network",       *this, clock, grid, m_allocator, m_registerFile, m_familyTable, config),
     m_mmio        ("mmio",          *this, clock, config),
     m_perfcounters(*this),
     m_ancillaryRegisterFile("acrs", *this, clock, config),
@@ -292,7 +292,6 @@ bool Processor::OnMemoryInvalidated(MemAddr addr)
     return m_dcache.OnMemoryInvalidated(addr) &&
            m_icache.OnMemoryInvalidated(addr);
 }
-
 
 //
 // Below are the various functions that construct configuration-dependent values

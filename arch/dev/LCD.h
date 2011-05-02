@@ -21,6 +21,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
 
 #include "arch/IOBus.h"
 #include "sim/kernel.h"
+#include <fstream>
 
 class Config;
 
@@ -29,27 +30,32 @@ namespace Simulator
 
 class LCD : public IIOBusClient, public Object
 {
-    char*     m_buffer;
+    IODeviceID m_devid;
+    IIOBus&    m_iobus;
 
-    size_t    m_width;
-    size_t    m_height;
+    char*      m_buffer;
 
-    size_t    m_startrow;
-    size_t    m_startcolumn;
+    size_t     m_width;
+    size_t     m_height;
 
-    unsigned  m_bgcolor;
-    unsigned  m_fgcolor;
+    size_t     m_startrow;
+    size_t     m_startcolumn;
 
-    size_t    m_curx;
-    size_t    m_cury;
+    unsigned   m_bgcolor;
+    unsigned   m_fgcolor;
+
+    size_t     m_curx;
+    size_t     m_cury;
+
+    std::ofstream *m_tracefile;
 
     void Refresh(unsigned firstrow, unsigned lastrow) const;
 
 public:
-    LCD(const std::string& name, Object& parent, Config& config);
+    LCD(const std::string& name, Object& parent, IIOBus& iobus, IODeviceID devid, Config& config);
     ~LCD();
 
-    bool OnReadRequestReceived(IODeviceID from, MemAddr address, MemSize size) { return false; }
+    bool OnReadRequestReceived(IODeviceID from, MemAddr address, MemSize size);
     bool OnReadResponseReceived(IODeviceID from, const IOData& data) { return false; }
 
     bool OnInterruptRequestReceived(IOInterruptID which) { return true; }

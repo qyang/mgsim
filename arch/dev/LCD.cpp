@@ -23,7 +23,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
 #include <cstring>
 #include <cctype>
 #include <cassert>
-#include "lcd.h"
+#include "LCD.h"
 #include "config.h"
 #include "except.h"
 

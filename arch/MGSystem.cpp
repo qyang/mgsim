@@ -26,7 +26,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
 #include "mem/zlcoma/COMA.h"
 
 #include "arch/dev/NullIO.h"
-#include "arch/dev/lcd.h"
+#include "arch/dev/LCD.h"
 #include "arch/dev/RTC.h"
 #include "arch/dev/Display.h"
 

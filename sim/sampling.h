@@ -19,10 +19,6 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
 #ifndef SAMPLING_H
 #define SAMPLING_H
 
-namespace Simulator {
-    class MGSystem;
-}
-
 #include <vector>
 #include <utility>
 #include <string>
@@ -61,6 +57,9 @@ void RegisterSampleVariable(T& var, const std::string& name, SampleVariableCateg
 void ListSampleVariables(std::ostream& os, const std::string &pat = "*");
 bool ReadSampleVariables(std::ostream& os, const std::string &pat = "*"); // returns "false" if no variables match.
 
+
+class Config;
+
 class BinarySampler
 {
     typedef std::vector<std::pair<const char*, size_t> > vars_t;
@@ -70,7 +69,7 @@ class BinarySampler
 
 public:
 
-    BinarySampler(std::ostream& os, const Simulator::MGSystem& sys, 
+    BinarySampler(std::ostream& os, const Config& config, 
                   const std::vector<std::string>& pats);
 
     size_t GetBufferSize() const { return m_datasize; }

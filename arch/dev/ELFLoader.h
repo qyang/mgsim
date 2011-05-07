@@ -16,18 +16,26 @@ You should have received a copy of the GNU Library General Public
 License along with this library; if not, write to the Free Software
 Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
 */
-#ifndef LOADER_H
-#define LOADER_H
+#ifndef ELFLOADER_H
+#define ELFLOADER_H
 
 #include "Memory.h"
+#include "ActiveROM.h"
 #include <algorithm>
 
 // Load the program file into the memory.
-// Returns loaded address and whether the file contains legacy code.
-std::pair<Simulator::MemAddr, bool> LoadProgram(Simulator::IMemoryAdmin* memory, const std::string& path, bool quiet);
-
-// Load a data file into the memory. Returns loaded address.
-std::pair<Simulator::MemAddr, size_t> LoadDataFile(Simulator::IMemoryAdmin* memory, const std::string& path, bool quiet);
+// Arguments:
+// - ranges: the set of loadable virtual ranges in the system memory address space
+// - memory: the memory administrative interface to set permissions
+// - elf_image_data: raw ELF data
+// - elf_image_size: size of raw ELF data
+// - quiet: set to true to enable verbose reporting of the ELF loading process
+std::pair<Simulator::MemAddr, bool>
+    LoadProgram(std::vector<Simulator::ActiveROM::LoadableRange>& ranges, 
+                Simulator::IMemoryAdmin& memory,
+                char *elf_image_data,
+                Simulator::MemSize elf_image_size,
+                bool verbose);
 
 #endif
 

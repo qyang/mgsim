@@ -26,6 +26,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
 class IOResponseMultiplexer;
 class IONotificationMultiplexer;
 class IODirectCacheAccess;
+class IOInterface;
 
 class IOBusInterface : public IIOBusClient, public Object
 {
@@ -55,7 +56,9 @@ private:
     Buffer<IORequest>          m_outgoing_reqs;
 
 public:
-    IOBusInterface(const std::string& name, Object& parent, Clock& clock, IOResponseMultiplexer& rrmux, IONotificationMultiplexer& nmux, IODirectCacheAccess& dca, IIOBus& iobus, IODeviceID devid, Config& config);
+    Processor& GetProcessor() const { return dynamic_cast<Processor&>(*GetParent()->GetParent()); }
+
+    IOBusInterface(const std::string& name, IOInterface& parent, Clock& clock, IOResponseMultiplexer& rrmux, IONotificationMultiplexer& nmux, IODirectCacheAccess& dca, IIOBus& iobus, IODeviceID devid, Config& config);
 
     bool SendRequest(const IORequest& request);
     

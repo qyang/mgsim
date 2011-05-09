@@ -51,6 +51,7 @@ namespace Simulator
         bool SendInterruptRequest(IODeviceID from, IOInterruptID which);
         bool SendNotification(IODeviceID from, IOInterruptID which, Integer tag);
 
+        void Initialize();
         IODeviceID GetLastDeviceID() const;
         IODeviceID GetDeviceByName(const std::string& objname) const;
         void GetDeviceIdentity(IODeviceID which, IODeviceIdentification& id) const;

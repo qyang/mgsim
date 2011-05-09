@@ -27,6 +27,7 @@ namespace Simulator
 {
     SMC::SMC(const string& name, Object& parent, IIOBus& iobus, IODeviceID devid,
              const vector<pair<RegAddr, RegValue> >& regs,
+             const vector<pair<RegAddr, string> >& loads,
              Processor& proc, 
              ActiveROM& rom, 
              Config& config)
@@ -36,6 +37,7 @@ namespace Simulator
           m_iobus(iobus),
           m_devid(devid),
           m_regs(regs),
+          m_loads(loads),
           m_cpu(proc),
           m_rom(rom),
           m_romid(rom.GetDeviceID()),
@@ -60,8 +62,9 @@ namespace Simulator
         delete m_enumdata;
     }
 
-    void SMC::Initialize(size_t numDevices)
+    void SMC::Initialize()
     {
+        size_t numDevices = m_iobus.GetLastDeviceID();
         m_size = (numDevices + 1) * 8;
         m_enumdata = new char[m_size];
 
@@ -114,6 +117,14 @@ namespace Simulator
             m_cpu.Boot(prog_start, legacy, m_cpu.GetGridSize(), m_cpu.GetDeviceBaseAddress(m_devid));
 
             // Fill initial registers
+            for (size_t i = 0; i < m_loads.size(); ++i)
+            {
+                RegAddr reg = m_loads[i].first;
+                RegValue val;
+                val.m_integer = m_cpu.GetDeviceBaseAddress(m_iobus.GetDeviceByName(m_loads[i].second));
+                val.m_state = RST_FULL;
+                m_cpu.WriteRegister(reg, val);
+            }
             for (size_t i = 0; i < m_regs.size(); ++i)
             {
                 m_cpu.WriteRegister(m_regs[i].first, m_regs[i].second);

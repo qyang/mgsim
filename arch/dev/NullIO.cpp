@@ -19,6 +19,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
 #include "NullIO.h"
 #include "sim/except.h"
 #include <iomanip>
+#include <fnmatch.h>
 
 using namespace std;
 namespace Simulator
@@ -108,6 +109,28 @@ namespace Simulator
                 res = res & m_clients[to]->OnNotificationReceived(which, tag);
         }
         return res;
+    }
+
+    IODeviceID NullIO::GetNextAvailableDeviceID() const
+    {
+        for (size_t i = 0; i < m_clients.size(); ++i)
+        {
+            if (m_clients[i] == NULL)
+            {
+                return i;
+            }
+        }
+        return m_clients.size();
+    }
+
+    IODeviceID NullIO::GetDeviceByName(const std::string& name) const
+    {
+        for (size_t i = 0; i < m_clients.size(); ++i)
+        {
+            if (m_clients[i] != NULL && FNM_NOMATCH != fnmatch(name.c_str(), m_clients[i]->GetIODeviceName().c_str(), FNM_CASEFOLD))
+                return i;
+        }
+        throw exceptf<InvalidArgumentException>(*this, "No such device: %s", name.c_str());
     }
 
     IODeviceID NullIO::GetLastDeviceID() const

@@ -29,6 +29,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
 #include <vector>
 
 class Config;
+class ComponentModelRegistry;
 
 namespace Simulator
 {
@@ -69,6 +70,7 @@ class ParallelMemory : public Object, public IMemoryAdmin, public VirtualMemory
     
     CycleNo GetMemoryDelay(size_t data_size) const;
     
+    ComponentModelRegistry&       m_registry;
     std::vector<ClientInfo> m_clients;
     
     CycleNo	m_baseRequestTime; // Config: This many cycles per request regardless of size

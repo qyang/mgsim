@@ -26,6 +26,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
 #include <set>
 
 class Config;
+class ComponentModelRegistry;
 
 namespace Simulator
 {
@@ -66,6 +67,7 @@ private:
     }
 
     
+    ComponentModelRegistry&     m_registry;
     size_t                      m_numProcsPerCache;
     size_t                      m_numCachesPerDir;
     std::vector<Cache*>         m_caches;             ///< List of caches

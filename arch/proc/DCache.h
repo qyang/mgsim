@@ -118,7 +118,6 @@ public:
     size_t GetNumLines()      const { return m_lines.size(); }
     size_t GetNumSets()       const { return m_sets; }
 
-
     const Line& GetLine(size_t i) const { return m_lines[i];  }
 };
 

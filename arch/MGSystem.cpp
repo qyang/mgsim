@@ -691,6 +691,7 @@ MGSystem::MGSystem(Config& config,
         m_fpus[f] = new FPU(name.str(), m_root, m_clock, config, numProcessorsPerFPU);
 
         config.registerObject(*m_fpus[f], "fpu");
+        config.registerProperty(*m_fpus[f], "freq", (uint32_t)m_clock.GetFrequency());
     }
 
     // Create processor grid
@@ -731,6 +732,8 @@ MGSystem::MGSystem(Config& config,
     size_t numIODevices = dev_names.size();
 
     m_devices.resize(numIODevices);
+    vector<ActiveROM*> aroms;
+
     for (size_t i = 0; i < numIODevices; ++i)
     {
         string name = dev_names[i];
@@ -773,15 +776,8 @@ MGSystem::MGSystem(Config& config,
             config.registerObject(*disp, "gfx");
         } else if (dev_type == "AROM") {
             ActiveROM *rom = new ActiveROM(name, m_root, *m_memory, iobus, devid, config);
-            if (rom->IsBootable())
-            {
-                if (m_bootrom != NULL)
-                {
-                    throw runtime_error("More than one bootable ROM detected: " + name + ", " + m_bootrom->GetFQN());
-                }
-                m_bootrom = rom;
-            }
             m_devices[i] = rom;
+            aroms.push_back(rom);
             config.registerObject(*rom, "arom");
         } else if (dev_type == "SMC") {
             SMC * smc = new SMC(name, m_root, iobus, devid, regs, loads, config);
@@ -832,6 +828,20 @@ MGSystem::MGSystem(Config& config,
         m_iobuses[i]->Initialize();
     }
 
+    // Check for bootable ROMs. This must happen after I/O bus
+    // initialization because the ROM contents are loaded then.
+    for (size_t i = 0; i < aroms.size(); ++i)
+    {
+        ActiveROM *rom = aroms[i];
+        if (rom->IsBootable())
+        {
+            if (m_bootrom != NULL)
+            {
+                throw runtime_error("More than one bootable ROM detected: " + rom->GetName() + ", " + m_bootrom->GetFQN());
+            }
+            m_bootrom = rom;
+        }
+    }
     if (m_bootrom == NULL)
     {
         cerr << "Warning: No bootable ROM configured." << endl;

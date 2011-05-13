@@ -280,14 +280,16 @@ RunState Kernel::Step(CycleNo cycles)
                     m_debugging = false; // Will be used by DeadlockWrite() for process-seperating newlines
                 
                     // If we fail in the acquire stage, don't bother with the check and commit stages
-                    if (process->m_delegate() == FAILED)
+                    Result result = process->m_delegate();
+                    if (result == SUCCESS)
                     {
-                        process->m_state = STATE_DEADLOCK;
-                        ++process->m_stalls;
+                        process->m_state = STATE_RUNNING;
                     }
                     else
                     {
-                        process->m_state = STATE_RUNNING;
+                        assert(result == FAILED);
+                        process->m_state = STATE_DEADLOCK;
+                        ++process->m_stalls;
                     }
                 }
             }
@@ -318,8 +320,8 @@ RunState Kernel::Step(CycleNo cycles)
                         m_phase     = PHASE_CHECK;
                         m_debugging = false; // Will be used by DeadlockWrite() for process-seperating newlines
                 
-                        Result result;
-                        if ((result = process->m_delegate()) == SUCCESS)
+                        Result result = process->m_delegate();
+                        if (result == SUCCESS)
                         {
                             m_phase = PHASE_COMMIT;
                             result = process->m_delegate();

@@ -30,6 +30,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
 #include "arch/dev/RTC.h"
 #include "arch/dev/Display.h"
 #include "arch/dev/ActiveROM.h"
+#include "arch/dev/Selector.h"
 #include "arch/dev/SMC.h"
 
 #include <cstdlib>
@@ -677,6 +678,9 @@ MGSystem::MGSystem(Config& config,
         throw runtime_error("Unknown memory type: " + memory_type);
     }
 
+    // Create the event selector
+    Clock& selclock = m_kernel.CreateClock(config.getValue<unsigned long>(m_root, "EventCheckFreq"));
+    m_selector = new Selector("selector", m_root, selclock, config);
 
     // Create the I/O Buses
     const size_t numIOBuses = config.getValue<size_t>("NumIOBuses");
@@ -919,9 +923,6 @@ MGSystem::~MGSystem()
     {
         delete m_fpus[i];
     }
-    // for (size_t i = 0; i < m_lcds.size(); ++i)
-    // {
-    //     delete m_lcds[i];
-    // }
+    delete m_selector;
     delete m_memory;
 }

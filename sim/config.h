@@ -30,6 +30,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
 #include <inttypes.h>
 #include "kernel.h"
 #include "except.h"
+#include "programs/mgsim.h"
 
 /// InputConfigRegistry: registry for configuration values provided
 /// before the simulation starts.
@@ -128,7 +129,8 @@ public:
     std::vector<std::string> getWordList(const std::string& name); 
     std::vector<std::string> getWordList(const Simulator::Object& obj, const std::string& name);
 
-    void dumpConfiguration(std::ostream& os, const std::string& cf, bool raw = false) const;
+    void dumpConfiguration(std::ostream& os, const std::string& cf) const;
+    std::vector<std::pair<std::string, std::string> > getRawConfiguration() const;
 
     InputConfigRegistry(const std::string& filename, const ConfigMap& overrides);
 
@@ -154,13 +156,18 @@ bool InputConfigRegistry::convertToNumber<bool>(const std::string& name, const s
 class ComponentModelRegistry
 {
 
-private:
+protected:
     typedef const std::string*          Symbol;
     typedef const Simulator::Object*    ObjectRef;
 
     struct Entity
     {
-        enum { VOID, OBJECT, SYMBOL, UINT32, UINT64 } type;
+        enum { 
+            VOID = CONF_ENTITY_VOID, 
+            SYMBOL = CONF_ENTITY_SYMBOL,
+            OBJECT = CONF_ENTITY_OBJECT,
+            UINT = CONF_ENTITY_UINT, 
+        } type;
         union
         {
             uint64_t     value;
@@ -192,12 +199,16 @@ private:
     EntityRef refEntity(const ObjectRef& obj);
     EntityRef refEntity(const Symbol& sym);
     EntityRef refEntity(const uint32_t& val);
-    EntityRef refEntity(const uint64_t& val);
     EntityRef refEntity(void);
 
     std::map<ObjectRef, Symbol> m_names;
-
     void renameObjects(void);
+
+    typedef std::map<Symbol, std::vector<Symbol> > types_t;
+    typedef std::map<Symbol, std::map<Symbol, size_t> > typeattrs_t;
+    types_t m_types;
+    typeattrs_t m_typeattrs;
+    void collectPropertiesByType(void);
 
 public:
 
@@ -254,7 +265,6 @@ public:
 
 
     void dumpComponentGraph(std::ostream& out, bool display_nodeprops = true, bool display_linkprops = true);
-
 };
 
 
@@ -275,6 +285,8 @@ public:
         : InputConfigRegistry(filename, overrides)
     { }
 
+
+    std::vector<uint32_t> GetConfWords();
 };
 
 

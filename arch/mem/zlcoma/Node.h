@@ -130,6 +130,10 @@ private:
     Result            DoForward();
 
 protected:
+    StorageTraceSet GetOutgoingTrace() const {
+        return m_outgoing;
+    }
+
     /// Send the message to the next node
     bool SendMessage(Message* message, size_t min_space);
     

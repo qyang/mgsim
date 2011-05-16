@@ -50,7 +50,16 @@ protected:
         }
 #endif
     }
-        
+    
+    void MarkUsage() const {
+        if (IsAcquiring()) {
+            Process* process = GetKernel()->GetActiveProcess();
+            if (process != NULL) {
+                process->OnStorageAccess(*this);
+            }
+        }
+    }
+    
     void RegisterUpdate() {
         if (!m_activated) {
             m_next = GetClock().ActivateStorage(*this);
@@ -202,12 +211,14 @@ public:
     /// Pushes the item on the back of the list
     void Push(const T& item)
     {
+        MarkUsage();
         Append(item, item);
     }
 
     /// Appends the passed list to this list
     void Append(const T& first, const T& last)
     {
+        MarkUsage();
         CheckClocks();        
         assert(!m_pushed);  // We can only push once in a cycle
         COMMIT {
@@ -325,6 +336,8 @@ public:
     // least min_space space is available before the push.
     bool Push(const T& item, size_t min_space = 1)
     {
+        MarkUsage();
+        
         assert(min_space >= 1);
         if (m_maxPushes != 1)
         {
@@ -432,6 +445,7 @@ public:
     }
     
     void Write(const T& data) {
+        MarkUsage();
         CheckClocks();
         assert(!m_assigned);    // We can only write once in a cycle
         COMMIT {
@@ -483,6 +497,7 @@ public:
     }
 
     bool Set() {
+        MarkUsage();
         if (!m_updated) {
             COMMIT {
                 m_new     = true;

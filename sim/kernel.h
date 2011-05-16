@@ -22,6 +22,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
 #include "except.h"
 #include "delegate.h"
 #include "types.h"
+#include "storagetrace.h"
 
 #include <vector>
 #include <map>
@@ -40,7 +41,6 @@ class Object;
 class Mutex;
 class Kernel;
 class Arbitrator;
-class Storage;
 class IRegister;
 class Process;
 
@@ -129,6 +129,7 @@ enum RunState
 	STATE_ABORTED,  ///< The simulation has been aborted.
 };
 
+
 // Processes are member variables in components and represent the information
 // about a single process in that component.
 class Process
@@ -142,6 +143,11 @@ class Process
     unsigned int      m_activations;   ///< Reference count of activations of this process
     Process*          m_next;          ///< Next pointer in the list of processes that require updates
     Process**         m_pPrev;         ///< Prev pointer in the list of processes that require updates
+    
+#ifndef NDEBUG
+    StorageTraceSet m_storages;         ///< Set of storage traces this process can have
+    StorageTrace    m_currentStorages;  ///< Storage trace for this cycle
+#endif
     uint64_t          m_stalls;        ///< Number of times the process stalled (failed).
 
     // Processes are non-copyable and non-assignable
@@ -155,7 +161,34 @@ public:
     std::string    GetName()   const;
     
     void Deactivate();
-        
+
+    // The following functions are for verification of storage accesses.
+    // They check that the process does not violate its contract for 
+    // accessing storages. The contract is set up when the system is created.
+#ifndef NDEBUG
+    void OnBeginCycle() {
+        m_currentStorages = StorageTrace();
+    }
+    
+    void OnEndCycle() const {
+        // Check if the process accessed storages in a way that isn't allowed
+        assert(m_storages.Contains(m_currentStorages));
+    }
+    
+    void OnStorageAccess(const Storage& s) {
+        m_currentStorages.Append(s);
+    }
+    
+    void SetStorageTraces(const StorageTraceSet& sl) {
+        m_storages = sl;
+    }
+#else
+    void OnBeginCycle() {}
+    void OnEndCycle() const {}
+    void OnStorageAccess(const Storage& s) {}
+    void AddStorages(const StorageList& sl) {}
+#endif
+    
     Process(Object& parent, const std::string& name, const delegate& delegate);
 };
 
@@ -234,7 +267,7 @@ public:
     /**
      * @brief Get the currently executing process
      */
-    inline const Process* GetActiveProcess() const { return m_process; }
+    inline Process* GetActiveProcess() const { return m_process; }
 
     /**
      * @brief Get the currently scheduled processes

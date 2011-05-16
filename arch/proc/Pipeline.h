@@ -25,6 +25,8 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
 
 class Pipeline : public Object, public Inspect::Interface<Inspect::Read>
 {
+    friend class Processor;
+    
 #include "ISA.h"
 
     /// A (possibly multi-) register value in the pipeline
@@ -380,6 +382,8 @@ class Pipeline : public Object, public Inspect::Interface<Inspect::Read>
 
         static RegValue PipeValueToRegValue(RegType type, const PipeValue& v);
     public:
+        size_t GetFPUSource() const { return m_fpuSource; }
+        
         ExecuteStage(Pipeline& parent, Clock& clock, const ReadExecuteLatch& input, ExecuteMemoryLatch& output, Allocator& allocator, FamilyTable& familyTable, ThreadTable& threadTable, FPU& fpu, size_t fpu_source, Config& config);
         
         uint64_t getFlop() const { return m_flop; }
@@ -444,6 +448,7 @@ public:
     uint64_t GetNStages() const { return m_stages.size(); }
     uint64_t GetStagesRun() const { return m_nStagesRun; }
     
+    size_t GetFPUSource() const { return dynamic_cast<ExecuteStage&>(*m_stages[3].stage).GetFPUSource(); }
 
     float    GetEfficiency() const { return (float)m_nStagesRun / m_stages.size() / (float)std::max<uint64_t>(1ULL, m_pipelineBusyTime); }
 

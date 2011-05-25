@@ -64,7 +64,7 @@ namespace Simulator
 
         SingleFlag m_readInterrupt;
         Process p_ReadInterrupt;
-        IOInterruptID m_readInterruptChannel;
+        IONotificationChannelID m_readInterruptChannel;
         Result DoSendReadInterrupt();
 
         bool m_writeInterruptEnable;
@@ -72,7 +72,7 @@ namespace Simulator
 
         SingleFlag m_writeInterrupt;
         Process p_WriteInterrupt;
-        IOInterruptID m_writeInterruptChannel;
+        IONotificationChannelID m_writeInterruptChannel;
         Result DoSendWriteInterrupt();
 
         bool m_loopback;

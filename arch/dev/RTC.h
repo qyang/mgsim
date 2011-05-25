@@ -49,7 +49,7 @@ namespace Simulator
             IODeviceID      m_devid;
             IIOBus&         m_iobus;
             SingleFlag      m_doNotify;
-            IOInterruptID   m_interruptNumber;
+            IONotificationChannelID   m_interruptNumber;
 
             RTC&            GetRTC() { return *dynamic_cast<RTC*>(GetParent()); }
 

@@ -79,7 +79,7 @@ namespace Simulator
         return m_clients[to]->OnWriteRequestReceived(from, address, data);
     }
 
-    bool NullIO::SendInterruptRequest(IODeviceID from, IOInterruptID which)
+    bool NullIO::SendInterruptRequest(IODeviceID from, IONotificationChannelID which)
     {
         if (from >= m_clients.size() || m_clients[from] == NULL)
         {
@@ -95,7 +95,7 @@ namespace Simulator
         return res;
     }
 
-    bool NullIO::SendNotification(IODeviceID from, IOInterruptID which, Integer tag)
+    bool NullIO::SendNotification(IODeviceID from, IONotificationChannelID which, Integer tag)
     {
         if (from >= m_clients.size() || m_clients[from] == NULL)
         {

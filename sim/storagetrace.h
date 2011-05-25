@@ -22,6 +22,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
 #include <set>
 #include <iterator>
 #include <vector>
+#include <iostream>
 
 namespace Simulator
 {
@@ -72,6 +73,8 @@ public:
     StorageTrace(const StorageTrace& a, const StorageTrace& b) : m_storages(a.m_storages) {
         std::copy(b.m_storages.begin(), b.m_storages.end(), std::back_inserter(m_storages));
     }
+
+    friend std::ostream& operator<<(std::ostream& os, const StorageTrace& st);
 };
 
 class StorageTraceSet
@@ -124,6 +127,8 @@ public:
     StorageTraceSet(const StorageTrace& a) {
         m_storages.insert(a);
     }
+
+    friend std::ostream& operator<<(std::ostream& os, const StorageTraceSet& st);
 };
 
 static inline StorageTraceSet operator^(const StorageTraceSet& a, const StorageTraceSet& b) {

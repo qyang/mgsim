@@ -81,7 +81,7 @@ static void ParseArguments(int argc, const char ** argv, ProgramConfig& config)
         const string arg = argv[i];
         if (arg[0] != '-')
         {
-            cerr << "Warning: converting extra argument to -o *.ROMFileName=" << arg << endl;
+            cerr << "Warning: converting extra argument to -o *:ROMFileName=" << arg << endl;
             config.m_overrides.push_back(make_pair("*:ROMFileName", arg));
         }
         else if (arg == "-c" || arg == "--config")      config.m_configFile    = argv[++i];
@@ -214,7 +214,7 @@ int main(int argc, char** argv)
         if (config.m_interactive)
         {
             // Interactive mode
-            PrintVersion(std::cout);
+            PrintVersion(std::clog);
         }
 
         // Read configuration
@@ -244,9 +244,9 @@ int main(int argc, char** argv)
 
         if (config.m_dumpvars)
         {
-            std::cout << "### begin monitor variables" << std::endl;
-            ListSampleVariables(std::cout);
-            std::cout << "### end monitor variables" << std::endl;
+            std::clog << "### begin monitor variables" << std::endl;
+            ListSampleVariables(std::clog);
+            std::clog << "### end monitor variables" << std::endl;
         }
 
         if (config.m_dumptopo)

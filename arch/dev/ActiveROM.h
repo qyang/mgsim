@@ -78,7 +78,7 @@ namespace Simulator
         void PrepareRanges();
 
     public:
-        ActiveROM(const std::string& name, Object& parent, IMemoryAdmin& mem, IIOBus& iobus, IODeviceID devid, Config& config);
+        ActiveROM(const std::string& name, Object& parent, IMemoryAdmin& mem, IIOBus& iobus, IODeviceID devid, Config& config, bool quiet = false);
         ~ActiveROM();
 
         void Initialize();

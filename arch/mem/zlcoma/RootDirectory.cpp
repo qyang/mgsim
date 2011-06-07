@@ -126,6 +126,7 @@ bool ZLCOMA::RootDirectory::OnMessageReceived(Message* req)
         // This message is for us
         if (!p_lines.Invoke())
         {
+            DeadlockWrite("Unable to acquire lines");
             return false;
         }
 
@@ -164,6 +165,7 @@ bool ZLCOMA::RootDirectory::OnMessageReceived(Message* req)
             
                 if (!m_requests.Push(req))
                 {
+                    DeadlockWrite("Unable to queue read request to memory");
                     return false;
                 }
                 return true;
@@ -204,6 +206,7 @@ bool ZLCOMA::RootDirectory::OnMessageReceived(Message* req)
 
                 if (!m_requests.Push(req))
                 {
+                    DeadlockWrite("Unable to queue read request to memory");
                     return false;
                 }
                 return true;
@@ -317,6 +320,7 @@ bool ZLCOMA::RootDirectory::OnMessageReceived(Message* req)
             // Dirty data; write back the data to memory
             else if (!m_requests.Push(req))
             {
+                DeadlockWrite("Unable to queue read request to memory");
                 return false;
             }
             return true;
@@ -419,6 +423,7 @@ Result ZLCOMA::RootDirectory::DoResponses()
     // even if we don't need or modify any line.
     if (!p_lines.Invoke())
     {
+        DeadlockWrite("Unable to acquire lines");
         return FAILED;
     }
 
@@ -527,6 +532,8 @@ void ZLCOMA::RootDirectory::Cmd_Read(std::ostream& out, const std::vector<std::s
     if (!arguments.empty() && arguments[0] == "buffers")
     {
         // Print the buffers
+        Print(out, "external requests", m_requests);
+        Print(out, "external responses", m_responses);
         Print(out);
         return;
     }

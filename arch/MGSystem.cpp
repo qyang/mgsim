@@ -33,6 +33,11 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
 #include "arch/dev/Selector.h"
 #include "arch/dev/SMC.h"
 #include "arch/dev/UART.h"
+#include "arch/dev/RPC.h"
+
+// maybe replace the following if the host-guest syscall API ever
+// changes.
+#include "arch/dev/RPC_unix.h"
 
 #include <cstdlib>
 #include <iomanip>
@@ -793,6 +798,9 @@ MGSystem::MGSystem(Config& config,
     m_devices.resize(numIODevices);
     vector<ActiveROM*> aroms;
 
+    UnixInterface *uif = new UnixInterface("unix_if", m_root);
+    m_devices.push_back(uif);
+
     for (size_t i = 0; i < numIODevices; ++i)
     {
         string name = dev_names[i];
@@ -846,6 +854,10 @@ MGSystem::MGSystem(Config& config,
             SMC * smc = new SMC(name, m_root, iobus, devid, regs, loads, config);
             m_devices[i] = smc;
             config.registerObject(*smc, "smc");
+        } else if (dev_type == "RPC") {
+            RPCInterface* rpc = new RPCInterface(name, m_root, iobus, devid, config, *uif);
+            m_devices[i] = rpc;
+            config.registerObject(*rpc, "rpc");
         } else {
             throw runtime_error("Unknown I/O device type: " + dev_type);
         }

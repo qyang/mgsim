@@ -46,7 +46,6 @@ public:
         bool*       valid;      ///< A bitmap of valid bytes in this line.
         CycleNo     access;     ///< Last access time of this line (for LRU).
         RegAddr     waiting;    ///< First register waiting on this line.
-        bool        create;
     };
 
 private:

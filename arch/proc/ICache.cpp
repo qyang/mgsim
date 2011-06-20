@@ -466,7 +466,7 @@ Result Processor::ICache::DoIncoming()
     if (line.creation)
     {
         // Resume family creation
-        if (!m_allocator.OnICachelineLoaded(cid))
+        if (!m_allocator.OnCachelineLoaded(cid))
         {
             DeadlockWrite("Unable to resume family creation for C%u", (unsigned)cid);
             return FAILED;

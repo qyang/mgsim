@@ -103,6 +103,8 @@ struct RemoteMessage
             };
         } famreg;
     };
+
+    std::string str() const;
 };
 
 struct LinkMessage
@@ -189,6 +191,8 @@ struct LinkMessage
             RegValue value;
         } global;
     };
+
+    std::string str() const;
 };
 
 /// Allocation response (going backwards)

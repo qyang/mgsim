@@ -21,7 +21,6 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
 #include "mem/SerialMemory.h"
 #include "mem/ParallelMemory.h"
 #include "mem/BankedMemory.h"
-#include "mem/RandomBankedMemory.h"
 #include "mem/coma/COMA.h"
 #include "mem/zlcoma/COMA.h"
 
@@ -682,10 +681,10 @@ MGSystem::MGSystem(Config& config,
         ParallelMemory* memory = new ParallelMemory("memory", m_root, memclock, config);
         m_memory = memory;
     } else if (memory_type == "BANKED") {
-        BankedMemory* memory = new BankedMemory("memory", m_root, memclock, config);
+        BankedMemory* memory = new BankedMemory("memory", m_root, memclock, config, "DIRECT");
         m_memory = memory;
     } else if (memory_type == "RANDOMBANKED") {
-        RandomBankedMemory* memory = new RandomBankedMemory("memory", m_root, memclock, config);
+        BankedMemory* memory = new BankedMemory("memory", m_root, memclock, config, "RMIX");
         m_memory = memory;
     } else if (memory_type == "COMA") {
         COMA* memory = new COMA("memory", m_root, memclock, config);

@@ -22,6 +22,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
 #include "sim/inspect.h"
 #include "arch/IOBus.h"
 #include "arch/Memory.h"
+#include "arch/BankSelector.h"
 
 class Config;
 

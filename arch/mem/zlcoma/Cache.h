@@ -21,6 +21,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
 
 #include "Node.h"
 #include "sim/inspect.h"
+#include "arch/BankSelector.h"
 #include <queue>
 #include <set>
 
@@ -72,7 +73,8 @@ private:
         unsigned int client;
         TID          tid;
     };
-    
+
+    IBankSelector&                m_selector;
     size_t                        m_lineSize;
     size_t                        m_assoc;
     size_t                        m_sets;
@@ -109,8 +111,8 @@ private:
     Result OnMessageReceived(Message* msg);
 
     Line* FindLine(MemAddr address);
-    Line* GetEmptyLine(MemAddr address);
-    Line* GetReplacementLine(MemAddr address);
+    Line* GetEmptyLine(MemAddr address, MemAddr& tag);
+    Line* GetReplacementLine(MemAddr address, MemAddr& tag);
 
     bool  ClearLine(Line* line);
     bool  EvictLine(Line* line, const Request& req);

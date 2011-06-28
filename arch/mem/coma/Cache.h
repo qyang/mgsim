@@ -21,6 +21,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
 
 #include "Node.h"
 #include "sim/inspect.h"
+#include "arch/BankSelector.h"
 #include <queue>
 #include <set>
 
@@ -60,6 +61,7 @@ private:
         TID          tid;
     };
 
+    IBankSelector&                m_selector;
     size_t                        m_lineSize;
     size_t                        m_assoc;
     size_t                        m_sets;
@@ -85,7 +87,7 @@ private:
     Buffer<MemData>     m_responses;
     
     Line* FindLine(MemAddr address);
-    Line* AllocateLine(MemAddr address, bool empty_only);
+    Line* AllocateLine(MemAddr address, bool empty_only, MemAddr *ptag = NULL);
     bool  EvictLine(Line* line, const Request& req);
 
     // Processes

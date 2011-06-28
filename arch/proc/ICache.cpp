@@ -17,6 +17,7 @@ License along with this library; if not, write to the Free Software
 Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
 */
 #include "Processor.h"
+#include "sim/log2.h"
 #include "sim/config.h"
 #include "sim/sampling.h"
 
@@ -28,12 +29,6 @@ using namespace std;
 
 namespace Simulator
 {
-
-template <typename T>
-static bool IsPowerOfTwo(const T& x)
-{
-    return (x & (x - 1)) == 0;
-}
 
 Processor::ICache::ICache(const std::string& name, Processor& parent, Clock& clock, Allocator& alloc, IMemory& memory, Config& config)
 :   Object(name, parent, clock),

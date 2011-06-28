@@ -18,18 +18,13 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
 */
 #include "Processor.h"
 #include "sim/config.h"
+#include "sim/log2.h"
 #include <cassert>
 #include <iomanip>
 using namespace std;
 
 namespace Simulator
 {
-
-template <typename T>
-static bool IsPowerOfTwo(const T& x)
-{
-    return (x & (x - 1)) == 0;
-}
 
 Processor::RAUnit::RAUnit(const std::string& name, Processor& parent, Clock& clock, const RegisterFile& regFile, Config& config)
     : Object(name, parent, clock)

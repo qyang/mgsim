@@ -19,6 +19,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
 #include "Processor.h"
 #include "symtable.h"
 #include "sim/sampling.h"
+#include "sim/log2.h"
 
 #include <cassert>
 #include <cmath>

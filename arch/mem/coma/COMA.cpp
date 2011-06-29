@@ -178,6 +178,7 @@ COMA::COMA(const std::string& name, Simulator::Object& parent, Clock& clock, Con
 
 void COMA::Initialize()
 {
+    m_config.registerObject(*this, "coma");
     m_config.registerProperty(*this, "selector", m_selector->GetName());
 
     // Initialize the caches

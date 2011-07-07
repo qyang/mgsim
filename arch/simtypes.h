@@ -302,6 +302,7 @@ enum ThreadState
     TST_SUSPENDED,
     TST_UNUSED,
     TST_KILLED,
+    TST_NUMSTATES
 };
 
 enum FamilyState

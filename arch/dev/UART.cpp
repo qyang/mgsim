@@ -84,6 +84,8 @@ namespace Simulator
 
         string connectMode = config.getValue<string>(*this, "UARTConnectMode");
         
+        errno = 0;
+
         if (connectMode == "FILE")
         {
             fin = fout = config.getValue<string>(*this, "UARTFile");
@@ -97,6 +99,7 @@ namespace Simulator
 
             m_fd_in = open(fin.c_str(), O_RDONLY);
             ein = errno;
+            errno = 0;
             m_fd_out = open(fout.c_str(), O_WRONLY);
             eout = errno;
         }

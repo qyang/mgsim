@@ -170,7 +170,7 @@ namespace Simulator
 
             if (Event::handler_count == 0)
             {
-                DebugIOWrite("No I/O streams are ready.");
+                DebugIONetWrite("No I/O streams are ready.");
             }
         }
 

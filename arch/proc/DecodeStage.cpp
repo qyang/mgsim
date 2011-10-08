@@ -1,6 +1,6 @@
 /*
 mgsim: Microgrid Simulator
-Copyright (C) 2006,2007,2008,2009,2010,2011  The Microgrid Project.
+Copyright (C) 2006,2007,2008,2009,2010,2011,2012  The Microgrid Project.
 
 This library is free software; you can redistribute it and/or
 modify it under the terms of the GNU Library General Public
@@ -41,11 +41,13 @@ struct IllegalInstruction
  \param[in] writing Indicates if this register is used in a write
  \returns the physical register address to use for the read or write
  */
-RegAddr Processor::Pipeline::DecodeStage::TranslateRegister(unsigned char reg, RegType type, unsigned int size, bool writing) const
+RegAddr Processor::Pipeline::DecodeStage::TranslateRegister(unsigned char reg, RegType type, unsigned int size, bool writing, bool *islocal) const
 {
     // We're always dealing with whole registers
     assert(size % sizeof(Integer) == 0);
     unsigned int nRegs = size / sizeof(Integer);
+
+    *islocal = false;
     
     if (nRegs == 0)
     {
@@ -93,6 +95,7 @@ RegAddr Processor::Pipeline::DecodeStage::TranslateRegister(unsigned char reg, R
             }
             
             // Just use the local register
+            *islocal = true;
             return MAKE_REGADDR(type, thread.locals + reg);
 
         case RC_DEPENDENT:
@@ -139,11 +142,12 @@ Processor::Pipeline::PipeAction Processor::Pipeline::DecodeStage::OnCycle()
             DecodeInstruction(m_input.instr);
             
             // Translate registers from window to full register file
-            m_output.Ra = TranslateRegister((unsigned char)m_output.Ra.index, m_output.Ra.type, m_output.RaSize, false);
-            m_output.Rb = TranslateRegister((unsigned char)m_output.Rb.index, m_output.Rb.type, m_output.RbSize, false);
-            m_output.Rc = TranslateRegister((unsigned char)m_output.Rc.index, m_output.Rc.type, m_output.RcSize, true);
+            m_output.Ra = TranslateRegister((unsigned char)m_output.Ra.index, m_output.Ra.type, m_output.RaSize, false, &m_output.RaIsLocal);
+            m_output.Rb = TranslateRegister((unsigned char)m_output.Rb.index, m_output.Rb.type, m_output.RbSize, false, &m_output.RbIsLocal);
+            bool dummy;
+            m_output.Rc = TranslateRegister((unsigned char)m_output.Rc.index, m_output.Rc.type, m_output.RcSize, true, &dummy);
 #if defined(TARGET_MTSPARC)
-            m_output.Rs = TranslateRegister((unsigned char)m_output.Rs.index, m_output.Rs.type, m_output.RsSize, false);
+            m_output.Rs = TranslateRegister((unsigned char)m_output.Rs.index, m_output.Rs.type, m_output.RsSize, false, &m_output.RsIsLocal);
 #endif
         }
         catch (IllegalInstruction&)

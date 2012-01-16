@@ -227,11 +227,9 @@ void Processor::ThreadTable::Cmd_Read(ostream& out, const vector<string>& argume
                 out << " | ";
                 out << dec;
                 out << " "
-                    << (thread.dependencies.prevCleanedUp ? 'P' : '.')
-                    << (thread.dependencies.killed        ? 'K' : '.')
-                    << "   | "
-                    << setw(2) << setfill(' ') << thread.dependencies.numPendingWrites
-                    << " | ";
+                    << (thread.dependencies.prevCleanedUp ? 'T' : 'F')
+                    << (thread.dependencies.killed        ? 'T' : 'F')
+                    << "   | ";
 
                 out << left << setfill(' ') << setw(9) <<  ThreadStateNames[thread.state]
                     << " | " << GetKernel()->GetSymbolTable()[thread.pc];

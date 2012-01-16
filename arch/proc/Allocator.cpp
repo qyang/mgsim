@@ -157,6 +157,7 @@ bool Processor::Allocator::QueueThreads(ThreadList& list, const ThreadQueue& thr
         {
             cur = next;
             next = m_threadTable[cur].next;
+            DebugSimWrite("T%u state %u ->¡¡%u", (unsigned)cur, (unsigned)m_threadTable[cur].state, (unsigned)state);
             m_threadTable[cur].state = state;
             ++count;
 
@@ -1427,7 +1428,7 @@ Result Processor::Allocator::DoBundle()
     if (m_bundleState == BUNDLE_INITIAL)
     {
         Result      result;
-        if ((result = m_dcache.Read(info.addr, m_bundleData, sizeof(Integer) + sizeof(MemAddr) + sizeof(Integer), 0, 0)) == FAILED)
+        if ((result = m_dcache.Read(info.addr, m_bundleData, sizeof(Integer) * 2 + sizeof(MemAddr), 0, 0)) == FAILED)
         {
             DeadlockWrite("Unable to fetch the D-Cache line for %#016llx for bundle creation", (unsigned long long)info.addr);
             return FAILED;
@@ -1458,11 +1459,12 @@ Result Processor::Allocator::DoBundle()
     }
     else if (m_bundleState == BUNDLE_LINE_LOADED)
     {     
-        size_t offset                  = (size_t) info.addr % sizeof(m_bundleData);   
+       //size_t offset                  = (size_t) info.addr % sizeof(m_bundleData);   
         
         RemoteMessage msg;
         msg.type                       = RemoteMessage::MSG_BUNDLE;
-        msg.allocate.place             = m_parent.UnpackPlace(UnserializeRegister(RT_INTEGER,&m_bundleData[offset], sizeof(Integer)));
+        
+        msg.allocate.place             = m_parent.UnpackPlace(UnserializeRegister(RT_INTEGER,&m_bundleData[0], sizeof(Integer)));
         
         if (msg.allocate.place.size == 0)
         {
@@ -1474,9 +1476,9 @@ Result Processor::Allocator::DoBundle()
         msg.allocate.type              = ALLOCATE_EXACT;
         msg.allocate.suspend           = true;
         msg.allocate.exclusive         = true;
-        msg.allocate.bundle.pc         = UnserializeRegister(RT_INTEGER, &m_bundleData[offset + sizeof(Integer)], sizeof(MemAddr));
+        msg.allocate.bundle.pc         = UnserializeRegister(RT_INTEGER, &m_bundleData[sizeof(Integer) ], sizeof(MemAddr));
         msg.allocate.bundle.parameter  = info.parameter;
-        msg.allocate.bundle.index      = UnserializeRegister(RT_INTEGER, &m_bundleData[offset + sizeof(Integer) + sizeof(MemAddr)], sizeof(SInteger));
+        msg.allocate.bundle.index      = UnserializeRegister(RT_INTEGER, &m_bundleData[sizeof(Integer) + sizeof(MemAddr)], sizeof(SInteger));
         
         DebugSimWrite("Processing bundle creation for CPU%u/%u, PC %#016llx, parameter %#016llx, index %#016llx",
                       (unsigned)msg.allocate.place.pid, (unsigned)msg.allocate.place.size,  

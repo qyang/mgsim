@@ -9,7 +9,9 @@ Processor::Pipeline::PipeAction Processor::Pipeline::WritebackStage::OnCycle()
     int  writebackOffset  = m_writebackOffset;
     int  size             = -1;
     bool allow_reschedule = true;
-    bool suspend          = (m_input.suspend != SUSPEND_NONE);        
+    bool suspend          = (m_input.suspend != SUSPEND_NONE); 
+    bool barrier          = (m_input.suspend == SUSPEND_MEMORY_BARRIER || m_input.suspend == SUSPEND_MEMORY_STORE);
+    
     
     if (m_stall)
     {
@@ -223,20 +225,15 @@ Processor::Pipeline::PipeAction Processor::Pipeline::WritebackStage::OnCycle()
         }
     }
     // No register to write back, check for a memory barrier
-    else if (m_input.suspend == SUSPEND_MEMORY_BARRIER)
+    else if(barrier)
     {
-        // Memory barrier, check to make sure it hasn't changed by now
-        suspend = (m_threadTable[m_input.tid].dependencies.numPendingWrites != 0);
-        if (suspend)
-        {
-            COMMIT{ m_threadTable[m_input.tid].waitingForWrites = true; }
-        }
+        //Memory barrier, check to make sure it hasn't changed by now
+        barrier = suspend = m_allocator.CheckFamMemBarrier(m_input.fid) || m_allocator.CheckFamPendingWrts(m_input.fid);
 
         DebugPipeWrite("F%u/T%u(%llu) %s memory barrier, suspend: %s",
                        (unsigned)m_input.fid, (unsigned)m_input.tid, (unsigned long long)m_input.logical_index,
                        m_input.pc_sym,
                        suspend ? "yes" : "no");
-
     }
 
     if (writebackOffset == size)
@@ -263,7 +260,7 @@ Processor::Pipeline::PipeAction Processor::Pipeline::WritebackStage::OnCycle()
             else if (suspend)
             {
                 // Suspend the thread
-                if (!m_allocator.SuspendThread(m_input.tid, m_input.pc))
+                if (!m_allocator.SuspendThread(m_input.tid, m_input.pc, barrier))
                 {
                     DeadlockWrite("F%u/T%u(%llu) %s unable to suspend thread",
                                   (unsigned)m_input.fid, (unsigned)m_input.tid, (unsigned long long)m_input.logical_index,

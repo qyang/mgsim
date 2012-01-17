@@ -273,9 +273,10 @@ bool Processor::Allocator::RescheduleThread(TID tid, MemAddr pc)
 // Suspends the thread at the specific PC.
 // Called from the pipeline.
 //
-bool Processor::Allocator::SuspendThread(TID tid, MemAddr pc)
+bool Processor::Allocator::SuspendThread(TID tid, MemAddr pc, bool barrier)
 {
     Thread& thread = m_threadTable[tid];
+    Family& family = m_familyTable[thread.family];
     assert(thread.state == TST_RUNNING);
 
     if (!m_icache.ReleaseCacheLine(thread.cid))
@@ -283,12 +284,27 @@ bool Processor::Allocator::SuspendThread(TID tid, MemAddr pc)
         return false;
     }
 
+    DebugSimWrite("T%u state %u -> %u", (unsigned)tid, (unsigned)thread.state, (unsigned)TST_SUSPENDED);
+    
+    ThreadQueue before = family.pending;
+    
     COMMIT
     {
-        thread.cid   = INVALID_CID;
-        thread.pc    = pc;
-        thread.state = TST_SUSPENDED;
+        thread.cid            = INVALID_CID;
+        thread.pc             = pc;
+        thread.state          = TST_SUSPENDED;
+        if(barrier)
+        {
+            thread.next           = (family.pending.head == INVALID_TID) ? tid : family.pending.head;
+            family.pending.head   = tid;
+            family.pending.tail   = (family.pending.tail == INVALID_TID) ? tid : family.pending.tail;
+            DebugSimWrite("F%u pending queue %s -> %s", (unsigned)thread.family, before.str().c_str(), family.pending.str().c_str());
+        }
+    
     }
+
+   
+    
     return true;
 }
 
@@ -322,13 +338,14 @@ bool Processor::Allocator::AllocateThread(LFID fid, TID tid, bool isNewlyAllocat
     thread->family           = fid;
     thread->index            = family->start;   // Administrative field, useful for debugging
     thread->nextInBlock      = INVALID_TID;
-    thread->waitingForWrites = false;
+    //thread->waitingForWrites = false;
     thread->next             = INVALID_TID;
+    
 
     // Initialize dependencies
     thread->dependencies.prevCleanedUp    = family->prevCleanedUp || !family->hasShareds || family->dependencies.numThreadsAllocated == 0 || family->physBlockSize == 1;
     thread->dependencies.killed           = false;
-    thread->dependencies.numPendingWrites = 0;
+    
     
     family->prevCleanedUp = false;
 
@@ -424,6 +441,9 @@ bool Processor::Allocator::AllocateThread(LFID fid, TID tid, bool isNewlyAllocat
 
         // Increase the allocation count
         family->dependencies.numThreadsAllocated++;
+        
+        //Initialize pending writes
+        //thread->dependencies.numPendingWrites = 0;
     }
 
     //
@@ -461,32 +481,34 @@ bool Processor::Allocator::AllocateThread(LFID fid, TID tid, bool isNewlyAllocat
     return true;
 }
 
+
 bool Processor::Allocator::DecreaseFamilyDependency(LFID fid, FamilyDependency dep)
 {
-    return DecreaseFamilyDependency(fid, m_familyTable[fid], dep);
-}
-
-bool Processor::Allocator::DecreaseFamilyDependency(LFID fid, Family& family, FamilyDependency dep)
-{
-    assert(family.state != FST_EMPTY);
-
-    // We work on a copy unless we're committing
-    Family::Dependencies  tmp_deps;
-    Family::Dependencies* deps = &tmp_deps;
+    
+    Family tmp_family; Family* family = &tmp_family;
+    Family::Dependencies  tmp_deps; Family::Dependencies* deps = &tmp_deps;
+    // We work on a copy unless we're committing  
     if (IsCommitting()) {
-        deps = &family.dependencies;
+        family = &m_familyTable[fid];
+        deps = &family->dependencies;
+        
     } else {
-        tmp_deps = family.dependencies;
+            tmp_family = m_familyTable[fid];
+            tmp_deps = family->dependencies;
     }
+    assert(family->state != FST_EMPTY);
 
     switch (dep)
     {
-    case FAMDEP_THREAD_COUNT:      assert(deps->numThreadsAllocated > 0); deps->numThreadsAllocated--;  break;
-    case FAMDEP_OUTSTANDING_READS: assert(deps->numPendingReads     > 0); deps->numPendingReads    --;  break;
-    case FAMDEP_PREV_SYNCHRONIZED: assert(!deps->prevSynchronized);       deps->prevSynchronized = true; break;
-    case FAMDEP_ALLOCATION_DONE:   assert(!deps->allocationDone);         deps->allocationDone   = true; break;
-    case FAMDEP_SYNC_SENT:         assert(!deps->syncSent);               deps->syncSent         = true; break;
-    case FAMDEP_DETACHED:          assert(!deps->detached);               deps->detached         = true; break;
+    case FAMDEP_THREAD_COUNT:       assert(deps->numThreadsAllocated > 0); deps->numThreadsAllocated--;  break;
+    case FAMDEP_OUTSTANDING_READS:  assert(deps->numPendingReads     > 0); deps->numPendingReads    --;  break;
+    case FAMDEP_OUTSTANDING_WRITES: assert(deps->numPendingWrites   > 0);  deps->numPendingWrites   --;  break;                                    
+    case FAMDEP_PREV_SYNCHRONIZED:  assert(!deps->prevSynchronized);       deps->prevSynchronized = true; break;
+    case FAMDEP_ALLOCATION_DONE:    assert(!deps->allocationDone);         deps->allocationDone   = true; break;
+    case FAMDEP_SYNC_SENT:          assert(!deps->syncSent);               deps->syncSent         = true; break;
+    case FAMDEP_DETACHED:           assert(!deps->detached);               deps->detached         = true; break;
+    case FAMDEP_MEMBARRIER:
+    default: assert(0); break;
     }
 
     switch (dep)
@@ -497,24 +519,44 @@ bool Processor::Allocator::DecreaseFamilyDependency(LFID fid, Family& family, Fa
         {
             COMMIT{ family->state = FST_TERMINATED; }
             DebugSimWrite("F%u terminated", (unsigned)fid);
-        }
+                
+            if(!m_dcache.FlushWCBInFam(fid))
+            {
+                DeadlockWrite(" Failed Queueing  F%u to flush pending writes in WCB on family termination",(unsigned)fid);       
+                return false;
+            }
+          
+        } 
         // Fall through
-
+    case FAMDEP_OUTSTANDING_WRITES:
+        if(deps->hasBarrier && !deps->numPendingWrites)
+        {
+            deps->hasBarrier = false;
+            if(!ActivateThreads(family->pending))
+            {
+                DeadlockWrite("Unable to activate pending threads due to Memory barrier of F%u ", (unsigned)fid);
+                return false;                
+            }
+            DebugSimWrite("F%u:Clearing memory pending queue after write commitment", (unsigned)fid);
+            COMMIT{ family->pending = (ThreadQueue){INVALID_TID, INVALID_TID};}
+            
+            break;
+        }        
     case FAMDEP_PREV_SYNCHRONIZED:
-    case FAMDEP_OUTSTANDING_READS:
+    case FAMDEP_OUTSTANDING_READS:    
         if (deps->numThreadsAllocated == 0 && deps->allocationDone &&
-            deps->numPendingReads     == 0 && deps->prevSynchronized)
+            deps->numPendingReads    == 0 && (!m_dcache.FamtoFlush(fid) && deps->numPendingWrites== 0)
+            &&  deps->prevSynchronized)
         {
             // Forward synchronization token
-            COMMIT{ family.sync.done = true; }
-    
-            if (family.link != INVALID_LFID)
+            COMMIT{ family->sync.done = true; }
+            if (family->link != INVALID_LFID)
             {
                 // Send family termination event to next processor
                 LinkMessage msg;
                 msg.type        = LinkMessage::MSG_DONE;
-                msg.done.fid    = family.link;
-                msg.done.broken = family.broken;
+                msg.done.fid    = family->link;
+                msg.done.broken = family->broken;
 
                 if (!m_network.SendMessage(msg))
                 {
@@ -526,14 +568,15 @@ bool Processor::Allocator::DecreaseFamilyDependency(LFID fid, Family& family, Fa
             }
             // This is the last core of the family. All other cores have
             // finished. Write back the completion.
-            else if (family.sync.pid != INVALID_PID)
+            else if (family->sync.pid != INVALID_PID)
             {
                 // A thread is synching on this family
                 Network::SyncInfo info;
                 info.fid = fid;
-                info.pid = family.sync.pid;
-                info.reg = family.sync.reg;
-                info.broken = family.broken;
+                info.pid = family->sync.pid;
+                info.reg = family->sync.reg;
+                info.broken = family->broken;
+
                 
                 if (!m_network.SendSync(info))
                 {
@@ -552,8 +595,8 @@ bool Processor::Allocator::DecreaseFamilyDependency(LFID fid, Family& family, Fa
     case FAMDEP_SYNC_SENT:
     case FAMDEP_DETACHED:
         if (deps->numThreadsAllocated == 0 && deps->allocationDone &&
-            deps->numPendingReads     == 0 && deps->prevSynchronized &&
-            deps->detached                 && deps->syncSent)
+            deps->numPendingReads     == 0 && (!m_dcache.FamtoFlush(fid) && deps->numPendingWrites== 0) && 
+            deps->prevSynchronized && deps->detached && deps->syncSent)
         {
             ContextType context = m_familyTable.IsExclusive(fid) ? CONTEXT_EXCLUSIVE : CONTEXT_NORMAL;
 
@@ -561,7 +604,7 @@ bool Processor::Allocator::DecreaseFamilyDependency(LFID fid, Family& family, Fa
             RegIndex indices[NUM_REG_TYPES];
             for (size_t i = 0; i < NUM_REG_TYPES; i++)
             {
-                indices[i] = family.regs[i].base;
+                indices[i] = family->regs[i].base;
             }
             m_raunit.Free(indices, context);
    
@@ -576,75 +619,60 @@ bool Processor::Allocator::DecreaseFamilyDependency(LFID fid, Family& family, Fa
     return true;
 }
 
-bool Processor::Allocator::OnMemoryRead(LFID fid)
+bool Processor::Allocator::IncreaseFamilyDependency(LFID fid, FamilyDependency dep)
 {
-    COMMIT{ m_familyTable[fid].dependencies.numPendingReads++; }
+    COMMIT
+    {
+        Family::Dependencies& deps = m_familyTable[fid].dependencies;
+        switch (dep)
+        {
+            case FAMDEP_OUTSTANDING_WRITES: deps.numPendingWrites++; break;
+            case FAMDEP_OUTSTANDING_READS:  deps.numPendingReads++; break;
+            case FAMDEP_MEMBARRIER: assert(!deps.hasBarrier); deps.hasBarrier = true; break;
+            default:                           assert(0); break;
+           
+        }
+    }
     return true;
 }
 
 bool Processor::Allocator::DecreaseThreadDependency(TID tid, ThreadDependency dep)
 {
-    // We work on a copy unless we're committing
-    Thread::Dependencies tmp_deps;
-    Thread::Dependencies* deps = &tmp_deps;
-    Thread& thread = m_threadTable[tid];
-    if (IsCommitting()) {
-        deps = &thread.dependencies;
-    } else {
-        tmp_deps = thread.dependencies;
-    }
+    // We work on a copy unless we're committing   
+   
+     Thread& thread = m_threadTable[tid];
+     
+     Thread::Dependencies tmp_deps;
+     Thread::Dependencies* deps = &tmp_deps;
+     
+     if (IsCommitting()) {
+         deps = &thread.dependencies;
+     } else {
+         tmp_deps = thread.dependencies;
+     }
     
     switch (dep)
     {
-    case THREADDEP_OUTSTANDING_WRITES: deps->numPendingWrites--;   break;
-    case THREADDEP_PREV_CLEANED_UP:    deps->prevCleanedUp = true; break;
-    case THREADDEP_TERMINATED:         deps->killed        = true; break;
+     
+       case THREADDEP_PREV_CLEANED_UP:                                        deps->prevCleanedUp = true; break;
+       case THREADDEP_TERMINATED:                                             deps->killed        = true; break;
     }
     
-    switch (dep)
+    if (deps->prevCleanedUp && deps->killed)
     {
-    case THREADDEP_OUTSTANDING_WRITES:
-        if (deps->numPendingWrites == 0 && thread.waitingForWrites)
+        // This thread can be cleaned up, push it on the cleanup queue
+        if (!m_cleanup.Push(tid))
         {
-            // Wake up the thread that was waiting on it
-            ThreadQueue tq = {tid, tid};
-            if (!ActivateThreads(tq))
-            {
-                return false;
-            }
-            COMMIT{ thread.waitingForWrites = false; }
+            return false;
         }
+            
+    }
+   
         
-    case THREADDEP_PREV_CLEANED_UP:
-    case THREADDEP_TERMINATED:
-        if (deps->numPendingWrites == 0 && deps->prevCleanedUp && deps->killed)
-        {
-            // This thread can be cleaned up, push it on the cleanup queue
-            if (!m_cleanup.Push(tid))
-            {
-                return false;
-            }
-            break;
-        }
-    }
-    
     return true;
 }
 
-bool Processor::Allocator::IncreaseThreadDependency(TID tid, ThreadDependency dep)
-{
-    COMMIT
-    {
-        Thread::Dependencies& deps = m_threadTable[tid].dependencies;
-        switch (dep)
-        {
-        case THREADDEP_OUTSTANDING_WRITES: deps.numPendingWrites++; break;
-        case THREADDEP_PREV_CLEANED_UP:    
-        case THREADDEP_TERMINATED:         assert(0); break;
-        }
-    }
-    return true;
-}
+
 
 Processor::Family& Processor::Allocator::GetFamilyChecked(LFID fid, FCapability capability) const
 {
@@ -685,7 +713,6 @@ FCapability Processor::Allocator::InitializeFamily(LFID fid) const
         family.start         = 0;
         family.limit         = 1;
         family.step          = 1;
-        //family.virtBlockSize = 0;
         family.physBlockSize = 0;
         family.link          = INVALID_LFID;
         family.sync.done     = false;
@@ -694,6 +721,7 @@ FCapability Processor::Allocator::InitializeFamily(LFID fid) const
         family.lastAllocated = INVALID_TID;
         family.prevCleanedUp = false;
         family.broken        = false;
+        family.pending       = (ThreadQueue){INVALID_TID,INVALID_TID};
 
         // Dependencies
         family.dependencies.allocationDone      = false;
@@ -1811,6 +1839,7 @@ Result Processor::Allocator::DoThreadActivation()
         {
             // Request was delayed, link thread into waiting queue
             // Mark the thread as waiting
+            DebugSimWrite("T%u state %u -> %u", (unsigned)tid, (unsigned)thread.state, TST_WAITING);
             COMMIT
             {
                 thread.next  = next;

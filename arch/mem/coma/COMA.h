@@ -76,6 +76,7 @@ public:
     IBankSelector& GetBankSelector() const { return *m_selector; }
     
     size_t GetLineSize() const;
+    size_t GetNumActiveCachePeers() const {return (m_caches.size() > m_numCachesPerDir) ? m_numCachesPerDir : m_caches.size(); }
     size_t GetNumClientsPerCache() const { return m_numClientsPerCache; }    
     size_t GetNumCachesPerDirectory() const { return m_numCachesPerDir; }
     size_t GetNumCaches() const { return m_caches.size(); }
@@ -88,8 +89,8 @@ public:
     // IMemory
     MCID RegisterClient(IMemoryCallback& callback, Process& process, StorageTraceSet& traces, Storage& storage, bool grouped);
     void UnregisterClient(MCID id);
-    bool Read (MCID id, MemAddr address, MemSize size);
-    bool Write(MCID id, MemAddr address, const void* data, MemSize size, TID tid);
+    bool Read (MCID id, MemAddr address, MemSize /* unused, remove! */);
+    bool Write(MCID id, MemAddr address, const void* data, MemSize /* unused, remove! */, LFID fid, const bool* mask, bool consistency);
     bool CheckPermissions(MemAddr address, MemSize size, int access) const;
 
     void GetMemoryStatistics(uint64_t& nreads, uint64_t& nwrites, 

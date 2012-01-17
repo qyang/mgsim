@@ -46,19 +46,19 @@ struct Thread
          the thread cannot be cleaned up until those writes have been
          confirmed by the memory system.
         */
-        unsigned int numPendingWrites;
+        //unsigned int numPendingWrites;
     };
     
     MemAddr      pc;
     RegInfo      regs[NUM_REG_TYPES];
     Dependencies dependencies;
-    bool         waitingForWrites;
+   // bool         waitingForWrites;
     TID          nextInBlock;
     CID          cid;
     LFID         family;
     TID          next;
-
-    // Architecture specific per-thread stuff
+    
+        // Architecture specific per-thread stuff
 #if defined(TARGET_MTALPHA)
 	FPCR         fpcr;
 #elif defined(TARGET_MTSPARC)

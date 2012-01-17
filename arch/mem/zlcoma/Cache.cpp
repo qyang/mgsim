@@ -86,7 +86,7 @@ bool ZLCOMA::Cache::Read(MCID id, MemAddr address, MemSize size)
 
 // Called from the processor on a memory write (can be any size with write-through/around)
 // Just queues the request.
-bool ZLCOMA::Cache::Write(MCID id, MemAddr address, const void* data, MemSize size, TID tid)
+bool ZLCOMA::Cache::Write(MCID id, MemAddr address, const void* data, MemSize size, LFID fid, const bool* mask, bool consistency)
 {
     if (size > m_lineSize || size > MAX_MEMORY_OPERATION_SIZE)
     {
@@ -112,8 +112,9 @@ bool ZLCOMA::Cache::Write(MCID id, MemAddr address, const void* data, MemSize si
     req.write   = true;
     req.size    = size;
     req.client  = id;
-    req.tid     = tid;
+    req.fid     = fid;
     memcpy(req.data, data, (size_t)size);
+    memcpy(req.mask, mask, (size_t)size);
 
     // Client should have been registered
     assert(m_clients[req.client] != NULL);
@@ -131,7 +132,7 @@ bool ZLCOMA::Cache::Write(MCID id, MemAddr address, const void* data, MemSize si
         IMemoryCallback* client = m_clients[i];
         if (client != NULL && i != req.client)
         {
-            if (!client->OnMemorySnooped(req.address, req))
+            if (!client->OnMemorySnooped(req.address, req, req.mask))
             {
                 DeadlockWrite("Unable to snoop data to cache clients");
                 return false;
@@ -552,7 +553,7 @@ Result ZLCOMA::Cache::OnWriteRequest(const Request& req)
         // We can acknowledge directly after writing.
         TraceWrite(req.address, "Processing Bus Write Request: Exclusive Hit");
         
-        if (!m_clients[req.client]->OnMemoryWriteCompleted(req.tid))
+        if (!m_clients[req.client]->OnMemoryWriteCompleted(req.fid))
         {
             return FAILED;
         }
@@ -561,7 +562,7 @@ Result ZLCOMA::Cache::OnWriteRequest(const Request& req)
     }
 
     // Save acknowledgement. When we get all tokens later, these will get acknowledged.
-    COMMIT{ line->ack_queue.push_back(WriteAck(req.client, req.tid)); }
+    COMMIT{ line->ack_queue.push_back(WriteAck(req.client, req.fid)); }
     
     if (line->pending_write)
     {

@@ -192,8 +192,8 @@ void Processor::FamilyTable::Cmd_Read(ostream& out, const vector<string>& argume
     }
     else
     {
-        out << "    |     Initial PC     | Allocated | Threads | P/A/D/Rd |  Cores  | Link |    Sync    |     Capability     | State         | Symbol" << endl;
-        out << "----+--------------------+-----------+---------+----------+---------+------+------------+--------------------+---------------+--------" << endl;
+        out << "    |     Initial PC     | Allocated | Threads | P/S/A/D/B/Rd/Wr/ |  Cores  | Link |    Sync    |     Capability     | State         | Symbol" << endl;
+        out << "----+--------------------+-----------+---------+-----------------+---------+------+------------+--------------------+---------------+--------" << endl;
         for (set<LFID>::const_iterator p = fids.begin(); p != fids.end(); ++p)
         {
             const Family& family = m_families[*p];
@@ -221,10 +221,13 @@ void Processor::FamilyTable::Cmd_Read(ostream& out, const vector<string>& argume
                             << setw(7) << right << family.nThreads
                             << " | "
                             << noboolalpha
-                            << !family.dependencies.prevSynchronized << "/"
-                            << !family.dependencies.allocationDone << "/"
-                            << !family.dependencies.detached << "/"
-                            << setw(2) << family.dependencies.numPendingReads
+                            << (family.dependencies.prevSynchronized ? "T":"F") << "/"
+                            << (family.dependencies.syncSent ? "T":"F") << "/"
+                            << (family.dependencies.allocationDone ? "T":"F") << "/"
+                            << (family.dependencies.detached ? "T":"F") << "/"
+                            << (family.dependencies.hasBarrier ? "T":"F") << "/"
+                            << setw(2) << family.dependencies.numPendingReads << "/"
+                            << setw(2) << family.dependencies.numPendingWrites
                             << right;
                     }
                     out << " | ";

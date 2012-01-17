@@ -22,7 +22,8 @@ struct BankedMemory::Request
     bool        write;
     MemAddr     address;
     MemData     data;
-    TID         tid;
+    LFID        fid;
+    bool        mask[MAX_MEMORY_OPERATION_SIZE];
     CycleNo     done;
 };
 
@@ -110,7 +111,7 @@ class BankedMemory::Bank : public Object
             }
                 
             if (request.write) {
-                if (!request.client->callback->OnMemoryWriteCompleted(request.tid)) {
+                if (!request.client->callback->OnMemoryWriteCompleted(request.fid)) {
                     return FAILED;
                 }
             } else {
@@ -342,7 +343,7 @@ bool BankedMemory::Read(MCID id, MemAddr address, MemSize size)
     return true;
 }
 
-bool BankedMemory::Write(MCID id, MemAddr address, const void* data, MemSize size, TID tid)
+bool BankedMemory::Write(MCID id, MemAddr address, const void* data, MemSize size, LFID fid, const bool* mask, bool consistency)
 {
     if (size > MAX_MEMORY_OPERATION_SIZE)
     {
@@ -356,14 +357,15 @@ bool BankedMemory::Write(MCID id, MemAddr address, const void* data, MemSize siz
     request.address   = address;
     request.client    = &m_clients[id];
     request.data.size = size;
-    request.tid       = tid;
+    request.fid       = fid;
     request.write     = true;
     memcpy(request.data.data, data, (size_t)size);
+    memcpy(request.mask, mask, (size_t)size);
 
     // Broadcast the snoop data
     for (std::vector<ClientInfo>::iterator p = m_clients.begin(); p != m_clients.end(); ++p)
     {
-        if (!p->callback->OnMemorySnooped(request.address, request.data))
+        if (!p->callback->OnMemorySnooped(request.address, request.data, request.mask))
         {
             return false;
         }

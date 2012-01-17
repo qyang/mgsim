@@ -14,13 +14,17 @@ namespace Simulator
  * For use in COMA::Object instances. Writes out a message
  * if the specified address is being traced.
  */
+#ifndef TRACE_COMA_ALL
 #define TraceWrite(addr, fmt, ...) do { \
-        const COMA::TraceMap& traces = m_parent.GetTraces(); \
-        MemAddr __addr = (addr) / m_lineSize * m_lineSize; \
-        if (!traces.empty() && traces.find((__addr)) != traces.end()) { \
-            OutputWrite(("0x%llx: " fmt), (unsigned long long)(__addr), ##__VA_ARGS__); \
-        } \
-    } while (false)
+const COMA::TraceMap& traces = m_parent.GetTraces(); \
+MemAddr __addr = (addr) / m_lineSize * m_lineSize; \
+    if (!traces.empty() && traces.find((__addr)) != traces.end()) { \
+    OutputWrite(("0x%llx: " fmt), (unsigned long long)(__addr), ##__VA_ARGS__); \
+} \
+} while (false)
+#else
+#define TraceWrite(addr, fmt, ...) DebugMemWrite(("0x%llx: " fmt), (unsigned long long)(addr), ##__VA_ARGS__); 
+#endif
 
 /**
  * This class defines a generic ring node interface.
@@ -52,8 +56,11 @@ protected:
             MemData      data;          ///< The data (RD, RDT, EV, UP)
             bool         dirty;         ///< Is the data dirty? (EV, RD, RDT)
             unsigned int tokens;        ///< Number of tokens in this message (RDT, EV)
+            unsigned int times;         ///< Appearance of massage
             size_t       client;        ///< Sending client (UP)
-            TID          tid;           ///< Sending thread (UP)
+            LFID         fid;           ///< Sending family (UP)
+            bool         mask[MAX_MEMORY_OPERATION_SIZE];
+            bool         consistency;   ///< Is global consistency required
         };
         
         /// For memory management

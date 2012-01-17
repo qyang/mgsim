@@ -31,18 +31,6 @@ RegValue Processor::Pipeline::ExecuteStage::PipeValueToRegValue(RegType type, co
     return r;
 }
 
-bool Processor::Pipeline::ExecuteStage::MemoryWriteBarrier(TID tid) const
-{
-    Thread& thread = m_threadTable[tid];
-    if (thread.dependencies.numPendingWrites != 0)
-    {
-        // There are pending writes, we need to wait for them
-        assert(!thread.waitingForWrites);
-        return false;
-    }
-    return true;
-}
-
 Processor::Pipeline::PipeAction Processor::Pipeline::ExecuteStage::OnCycle()
 {
     COMMIT
@@ -208,7 +196,7 @@ Processor::Pipeline::PipeAction Processor::Pipeline::ExecuteStage::ExecAllocate(
         m_output.Rrc.allocate.type           = type;
         m_output.Rrc.allocate.completion_pid = m_parent.GetProcessor().GetPID();
         m_output.Rrc.allocate.completion_reg = reg;
-            
+        
         m_output.Rcv = MAKE_PENDING_PIPEVALUE(m_input.RcSize);
     }
     return PIPE_CONTINUE;
@@ -229,13 +217,23 @@ Processor::Pipeline::PipeAction Processor::Pipeline::ExecuteStage::SetFamilyProp
 Processor::Pipeline::PipeAction Processor::Pipeline::ExecuteStage::ExecCreate(const FID& fid, MemAddr address, RegIndex completion)
 {
     // Create
-    if (!MemoryWriteBarrier(m_input.tid))
+    if (m_allocator.CheckFamMemBarrier(m_input.fid) || m_allocator.CheckFamPendingWrts(m_input.fid))
     {
         // We need to wait for the pending writes to complete
         COMMIT
         {
             m_output.pc      = m_input.pc;
-            m_output.suspend = SUSPEND_MEMORY_BARRIER;
+            m_output.suspend = m_familyTable[m_input.fid].dependencies.hasBarrier ? SUSPEND_MEMORY_STORE : SUSPEND_MEMORY_BARRIER;
+            if(m_output.suspend == SUSPEND_MEMORY_BARRIER)
+            {
+                if(!m_allocator.IncreaseFamilyDependency(m_input.fid,FAMDEP_MEMBARRIER))
+                {
+                    return PIPE_STALL;
+                }
+                
+                DebugSimWrite("F%u: Set memory barrier due to creation from child T%u", (unsigned)m_input.fid, (unsigned)m_input.tid);
+            
+            }
             m_output.swch    = true;
             m_output.kill    = false;
             m_output.Rc      = INVALID_REG;

@@ -103,6 +103,7 @@ class Pipeline : public Object, public Inspect::Interface<Inspect::Read>
         SUSPEND_NONE,           ///< Don't suspend
         SUSPEND_MEMORY_BARRIER, ///< Memory barrier
         SUSPEND_MISSING_DATA,   ///< We're missing data
+        SUSPEND_MEMORY_STORE,   ///< Memory write after barrier
     };
 
     struct RegInfo
@@ -337,11 +338,11 @@ class Pipeline : public Object, public Inspect::Interface<Inspect::Read>
         uint64_t                m_flop;         // FP operations
         uint64_t                m_op;           // Instructions
         
-        bool       MemoryWriteBarrier(TID tid) const;
         PipeAction ReadFamilyRegister(RemoteRegType kind, RegType type, const FID& fid, unsigned char ofs);
         PipeAction WriteFamilyRegister(RemoteRegType kind, RegType type, const FID& fid, unsigned char ofs);
         PipeAction ExecSync(const FID& fid);
         PipeAction ExecDetach(const FID& fid);
+
         PipeAction SetFamilyProperty(const FID& fid, FamilyProperty property, Integer value);
         PipeAction ExecuteInstruction();
         PipeAction ExecBundle(MemAddr addr, bool indirect, Integer value, RegIndex reg);

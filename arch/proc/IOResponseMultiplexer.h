@@ -18,13 +18,13 @@ private:
     };
 
 public:
-    Buffer<IOResponse>            m_incoming;
-
+    Buffer<IOResponse>            m_incoming;    
+    
 private:
     typedef Buffer<RegAddr>       WriteBackQueue;
-    std::vector<WriteBackQueue*>  m_wb_buffers;
-
+    std::vector<WriteBackQueue*>  m_wb_buffers;    
     Process p_dummy;
+    
     Result DoNothing() { COMMIT{ p_dummy.Deactivate(); }; return SUCCESS; }
 
 public:
@@ -40,8 +40,7 @@ public:
     Process p_IncomingReadResponses;
     
     // upon data available on m_incoming
-    Result DoReceivedReadResponses();
-
+    Result DoReceivedReadResponses();    
     StorageTraceSet GetWriteBackTraces() const;
 };
 

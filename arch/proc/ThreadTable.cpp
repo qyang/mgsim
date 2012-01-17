@@ -211,8 +211,8 @@ void Processor::ThreadTable::Cmd_Read(ostream& out, const vector<string>& argume
     }
     else
     {
-        out << "    |         PC         | Fam | Index | Next | Flags | WR | State     | Symbol" << endl;
-        out << "----+--------------------+-----+-------+------+-------+----+-----------+--------" << endl;
+        out << "    |         PC         | Fam | Index | Next | Flags | State     | Symbol" << endl;
+        out << "----+--------------------+-----+-------+------+-------+-----------+--------" << endl;
         for (set<TID>::const_iterator p = tids.begin(); p != tids.end(); ++p)
         {
             out << right << dec << setw(3) << setfill(' ') << *p << " | ";

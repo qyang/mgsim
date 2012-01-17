@@ -59,7 +59,7 @@ bool SerialMemory::Read(MCID id, MemAddr address, MemSize size)
     return true;
 }
 
-bool SerialMemory::Write(MCID id, MemAddr address, const void* data, MemSize size, TID tid)
+bool SerialMemory::Write(MCID id, MemAddr address, const void* data, MemSize size, LFID fid, const bool* mask, bool consistency)
 {
     if (size > MAX_MEMORY_OPERATION_SIZE)
     {
@@ -78,9 +78,10 @@ bool SerialMemory::Write(MCID id, MemAddr address, const void* data, MemSize siz
     request.callback  = m_clients[id];
     request.address   = address;
     request.data.size = size;
-    request.tid       = tid;
+    request.fid       = fid;
     request.write     = true;
     memcpy(request.data.data, data, (size_t)size);
+    memcpy(request.mask, mask, (size_t)size);
 
     if (!m_requests.Push(request))
     {
@@ -90,7 +91,7 @@ bool SerialMemory::Write(MCID id, MemAddr address, const void* data, MemSize siz
     // Broadcast the snoop data
     for (vector<IMemoryCallback*>::const_iterator p = m_clients.begin(); p != m_clients.end(); ++p)
     {
-        if (*p != NULL && !(*p)->OnMemorySnooped(request.address, request.data))
+        if (*p != NULL && !(*p)->OnMemorySnooped(request.address, request.data,request.mask))
         {
             return false;
         }
@@ -144,7 +145,7 @@ Result SerialMemory::DoRequests()
             // The current request has completed
             if (request.write) {
                 VirtualMemory::Write(request.address, request.data.data, request.data.size);
-                if (!request.callback->OnMemoryWriteCompleted(request.tid))
+                if (!request.callback->OnMemoryWriteCompleted(request.fid))
                 {
                     return FAILED;
                 }

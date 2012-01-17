@@ -68,7 +68,7 @@ public:
 
     bool OnMemoryReadCompleted(MemAddr addr, const MemData& data) ;
     bool OnMemoryWriteCompleted(TID tid);
-    bool OnMemorySnooped(MemAddr /*unused*/, const MemData& /*unused*/) { return true; }
+    bool OnMemorySnooped(MemAddr /*unused*/, const MemData& /*unused*/, bool* /*unused*/) { return true; }
     bool OnMemoryInvalidated(MemAddr /*unused*/) { return true; }
 
     Object& GetMemoryPeer() { return m_cpu; }

@@ -11,17 +11,20 @@ enum FamilyDependency
 {
     FAMDEP_THREAD_COUNT,        // Number of allocated threads
     FAMDEP_OUTSTANDING_READS,   // Number of outstanding memory reads
+    FAMDEP_OUTSTANDING_WRITES,  // Number of outstanding memory writes
+    FAMDEP_MEMBARRIER,          // Memory barrier
     FAMDEP_PREV_SYNCHRONIZED,   // Family has synchronized on the previous processor
     FAMDEP_SYNC_SENT,           // The synchronization has been sent
     FAMDEP_DETACHED,            // Family has been detached
     FAMDEP_ALLOCATION_DONE,     // Thread allocation is done
+    
 };
 
 // A list of dependencies that prevent a thread from being
 // terminated or cleaned up
 enum ThreadDependency
 {
-    THREADDEP_OUTSTANDING_WRITES,   // Number of outstanding memory writes
+    //THREADDEP_OUTSTANDING_WRITES,   // Number of outstanding memory writes
     THREADDEP_PREV_CLEANED_UP,      // Predecessor has been cleaned up
     THREADDEP_TERMINATED,           // Thread has terminated
 };
@@ -97,7 +100,7 @@ public:
     //
     bool ActivateThreads(const ThreadQueue& threads);   // Activates the specified threads
     bool RescheduleThread(TID tid, MemAddr pc);         // Reschedules a thread from the pipeline
-    bool SuspendThread(TID tid, MemAddr pc);            // Suspends a thread at the specified PC
+    bool SuspendThread(TID tid, MemAddr pc, bool barrier); // Suspends a thread at the specified PC
     bool KillThread(TID tid);                           // Kills a thread
     
     bool QueueFamilyAllocation(const RemoteMessage& msg, bool bundle);
@@ -118,8 +121,9 @@ public:
     bool OnMemoryRead(LFID fid);
     
     bool DecreaseFamilyDependency(LFID fid, FamilyDependency dep);
-    bool DecreaseFamilyDependency(LFID fid, Family& family, FamilyDependency dep);
-    bool IncreaseThreadDependency(TID tid, ThreadDependency dep);
+    bool IncreaseFamilyDependency(LFID fid, FamilyDependency dep);
+    bool CheckFamMemBarrier(LFID fid)  const {return m_familyTable[fid].dependencies.hasBarrier; }
+    bool CheckFamPendingWrts(LFID fid) const {return (m_familyTable[fid].dependencies.numPendingWrites != 0); }
     bool DecreaseThreadDependency(TID tid, ThreadDependency dep);
     
     TID PopActiveThread();

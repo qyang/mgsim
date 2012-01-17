@@ -38,9 +38,11 @@ private:
     struct Request : public MemData
     {
         bool         write;
+        bool         consistency;
+        bool         mask[MAX_MEMORY_OPERATION_SIZE];
         MemAddr      address;
         unsigned int client;
-        TID          tid;
+        LFID         fid;
     };
 
     IBankSelector&                m_selector;
@@ -110,7 +112,7 @@ public:
     MCID RegisterClient  (IMemoryCallback& callback, Process& process, StorageTraceSet& traces, Storage& storage);
     void UnregisterClient(MCID id);
     bool Read (MCID id, MemAddr address, MemSize size);
-    bool Write(MCID id, MemAddr address, const void* data, MemSize size, TID tid);
+    bool Write(MCID id, MemAddr address, const void* data, MemSize size, LFID fid, const bool* mask, bool consistency);
 };
 
 }

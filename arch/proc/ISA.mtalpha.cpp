@@ -1010,9 +1010,20 @@ Processor::Pipeline::PipeAction Processor::Pipeline::ExecuteStage::ExecuteInstru
             }
         }
         return PIPE_FLUSH;
-
-        case IFORMAT_MEM_LOAD:
+        
         case IFORMAT_MEM_STORE:
+        if(m_allocator.CheckFamMemBarrier(m_input.fid))
+        {
+            COMMIT{
+                    m_output.pc      = m_input.pc;
+                    m_output.suspend = SUSPEND_MEMORY_STORE ;
+                    m_output.swch    = true;
+                    m_output.kill    = false;
+                    m_output.Rc      = INVALID_REG;
+                }
+            return PIPE_FLUSH;                
+        }
+        case IFORMAT_MEM_LOAD:
         COMMIT
         {
             // Create, LDA, LDAH and Memory reads and writes
@@ -1285,21 +1296,28 @@ Processor::Pipeline::PipeAction Processor::Pipeline::ExecuteStage::ExecuteInstru
         {
             case A_MISCFUNC_MB:
             case A_MISCFUNC_WMB:
-                // Memory barrier
-                if (!MemoryWriteBarrier(m_input.tid))
-                {
-                    // Suspend thread at our PC
-                    COMMIT {
-                        m_output.pc      = m_input.pc;
+                // Memory barrier,suspend thread at our PC
+                COMMIT {
+                               
+                    m_output.suspend = SUSPEND_MEMORY_STORE;
+                    if(!m_allocator.CheckFamMemBarrier(m_input.fid))
+                    {
                         m_output.suspend = SUSPEND_MEMORY_BARRIER;
-                        m_output.swch    = true;
-                        m_output.kill    = false;
-                        m_output.Rc      = INVALID_REG;
+                        if(!m_allocator.IncreaseFamilyDependency(m_input.fid,FAMDEP_MEMBARRIER))
+                        {
+                            return PIPE_STALL;
+                        }
+                        
                     }
+                        
+                    m_output.swch    = true;
+                    m_output.kill    = false;
+                    m_output.Rc      = INVALID_REG;
+                        
                 }
-                return PIPE_FLUSH;
-
-            case A_MISCFUNC_RPCC:
+               return PIPE_FLUSH;
+                
+           case A_MISCFUNC_RPCC:
                 // Read processor cycle count
             // NOTE: the Alpha spec specifies that the higher 32-bits
                 // are operating-system dependent. In our case we stuff

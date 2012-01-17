@@ -217,6 +217,18 @@ namespace Simulator
         case READ:
         {
             // this is a read request coming from the bus.
+            
+            if (req.data.size > m_lineSize || req.data.size > MAX_MEMORY_OPERATION_SIZE)
+            {
+                throw InvalidArgumentException("Read size is too big");
+            }
+            
+            if (req.address / m_lineSize != (req.address + req.data.size - 1) / m_lineSize)
+            {
+                throw InvalidArgumentException("Read request straddles cache-line boundary");
+            }
+
+            
             if (!p_service.Invoke())
             {
                 DeadlockWrite("Unable to acquire port for DCA read (%#016llx, %u)",
@@ -255,6 +267,16 @@ namespace Simulator
         {
             // write operation
 
+            if (req.data.size > m_lineSize || req.data.size > MAX_MEMORY_OPERATION_SIZE)
+            {
+                throw InvalidArgumentException("Write size is too big");
+            }
+            
+            if (req.address / m_lineSize != (req.address + req.data.size - 1) / m_lineSize)
+            {
+                throw InvalidArgumentException("Write request straddles cache-line boundary");
+            }
+
             if (!p_service.Invoke())
             {
                 DeadlockWrite("Unable to acquire port for DCA write (%#016llx, %u)",
@@ -263,7 +285,17 @@ namespace Simulator
                 return FAILED;
             }
 
-            if (!m_memory.Write(m_mcid, req.address, req.data.data, req.data.size, INVALID_TID))
+            char data[m_lineSize];
+            bool mask[m_lineSize];
+            MemAddr line_addr = req.address & -m_lineSize;
+            size_t offset = req.address & (m_lineSize - 1);
+            
+            std::copy(req.data.data, req.data.data + req.data.size, data + offset);
+            std::fill(mask, mask + offset, false);
+            std::fill(mask + offset, mask + offset + req.data.size, true);
+            std::fill(mask + offset + req.data.size, mask + m_lineSize, false);
+            
+            if (!m_memory.Write(m_mcid, line_addr, data, m_lineSize, INVALID_LFID, mask, false))
             {
                 DeadlockWrite("Unable to send DCA write to %#016llx/%u to memory", (unsigned long long)req.address, (unsigned)req.data.size);
                 return FAILED;

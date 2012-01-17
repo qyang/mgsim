@@ -77,13 +77,6 @@ Processor::Pipeline::PipeAction Processor::Pipeline::MemoryStage::OnCycle()
                         return PIPE_STALL;
                     }
                     
-                    if (!m_allocator.IncreaseThreadDependency(m_input.tid, THREADDEP_OUTSTANDING_WRITES))
-                    {
-                        DeadlockWrite("F%u/T%u(%llu) %s unable to increase OUTSTANDING_WRITES",
-                                      (unsigned)m_input.fid, (unsigned)m_input.tid, (unsigned long long)m_input.logical_index,
-                                      m_input.pc_sym);
-                        return PIPE_STALL;
-                    }
                 }
                 
                 // Clear the register state so it won't get written to the register file
@@ -161,10 +154,16 @@ Processor::Pipeline::PipeAction Processor::Pipeline::MemoryStage::OnCycle()
                             rcv.m_memory.offset      = 0;
                             rcv.m_memory.size        = (size_t)m_input.size;
                             rcv.m_memory.sign_extend = m_input.sign_extend;
-
+                            
+                            
                             // Increase the outstanding memory count for the family
-                            if (!m_allocator.OnMemoryRead(m_input.fid))
+                            if (!m_allocator.IncreaseFamilyDependency(m_input.fid,FAMDEP_OUTSTANDING_READS))
                             {
+                                DeadlockWrite("F%u/T%u(%llu) %s unable to increase outstanding family read count (I/O load *%#.*llx/%zu bytes -> %s)",
+                                              (unsigned)m_input.fid, (unsigned)m_input.tid, (unsigned long long)m_input.logical_index,
+                                              m_input.pc_sym,
+                                              (int)(sizeof(MemAddr)*2), (unsigned long long)m_input.address, (size_t)m_input.size,
+                                              m_input.Rc.str().c_str());
                                 return PIPE_STALL;
                             }
 
@@ -208,8 +207,13 @@ Processor::Pipeline::PipeAction Processor::Pipeline::MemoryStage::OnCycle()
                             rcv.m_memory.sign_extend = m_input.sign_extend;
 
                             // Increase the outstanding memory count for the family
-                            if (!m_allocator.OnMemoryRead(m_input.fid))
+                            if (!m_allocator.IncreaseFamilyDependency(m_input.fid,FAMDEP_OUTSTANDING_READS))
                             {
+                                DeadlockWrite("F%u/T%u(%llu) %s unable to increase outstanding family read count (L1 load *%#.*llx/%zu bytes -> %s)",
+                                              (unsigned)m_input.fid, (unsigned)m_input.tid, (unsigned long long)m_input.logical_index,
+                                              m_input.pc_sym,
+                                              (int)(sizeof(MemAddr)*2), (unsigned long long)m_input.address, (size_t)m_input.size,
+                                              m_input.Rc.str().c_str());
                                 return PIPE_STALL;
                             }
                     
@@ -269,6 +273,17 @@ Processor::Pipeline::PipeAction Processor::Pipeline::MemoryStage::OnCycle()
                     throw;
                 }
             }
+        }
+    }
+    else if(m_input.suspend == SUSPEND_MEMORY_BARRIER)
+    {
+        
+        if(!m_dcache.FlushWCBInFam(m_input.fid))
+        {
+            DeadlockWrite("F%u/T%u(%llu) %s unable to flush WCB",
+                          (unsigned)m_input.fid, (unsigned)m_input.tid, (unsigned long long)m_input.logical_index,
+                          m_input.pc_sym);
+            return PIPE_STALL;
         }
     }
 

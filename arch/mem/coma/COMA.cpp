@@ -79,7 +79,7 @@ bool COMA::Read(MCID id, MemAddr address, MemSize size)
     return m_clientMap[id].first->Read(m_clientMap[id].second, address, size);
 }
 
-bool COMA::Write(MCID id, MemAddr address, const void* data, MemSize size, TID tid)
+bool COMA::Write(MCID id, MemAddr address, const void* data, MemSize size, LFID fid, const bool* mask, bool consistency)
 {
     // Until the write protocol is figured out, do magic coherence!
     COMMIT
@@ -88,7 +88,7 @@ bool COMA::Write(MCID id, MemAddr address, const void* data, MemSize size, TID t
         m_nwrite_bytes += size;
     }
     // Forward the write to the cache associated with the callback
-    return m_clientMap[id].first->Write(m_clientMap[id].second, address, data, size, tid);
+    return m_clientMap[id].first->Write(m_clientMap[id].second, address, data, size, fid, mask, consistency);
 }
 
 void COMA::Reserve(MemAddr address, MemSize size, ProcessID pid, int perm)

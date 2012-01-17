@@ -14,7 +14,8 @@ struct ParallelMemory::Request
     bool             write;
     MemAddr          address;
     MemData          data;
-    TID              tid;
+    LFID             fid;
+    bool             mask[MAX_MEMORY_OPERATION_SIZE];
 };
 
 class ParallelMemory::Port : public Object
@@ -50,7 +51,7 @@ class ParallelMemory::Port : public Object
             if (request.write)
             {
                 m_memory.Write(request.address, request.data.data, request.data.size);
-                if (!m_callback.OnMemoryWriteCompleted(request.tid))
+                if (!m_callback.OnMemoryWriteCompleted(request.fid))
                 {
                     return FAILED;
                 }
@@ -127,9 +128,9 @@ public:
         return m_requests.Push(request);
     }
     
-    bool OnMemorySnooped(MemAddr address, const MemData& data)
+    bool OnMemorySnooped(MemAddr address, const MemData& data, bool* mask)
     {
-        return m_callback.OnMemorySnooped(address, data);
+        return m_callback.OnMemorySnooped(address, data, mask);
     }
     
     Port(const std::string& name, ParallelMemory& memory, BufferSize buffersize, IMemoryCallback& callback, Process& process, StorageTraceSet& traces, Storage& storage)
@@ -203,7 +204,7 @@ bool ParallelMemory::Read(MCID id, MemAddr address, MemSize size)
     return true;
 }
 
-bool ParallelMemory::Write(MCID id, MemAddr address, const void* data, MemSize size, TID tid)
+bool ParallelMemory::Write(MCID id, MemAddr address, const void* data, MemSize size, LFID fid, const bool* mask, bool consistency)
 {
     if (size > MAX_MEMORY_OPERATION_SIZE)
     {
@@ -216,14 +217,15 @@ bool ParallelMemory::Write(MCID id, MemAddr address, const void* data, MemSize s
     Request request;
     request.address   = address;
     request.data.size = size;
-    request.tid       = tid;
+    request.fid       = fid;
     request.write     = true;
     memcpy(request.data.data, data, (size_t)size);
+    memcpy(request.mask, mask, (size_t)size);
 
     // Broadcast the snoop data
     for (std::vector<Port*>::iterator p = m_ports.begin(); p != m_ports.end(); ++p)
     {
-        if (!(*p)->OnMemorySnooped(request.address, request.data))
+        if (!(*p)->OnMemorySnooped(request.address, request.data, request.mask))
         {
             return false;
         }

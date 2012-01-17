@@ -804,6 +804,17 @@ Processor::Pipeline::PipeAction Processor::Pipeline::ExecuteStage::ExecuteInstru
                 case S_OP3_STD:
                 case S_OP3_STF:
                 case S_OP3_STDF:
+                    if(MemoryWriteBarrier(m_input.fid))
+                    {
+                        COMMIT{
+                            m_output.pc      = m_input.pc;
+                            m_output.suspend = SUSPEND_MEMORY_STORE ;
+                            m_output.swch    = true;
+                            m_output.kill    = false;
+                            m_output.Rc      = INVALID_REG;
+                        }
+                        return PIPE_FLUSH;                
+                    }
                     m_output.Rcv = m_input.Rsv;
                     m_output.Ra = m_input.Rs; // for debugging memory only
                     break;
@@ -997,12 +1008,22 @@ Processor::Pipeline::PipeAction Processor::Pipeline::ExecuteStage::ExecuteInstru
                     ThrowIllegalInstructionException(*this, m_input.pc);
                 }
 
-                if (!MemoryWriteBarrier(m_input.tid))
+                if (MemoryWriteBarrier(m_input.tid))
                 {
                     // Suspend thread at out PC
                     COMMIT {
-                        m_output.pc      = m_input.pc;
+                       /* m_output.pc      = m_input.pc;
                         m_output.suspend = SUSPEND_MEMORY_BARRIER;
+                        m_output.swch    = true;
+                        m_output.kill    = false;
+                        m_output.Rc      = INVALID_REG;*/
+                        m_output.suspend = SUSPEND_MEMORY_STORE;
+                        if(!MemoryWriteBarrier(m_input.fid))
+                        {
+                            m_output.suspend = SUSPEND_MEMORY_BARRIER;
+                            m_familyTable[m_input.fid].dependencies.hasBarrier = true;
+                        }
+                        
                         m_output.swch    = true;
                         m_output.kill    = false;
                         m_output.Rc      = INVALID_REG;

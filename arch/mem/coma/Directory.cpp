@@ -111,24 +111,48 @@ bool COMA::Directory::OnMessageReceivedBottom(Message* msg)
         return false;
     }
 
+    bool forward_top = true;
+    
+    Line* line = FindLine(msg->address);
     if (!msg->ignore)
     {    
         switch (msg->type)
         {
         case Message::EVICTION:
-            // Evictions always come from below since they do not go down into a ring.
+        {    // Evictions always come from below since they do not go down into a ring.
             // (Except for deadlock avoidance, but then the ignore flag is set).
-            assert(IsBelow(msg->sender));
+            assert(IsBelow(msg->sender));            
+            assert(line != NULL);
+            assert(line->tokens >= msg->tokens);
+            if(msg->times < m_parent.GetNumActiveCachePeers())
+            {
+                forward_top = false;
+                break;
+            }             
+            COMMIT
+            {
+                line->tokens -= msg->tokens;
+                if (line->tokens == 0)
+                {
+                    // No more tokens left; clear the line too
+                    line->valid = false;
+                }
+            }              
+            break;
+        }
             
         case Message::REQUEST_DATA_TOKEN:
         {
-            // Reduce the token count in the dir line
-            Line* line = FindLine(msg->address);
+            
             assert(line != NULL);
             assert(line->tokens >= msg->tokens);
-            
-            COMMIT
+            if(IsBelow(msg->sender))
             {
+                forward_top = false; 
+                break;
+            }
+            COMMIT
+            {   // Reduce the token count in the dir line for request from other directories
                 line->tokens -= msg->tokens;
                 if (line->tokens == 0)
                 {
@@ -138,26 +162,54 @@ bool COMA::Directory::OnMessageReceivedBottom(Message* msg)
             }
             break;
         }
+        
+        case Message::UPDATE:
+            //exclusive or sub-ring update priority
+           if(!msg->consistency || ((line != NULL) && (line->tokens >= m_parent.GetTotalTokens())))
+           {
+                forward_top = false;
+           }      
+            break; 
             
         case Message::REQUEST:
+            //sub-ring priority
+            if(line != NULL)
+            {
+                forward_top = false;                
+            }
+            break; 
+            
         case Message::REQUEST_DATA:
-        case Message::UPDATE:
+            if(msg->times < m_parent.GetNumActiveCachePeers())
+            {
+                forward_top = false;
+                break;
+            }       
             break;
             
         default:
             assert(false);
             break;
         }
-    }
-    
-    // We can stop ignoring it now
-    COMMIT{ msg->ignore = false; }
-    
-    // Put the message on the higher-level ring
-    if (!m_top.SendMessage(msg, MINSPACE_FORWARD))
+    }    
+    if(!forward_top)
     {
-        DeadlockWrite("Unable to buffer request for next node on top ring");
-        return false;
+        if (!m_bottom.SendMessage(msg, MINSPACE_FORWARD))
+        {
+            DeadlockWrite("Unable to buffer request for next node on bottom ring");
+            return false;
+        }
+    }
+    else
+    {      
+        // We can stop ignoring it now
+        COMMIT{ msg->ignore = false; }
+        // Put the message on the higher-level ring
+        if (!m_top.SendMessage(msg, MINSPACE_FORWARD))
+        {
+            DeadlockWrite("Unable to buffer request for next node on top ring");
+            return false;
+        }
     }
 
     return true;
@@ -175,9 +227,9 @@ bool COMA::Directory::OnMessageReceivedTop(Message* msg)
     Line* line = NULL;
     switch (msg->type)
     {
+    case Message::UPDATE:
     case Message::REQUEST:
     case Message::REQUEST_DATA:
-    case Message::UPDATE:
         line = FindLine(msg->address);
         break;
 
@@ -206,7 +258,7 @@ bool COMA::Directory::OnMessageReceivedTop(Message* msg)
         break;
     }
     
-    if (line == NULL)
+    if ((line == NULL) || ((line->tokens == 1) && (msg->type == Message::REQUEST_DATA)))
     {
         // Miss, just forward the request on the upper ring
         if (!m_top.SendMessage(msg, MINSPACE_SHORTCUT))
@@ -222,6 +274,16 @@ bool COMA::Directory::OnMessageReceivedTop(Message* msg)
     }
     else
     {
+        //Set for request from other directories
+        if((msg->type == Message::REQUEST) && (line->tokens >= 2))
+        {
+            COMMIT{ msg->times = 1;}     // attach token on invalidation
+        }
+        else 
+        {
+            COMMIT{ msg->times = 0; }   // only data attachment allowed
+        }
+      
         // We have the line; put the request on the lower ring
         if (!m_bottom.SendMessage(msg, MINSPACE_FORWARD))
         {
@@ -287,7 +349,7 @@ COMA::Directory::Directory(const std::string& name, COMA& parent, Clock& clock, 
     p_lines.AddProcess(p_InTop);
     p_lines.AddProcess(p_InBottom);   
 
-    p_InBottom.SetStorageTraces(m_top.GetOutgoingTrace());
+    p_InBottom.SetStorageTraces((opt(m_bottom.GetOutgoingTrace()) * opt(m_top.GetOutgoingTrace())) ^ m_bottom.GetOutgoingTrace());
     p_InTop.SetStorageTraces((m_top.GetOutgoingTrace() * opt(m_bottom.GetOutgoingTrace())) ^ m_bottom.GetOutgoingTrace());
 
     config.registerObject(m_top, "dt");

@@ -24,9 +24,9 @@ class IMemoryCallback
 {
 public:
     virtual bool OnMemoryReadCompleted(MemAddr addr, const MemData& data) = 0;
-    virtual bool OnMemoryWriteCompleted(TID tid) = 0;
+    virtual bool OnMemoryWriteCompleted(LFID fid) = 0;
     virtual bool OnMemoryInvalidated(MemAddr addr) = 0;
-    virtual bool OnMemorySnooped(MemAddr /* addr */, const MemData& /* data */) { return true; }
+    virtual bool OnMemorySnooped(MemAddr /* addr */, const MemData& /* data */, bool* /*mask*/) { return true; }
 
     virtual ~IMemoryCallback() {}
 
@@ -41,8 +41,8 @@ class IMemory
 public:
     enum Permissions {
         PERM_EXECUTE   = 1,
-	PERM_WRITE     = 2,
-	PERM_READ      = 4,
+        PERM_WRITE     = 2,
+        PERM_READ      = 4,
         PERM_DCA_READ  = 8,
         PERM_DCA_WRITE = 16
     };
@@ -50,7 +50,7 @@ public:
     virtual MCID RegisterClient(IMemoryCallback& callback, Process& process, StorageTraceSet& traces, Storage& storage, bool grouped = false) = 0;
     virtual void UnregisterClient(MCID id) = 0;
     virtual bool Read (MCID id, MemAddr address, MemSize size) = 0;
-    virtual bool Write(MCID id, MemAddr address, const void* data, MemSize size, TID tid) = 0;
+    virtual bool Write(MCID id, MemAddr address, const void* data, MemSize size, LFID fid, const bool* mask, bool consistency) = 0;
     
     virtual void Initialize() {}
 

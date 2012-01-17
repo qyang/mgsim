@@ -62,6 +62,8 @@ struct Family
          dependency.
         */
         unsigned int numPendingReads;
+        unsigned int numPendingWrites;
+        bool         hasBarrier;          // Memory barrier issued.
 	};
 
     PSize        placeSize;      // Number of cores this family wanted to run on.
@@ -93,6 +95,9 @@ struct Family
     TID          lastAllocated;  // Last thread that has been allocated
 
     RegInfo      regs[NUM_REG_TYPES];    // Register information
+    
+    ThreadQueue  pending;           // Pending list of memory barrier.
+    
 
     // Admin
     FamilyState  state;          // Family state

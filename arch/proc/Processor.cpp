@@ -99,7 +99,8 @@ void Processor::Initialize(Processor* prev, Processor* next)
     m_dcache.p_service.AddProcess(m_dcache.p_CompletedReads);     // Memory read returns
     m_dcache.p_service.AddProcess(m_pipeline.p_Pipeline);         // Memory read/write
     m_dcache.p_service.AddProcess(m_allocator.p_Bundle);          // Indirect create read
-
+    
+    
     m_allocator.p_allocation.AddProcess(m_pipeline.p_Pipeline);         // ALLOCATE instruction
     m_allocator.p_allocation.AddProcess(m_network.p_DelegationIn);      // Delegated non-exclusive create
     m_allocator.p_allocation.AddProcess(m_allocator.p_FamilyAllocate);  // Delayed ALLOCATE instruction
@@ -163,6 +164,7 @@ void Processor::Initialize(Processor* prev, Processor* next)
     m_network.m_link.out.AddProcess(m_network.p_Link);                      // Forwarding link messages
     m_network.m_link.out.AddProcess(m_network.p_DelegationIn);              // Delegation message forwards onto link
     m_network.m_link.out.AddProcess(m_dcache.p_CompletedReads);             // Completed read causes sync
+    m_network.m_link.out.AddProcess(m_dcache.p_Incoming);                   // Completed write causes sync
     m_network.m_link.out.AddProcess(m_allocator.p_FamilyAllocate);          // Allocate process sending place-wide allocate
     m_network.m_link.out.AddProcess(m_allocator.p_FamilyCreate);            // Create process sends place-wide create
     m_network.m_link.out.AddProcess(m_allocator.p_ThreadAllocate);          // Thread cleanup causes sync
@@ -215,11 +217,13 @@ void Processor::Initialize(Processor* prev, Processor* next)
     // Anything that is delegated can either go local or remote
 #define DELEGATE (m_network.m_delegateIn ^ m_network.m_delegateOut)
 
+        
+    
     m_allocator.p_ThreadAllocate.SetStorageTraces(
-        /* THREADDEP_PREV_CLEANED_UP */ (opt(m_allocator.m_cleanup) * 
+        /* THREADDEP_PREV_CLEANED_UP */ (opt(m_dcache.m_outgoing) ^ opt(m_allocator.m_cleanup) * 
         /* FAMDEP_THREAD_COUNT */        opt(m_network.m_link.out ^ m_network.m_syncs ^
         /* AllocateThread */                 m_allocator.m_readyThreads2)) ^
-        /* FAMDEP_ALLOCATION_DONE */    (opt(m_network.m_link.out ^ m_network.m_syncs) *
+        /* FAMDEP_ALLOCATION_DONE */    (opt(m_dcache.m_famflush) * opt(m_network.m_link.out ^ m_network.m_syncs) *
         /* AllocateThread */             opt(m_allocator.m_readyThreads2)) );
 
     m_allocator.p_FamilyAllocate.SetStorageTraces(
@@ -234,7 +238,7 @@ void Processor::Initialize(Processor* prev, Processor* next)
     m_allocator.p_ThreadActivation.SetStorageTraces(
         opt(m_allocator.m_activeThreads ^ m_icache.m_outgoing) );  
     
-    m_allocator.p_Bundle.SetStorageTraces( m_dcache.m_outgoing ^ DELEGATE );
+    m_allocator.p_Bundle.SetStorageTraces( opt(m_dcache.m_outgoing) ^ opt(DELEGATE) );
 
     m_icache.p_Incoming.SetStorageTraces(
         opt(m_allocator.m_activeThreads) );
@@ -242,12 +246,14 @@ void Processor::Initialize(Processor* prev, Processor* next)
     // m_icache.p_Outgoing is set in the memory
 
     m_dcache.p_Incoming.SetStorageTraces(
-        /* Writes */    opt(m_allocator.m_readyThreads2) ^ opt(m_allocator.m_cleanup) ^
+        /* Writes */    opt(m_network.m_link.out) ^ opt(m_network.m_syncs) ^ opt(m_allocator.m_readyThreads2) ^ //opt(m_allocator.m_cleanup) ^
         /* Reads */     m_dcache.m_completed );
     
     m_dcache.p_CompletedReads.SetStorageTraces(
         /* Thread wakeup */ opt(m_allocator.m_readyThreads2) *
         /* Family sync */   opt(m_network.m_link.out ^ m_network.m_syncs) );
+    
+    m_dcache.p_FamFlush.SetStorageTraces(opt(m_dcache.m_outgoing));
     
     // m_dcache.p_Outgoing is set in the memory
 
@@ -257,8 +263,10 @@ void Processor::Initialize(Processor* prev, Processor* next)
             (m_allocator.m_readyThreads1 * m_allocator.m_cleanup) ^ 
             m_allocator.m_cleanup ^ 
             m_allocator.m_readyThreads1);
+    
     StorageTraceSet pls_memory =
-        m_dcache.m_outgoing;
+        m_dcache.m_outgoing ^ // outgoing L1 request
+        m_dcache.m_famflush ;  // memory barrier
 
     if (m_io_if != NULL)
     {
@@ -287,6 +295,7 @@ void Processor::Initialize(Processor* prev, Processor* next)
         /* Memory */    opt(pls_memory) * 
         /* Execute */   opt(pls_execute) *
                         m_pipeline.m_active );
+
 
     m_network.p_DelegationIn.SetStorageTraces(
         /* MSG_ALLOCATE */          (m_network.m_link.out ^ m_allocator.m_allocRequestsExclusive ^
@@ -438,6 +447,20 @@ MemSize Processor::GetTLSSize() const
     assert(sizeof(MemAddr) * 8 > m_bits.pid_bits + m_bits.tid_bits + 1);
 
     return static_cast<MemSize>(1) << (sizeof(MemSize) * 8 - (1 + m_bits.pid_bits + m_bits.tid_bits));
+}
+
+
+bool Processor::IsLocalStorage(LFID fid, MemAddr address) const
+{
+    if(address < GetTLSAddress(fid,0) || address >= (GetTLSAddress(fid,1 << m_bits.tid_bits - 1) + GetTLSSize()))
+        return false;
+    
+    return true;
+}
+
+bool Processor::GetMemConsistency(LFID fid, MemAddr address) const
+{
+    return   m_familyTable[fid].hasShareds | IsLocalStorage(fid,address);
 }
 
 static Integer GenerateCapability(unsigned int bits)

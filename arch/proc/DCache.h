@@ -30,21 +30,32 @@ public:
         RegAddr     waiting;    ///< First register waiting on this line.
         bool        create;
     };
+    
+    struct WCB_Line
+    {
+        MemAddr     tag;
+        LFID        fid;
+        char*       data;
+        bool*       valid;
+        bool        free;
+    };
 
 private:
     struct Request
     {
         MemAddr address;
         bool    write;
+        bool    update;       
         MemData data;
-        TID     tid;
+        bool    mask[sizeof(data.data)];
+        LFID    fid;
     };
     
     struct Response
     {
         bool write;
         union {
-            TID tid;
+            LFID fid;
             CID cid;
         };
     };
@@ -69,15 +80,17 @@ private:
 	IMemory&             m_memory;          ///< Memory
 	MCID                 m_mcid;            ///< Memory Client ID
     std::vector<Line>    m_lines;           ///< The cache-lines.
-	size_t               m_assoc;           ///< Config: Cache associativity.
+    size_t               m_assoc;           ///< Config: Cache associativity.
 	size_t               m_sets;            ///< Config: Number of sets in the cace.
 	size_t               m_lineSize;        ///< Config: Size of a cache line, in bytes.
     IBankSelector*       m_selector;        ///< Mapping of cache line addresses to tags and set indices.
     Buffer<CID>          m_completed;       ///< Completed cache-line reads waiting to be processed.
+    Buffer<LFID>         m_famflush;        ///< WCB line of family to be flushed away.
     Buffer<Response>     m_incoming;        ///< Incoming buffer from memory bus.
     Buffer<Request>      m_outgoing;        ///< Outgoing buffer to memory bus.
     WritebackState       m_wbstate;         ///< Writeback state
     uint64_t             m_numRHits;         ///< Number of rhits so far.
+    uint64_t             m_wcbRHits;        ///< Number of WCB rhits so far.
     uint64_t             m_numEmptyRMisses;  ///< Number of rmisses so far (rmiss to an empty cache line).
     uint64_t             m_numLoadingRMisses;///< Number of rmisses so far (rmiss to a loading cache line with same tag).
     uint64_t             m_numInvalidRMisses;///< Number of rmisses so far (rmiss to an invalid cache line with same tag).
@@ -85,15 +98,25 @@ private:
     uint64_t             m_numResolvedConflicts;///< Number of resolved conflicts so far (rmiss to a non-empty, substitutable line with different tag).
 
     uint64_t             m_numWHits;          ///< Number of whits so far.
+    uint64_t             m_wcbMConflicts;     ///< Number of WCB whits so far.
     uint64_t             m_numPassThroughWMisses;
     uint64_t             m_numInvLoadingWMisses;///< Number of wmisses so far (wmiss to an invalid/loading line)
 
     uint64_t             m_numStallingRMisses;///< Number of rmisses that cannot be serviced upstream
     uint64_t             m_numStallingWMisses;///< Number of mmisses that cannot be serviced upstream
+    
+    std::vector<WCB_Line>    m_wcblines; ///< The write combine buffer lines.
        
     Result DoCompletedReads();
     Result DoIncomingResponses();
     Result DoOutgoingRequests();
+    Result DoFamFlush  ();
+    bool   ReadWCB(MemAddr address, size_t size, Line* &line, LFID fid);
+    bool   WriteWCB(MemAddr address, MemSize size, void* data, LFID fid);
+    bool   FlushWCBLine(size_t index);
+    
+    //bool   FlushWCBInLine(size_t index);
+    
 
 public:
     DCache(const std::string& name, Processor& parent, Clock& clock, Allocator& allocator, FamilyTable& familyTable, RegisterFile& regFile, IMemory& memory, Config& config);
@@ -103,21 +126,26 @@ public:
     Process p_CompletedReads;
     Process p_Incoming;
     Process p_Outgoing;
+    Process p_FamFlush;
 
     ArbitratedService<> p_service;
 
     // Public interface
     Result Read (MemAddr address, void* data, MemSize size, LFID fid, RegAddr* reg);
     Result Write(MemAddr address, void* data, MemSize size, LFID fid, TID tid);
+    bool   FamtoFlush(LFID fid);
+    
+    
+    bool   FlushWCBInFam   (LFID fid);
 
     size_t GetLineSize() const { return m_lineSize; }
 
     // Memory callbacks
     bool OnMemoryReadCompleted(MemAddr addr, const MemData& data);
-    bool OnMemoryWriteCompleted(TID tid);
-    bool OnMemorySnooped(MemAddr addr, const MemData& data);
+    bool OnMemoryWriteCompleted(LFID fid);
+    bool OnMemorySnooped(MemAddr addr, const MemData& data, bool* mask);
     bool OnMemoryInvalidated(MemAddr addr);
-
+   
     Object& GetMemoryPeer() { return m_parent; }
 
 

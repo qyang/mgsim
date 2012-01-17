@@ -452,7 +452,7 @@ MemSize Processor::GetTLSSize() const
 
 bool Processor::IsLocalStorage(LFID fid, MemAddr address) const
 {
-    if(address < GetTLSAddress(fid,0) || address >= (GetTLSAddress(fid,1 << m_bits.tid_bits - 1) + GetTLSSize()))
+    if(address < GetTLSAddress(fid,0) || address >= (GetTLSAddress(fid,(1 << m_bits.tid_bits) - 1) + GetTLSSize()))
         return false;
     
     return true;

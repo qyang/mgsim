@@ -877,7 +877,7 @@ Result Processor::DCache::DoIncomingResponses()
             return FAILED;
         }
 
-        DebugMemWrite("T%u completed store", (unsigned)response.tid);
+        DebugMemWrite("F%u completed pending stores", (unsigned)response.fid);
 
     }
     else
@@ -925,8 +925,8 @@ Result Processor::DCache::DoOutgoingRequests()
         }
     }
 
-    DebugMemWrite("T%d queued outgoing %s request for %.*llx",
-                  (request.write ? (int)request.tid : -1), (request.write ? "store" : "load"),
+    DebugMemWrite("F%d queued outgoing %s request for %.*llx",
+                  (request.write ? (int)request.fid : -1), (request.write ? "store" : "load"),
                   (int)(sizeof(MemAddr)*2), (unsigned long long)request.address);
 
     m_outgoing.Pop();

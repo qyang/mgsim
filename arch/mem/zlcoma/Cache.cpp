@@ -86,7 +86,7 @@ bool ZLCOMA::Cache::Read(MCID id, MemAddr address, MemSize size)
 
 // Called from the processor on a memory write (can be any size with write-through/around)
 // Just queues the request.
-bool ZLCOMA::Cache::Write(MCID id, MemAddr address, const void* data, MemSize size, LFID fid, const bool* mask, bool consistency)
+bool ZLCOMA::Cache::Write(MCID id, MemAddr address, const void* data, MemSize size, LFID fid, const bool* mask, bool /*consistency*/)
 {
     if (size > m_lineSize || size > MAX_MEMORY_OPERATION_SIZE)
     {

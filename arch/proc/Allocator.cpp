@@ -614,6 +614,8 @@ bool Processor::Allocator::DecreaseFamilyDependency(LFID fid, FamilyDependency d
             DebugSimWrite("F%u cleaned up", (unsigned)fid);
         }
         break;
+    case FAMDEP_MEMBARRIER:
+    default: assert(0); break;
     }
 
     return true;

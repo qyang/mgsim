@@ -1,5 +1,5 @@
 #ifndef MONITOR_H
-# define MONITOR_H
+#define MONITOR_H
 
 #include "arch/MGSystem.h"
 #include "sampling.h"
@@ -7,6 +7,9 @@
 #include <fstream>
 #include <ctime>
 #include <pthread.h>
+
+
+static void* runmonitor(void*);
 
 class Monitor
 {

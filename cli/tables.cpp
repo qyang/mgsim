@@ -1,7 +1,7 @@
 #include "commands.h"
 
 extern command_handler
-cmd_aliases,
+    cmd_aliases,
     cmd_bp_list,
     cmd_bp_add,
     cmd_bp_clear,

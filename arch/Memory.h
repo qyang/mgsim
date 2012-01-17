@@ -50,7 +50,7 @@ public:
     virtual MCID RegisterClient(IMemoryCallback& callback, Process& process, StorageTraceSet& traces, Storage& storage, bool grouped = false) = 0;
     virtual void UnregisterClient(MCID id) = 0;
     virtual bool Read (MCID id, MemAddr address, MemSize size) = 0;
-    virtual bool Write(MCID id, MemAddr address, const void* data, MemSize size, LFID fid, const bool* mask, bool consistency) = 0;
+    virtual bool Write(MCID id, MemAddr address, const void* data, MemSize size, LFID fid, const bool* mask, bool /*consistency*/) = 0;
     
     virtual void Initialize() {}
 

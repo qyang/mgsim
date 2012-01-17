@@ -59,7 +59,7 @@ bool SerialMemory::Read(MCID id, MemAddr address, MemSize size)
     return true;
 }
 
-bool SerialMemory::Write(MCID id, MemAddr address, const void* data, MemSize size, LFID fid, const bool* mask, bool consistency)
+bool SerialMemory::Write(MCID id, MemAddr address, const void* data, MemSize size, LFID fid, const bool* mask, bool /*consistency*/)
 {
     if (size > MAX_MEMORY_OPERATION_SIZE)
     {

@@ -655,7 +655,7 @@ void Simulator::MGSystem::DumpArea(std::ostream& os, unsigned int tech) const
 
 #else
 // CACTI not enabled
-void Simulator::MGSystem::DumpArea(std::ostream& os, unsigned int tech) const
+void Simulator::MGSystem::DumpArea(std::ostream& /*unused*/, unsigned int /*unused*/) const
 {
     assert(false);
 }

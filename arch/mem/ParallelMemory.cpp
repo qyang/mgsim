@@ -50,7 +50,16 @@ class ParallelMemory::Port : public Object
             // The current request has completed
             if (request.write)
             {
-                m_memory.Write(request.address, request.data.data, request.data.size);
+                char temp[request.data.size];
+                m_memory.Read(request.address,temp, request.data.size);
+                for(size_t i = 0; i < request.data.size; i++)
+                {
+                    if(request.mask[i])
+                    {
+                        temp[i] = request.data.data[i];
+                    }
+                }
+                m_memory.Write(request.address, temp, request.data.size);
                 if (!m_callback.OnMemoryWriteCompleted(request.fid))
                 {
                     return FAILED;

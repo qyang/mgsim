@@ -671,9 +671,9 @@ bool Processor::DCache::OnMemorySnooped(MemAddr address, const MemData& data, bo
             
             for (size_t i = 0; i <  data.size; ++i)
             {
-                if (!line->valid[i + offset] && mask[i])
+                if (mask[i + offset])
                 {
-                    line->data[i + offset]  = data.data[i];
+                    line->data[i + offset]  = data.data[i + offset];
                     line->valid[i + offset] = true;
                 }               
             }     

@@ -481,6 +481,23 @@ bool Processor::Allocator::AllocateThread(LFID fid, TID tid, bool isNewlyAllocat
     return true;
 }
 
+bool Processor::Allocator::CheckFamilyDependency(LFID fid, FamilyDependency dep)
+{
+    Family::Dependencies deps = m_familyTable[fid].dependencies;
+    
+    switch (dep)
+    {
+        case FAMDEP_THREAD_COUNT:       return deps.numThreadsAllocated > 0;
+        case FAMDEP_OUTSTANDING_READS:  return deps.numPendingReads     > 0;
+        case FAMDEP_OUTSTANDING_WRITES: return deps.numPendingWrites    > 0;                                    
+        case FAMDEP_PREV_SYNCHRONIZED:  return deps.prevSynchronized;       
+        case FAMDEP_ALLOCATION_DONE:    return deps.allocationDone;
+        case FAMDEP_SYNC_SENT:          return deps.syncSent;
+        case FAMDEP_DETACHED:           return deps.detached;
+        case FAMDEP_MEMBARRIER:         return deps.hasBarrier;
+        default: assert(0);             return false;
+    }   
+}
 
 bool Processor::Allocator::DecreaseFamilyDependency(LFID fid, FamilyDependency dep)
 {
@@ -630,7 +647,15 @@ bool Processor::Allocator::IncreaseFamilyDependency(LFID fid, FamilyDependency d
         {
             case FAMDEP_OUTSTANDING_WRITES: deps.numPendingWrites++; break;
             case FAMDEP_OUTSTANDING_READS:  deps.numPendingReads++; break;
-            case FAMDEP_MEMBARRIER: assert(!deps.hasBarrier); deps.hasBarrier = true; break;
+            case FAMDEP_MEMBARRIER: 
+            {
+                assert(!deps.hasBarrier);
+                if(BarrierFam(fid))
+                {
+                    deps.hasBarrier = true;
+                }
+                break;
+            }
             default:                           assert(0); break;
            
         }

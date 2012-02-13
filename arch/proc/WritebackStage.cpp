@@ -228,7 +228,9 @@ Processor::Pipeline::PipeAction Processor::Pipeline::WritebackStage::OnCycle()
     else if(barrier)
     {
         //Memory barrier, check to make sure it hasn't changed by now
-        barrier = suspend = m_allocator.CheckFamMemBarrier(m_input.fid) || m_allocator.CheckFamPendingWrts(m_input.fid);
+        barrier = suspend = m_allocator.CheckFamilyDependency(m_input.fid, FAMDEP_MEMBARRIER) || 
+                            m_allocator.CheckFamilyDependency(m_input.fid,FAMDEP_OUTSTANDING_WRITES);// ||
+                                   //m_allocator.BarrierFam(m_input.fid);
 
         DebugPipeWrite("F%u/T%u(%llu) %s memory barrier, suspend: %s",
                        (unsigned)m_input.fid, (unsigned)m_input.tid, (unsigned long long)m_input.logical_index,

@@ -122,8 +122,8 @@ public:
     
     bool DecreaseFamilyDependency(LFID fid, FamilyDependency dep);
     bool IncreaseFamilyDependency(LFID fid, FamilyDependency dep);
-    bool CheckFamMemBarrier(LFID fid)  const {return m_familyTable[fid].dependencies.hasBarrier; }
-    bool CheckFamPendingWrts(LFID fid) const {return (m_familyTable[fid].dependencies.numPendingWrites != 0); }
+    bool CheckFamilyDependency   (LFID fid, FamilyDependency dep);
+    bool BarrierFam(LFID fid)  const {return m_dcache.FamtoFlush(fid);}
     bool DecreaseThreadDependency(TID tid, ThreadDependency dep);
     
     TID PopActiveThread();

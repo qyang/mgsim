@@ -275,7 +275,7 @@ Processor::Pipeline::PipeAction Processor::Pipeline::MemoryStage::OnCycle()
             }
         }
     }
-    else if(m_input.suspend == SUSPEND_MEMORY_BARRIER)
+    else if(m_input.suspend == SUSPEND_MEMORY_BARRIER && m_allocator.CheckFamilyDependency(m_input.fid, FAMDEP_MEMBARRIER))
     {
         
         if(!m_dcache.FlushWCBInFam(m_input.fid))

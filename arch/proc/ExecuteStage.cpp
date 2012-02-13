@@ -217,13 +217,13 @@ Processor::Pipeline::PipeAction Processor::Pipeline::ExecuteStage::SetFamilyProp
 Processor::Pipeline::PipeAction Processor::Pipeline::ExecuteStage::ExecCreate(const FID& fid, MemAddr address, RegIndex completion)
 {
     // Create
-    if (m_allocator.CheckFamMemBarrier(m_input.fid) || m_allocator.CheckFamPendingWrts(m_input.fid))
+    if (m_allocator.CheckFamilyDependency(m_input.fid, FAMDEP_MEMBARRIER) || m_allocator.CheckFamilyDependency(m_input.fid,FAMDEP_OUTSTANDING_WRITES))
     {
         // We need to wait for the pending writes to complete
         COMMIT
         {
             m_output.pc      = m_input.pc;
-            m_output.suspend = m_familyTable[m_input.fid].dependencies.hasBarrier ? SUSPEND_MEMORY_STORE : SUSPEND_MEMORY_BARRIER;
+            m_output.suspend = m_allocator.CheckFamilyDependency(m_input.fid, FAMDEP_MEMBARRIER)? SUSPEND_MEMORY_STORE : SUSPEND_MEMORY_BARRIER;
             if(m_output.suspend == SUSPEND_MEMORY_BARRIER)
             {
                 if(!m_allocator.IncreaseFamilyDependency(m_input.fid,FAMDEP_MEMBARRIER))

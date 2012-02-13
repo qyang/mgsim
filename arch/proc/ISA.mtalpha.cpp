@@ -1012,7 +1012,7 @@ Processor::Pipeline::PipeAction Processor::Pipeline::ExecuteStage::ExecuteInstru
         return PIPE_FLUSH;
         
         case IFORMAT_MEM_STORE:
-        if(m_allocator.CheckFamMemBarrier(m_input.fid))
+        if(m_allocator.CheckFamilyDependency(m_input.fid, FAMDEP_MEMBARRIER))
         {
             COMMIT{
                     m_output.pc      = m_input.pc;
@@ -1296,18 +1296,19 @@ Processor::Pipeline::PipeAction Processor::Pipeline::ExecuteStage::ExecuteInstru
         {
             case A_MISCFUNC_MB:
             case A_MISCFUNC_WMB:
-                // Memory barrier,suspend thread at our PC
+                // Memory barrier,suspend thread at output PC
                 COMMIT {
                                
                     m_output.suspend = SUSPEND_MEMORY_STORE;
-                    if(!m_allocator.CheckFamMemBarrier(m_input.fid))
+                    if(!m_allocator.CheckFamilyDependency(m_input.fid, FAMDEP_MEMBARRIER))
                     {
-                        m_output.suspend = SUSPEND_MEMORY_BARRIER;
                         if(!m_allocator.IncreaseFamilyDependency(m_input.fid,FAMDEP_MEMBARRIER))
                         {
                             return PIPE_STALL;
                         }
                         
+                        m_output.suspend = SUSPEND_MEMORY_BARRIER;
+                                               
                     }
                         
                     m_output.swch    = true;

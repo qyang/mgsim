@@ -144,7 +144,16 @@ Result SerialMemory::DoRequests()
         {
             // The current request has completed
             if (request.write) {
-                VirtualMemory::Write(request.address, request.data.data, request.data.size);
+                char temp[request.data.size];
+                VirtualMemory::Read(request.address,temp, request.data.size);
+                for(size_t i = 0; i < request.data.size; i++)
+                {
+                    if(request.mask[i])
+                    {
+                        temp[i] = request.data.data[i];
+                    }
+                }
+                VirtualMemory::Write(request.address, temp, request.data.size);
                 if (!request.callback->OnMemoryWriteCompleted(request.fid))
                 {
                     return FAILED;

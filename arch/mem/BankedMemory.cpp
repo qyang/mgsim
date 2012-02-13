@@ -133,6 +133,15 @@ class BankedMemory::Bank : public Object
         {
             // This bank is done serving the request
             if (m_request.write) {
+                char temp[m_request.data.size];
+                m_memory.Read(m_request.address,temp, m_request.data.size);
+                for(size_t i = 0; i < m_request.data.size; i++)
+                {
+                    if(!m_request.mask[i])
+                    {
+                        m_request.data.data[i] = temp[i];
+                    }
+                }
                 m_memory.Write(m_request.address, m_request.data.data, m_request.data.size);
             } else {
                 m_memory.Read(m_request.address, m_request.data.data, m_request.data.size);

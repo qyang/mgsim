@@ -98,9 +98,8 @@ private:
     uint64_t             m_numResolvedConflicts;///< Number of resolved conflicts so far (rmiss to a non-empty, substitutable line with different tag).
 
     uint64_t             m_numWHits;          ///< Number of whits so far.
-    uint64_t             m_wcbMConflicts;     ///< Number of WCB whits so far.
-    uint64_t             m_numPassThroughWMisses;
-    uint64_t             m_numInvLoadingWMisses;///< Number of wmisses so far (wmiss to an invalid/loading line)
+    uint64_t             m_wcbConflicts;     ///< Number of WCB whits so far.
+    uint64_t             m_numLoadingWMisses;///< Number of wmisses so far (wmiss to an invalid/loading line)
 
     uint64_t             m_numStallingRMisses;///< Number of rmisses that cannot be serviced upstream
     uint64_t             m_numStallingWMisses;///< Number of mmisses that cannot be serviced upstream

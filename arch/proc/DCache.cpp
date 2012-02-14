@@ -33,9 +33,8 @@ Processor::DCache::DCache(const std::string& name, Processor& parent, Clock& clo
     m_numHardConflicts(0),
     m_numResolvedConflicts(0),
     m_numWHits        (0),
-    m_wcbMConflicts   (0),
-    m_numPassThroughWMisses(0),
-    m_numInvLoadingWMisses(0),
+    m_wcbConflicts   (0),
+    m_numLoadingWMisses(0),
     m_numStallingRMisses(0),
     m_numStallingWMisses(0),
     
@@ -55,9 +54,8 @@ Processor::DCache::DCache(const std::string& name, Processor& parent, Clock& clo
     RegisterSampleVariableInObject(m_numHardConflicts, SVC_CUMULATIVE);
     RegisterSampleVariableInObject(m_numResolvedConflicts, SVC_CUMULATIVE);
     RegisterSampleVariableInObject(m_numWHits, SVC_CUMULATIVE);
-    RegisterSampleVariableInObject(m_wcbMConflicts, SVC_CUMULATIVE);
-    RegisterSampleVariableInObject(m_numPassThroughWMisses, SVC_CUMULATIVE);
-    RegisterSampleVariableInObject(m_numInvLoadingWMisses, SVC_CUMULATIVE);
+    RegisterSampleVariableInObject(m_wcbConflicts, SVC_CUMULATIVE);
+    RegisterSampleVariableInObject(m_numLoadingWMisses, SVC_CUMULATIVE);
     RegisterSampleVariableInObject(m_numStallingRMisses, SVC_CUMULATIVE);
     RegisterSampleVariableInObject(m_numStallingWMisses, SVC_CUMULATIVE);
     
@@ -258,9 +256,11 @@ bool Processor::DCache::WriteWCB(MemAddr address, MemSize size, void* data, LFID
             DeadlockWrite("Unable to flush line %u in WCB", (unsigned)index);
             return false;
         }
-        COMMIT{ ++m_wcbMConflicts;}
+        COMMIT{ ++m_wcbConflicts;}
                      
     }
+    else
+        COMMIT{ ++m_numWHits; }
     COMMIT {
         memcpy(wcb_line.data + offset, data, (size_t)size);
         //std::fill(wcb_line.tid + offset, wcb_line.tid + oqffset + size, tid);
@@ -303,7 +303,7 @@ bool Processor::DCache::FlushWCBLine(size_t index)
     
     
     WCB_Line& wcb_line = m_wcblines[index];    
-    
+    assert(!wcb_line.free);
     //put this line into outgoing buffer
     Request request;
     request.write     = true;
@@ -316,6 +316,7 @@ bool Processor::DCache::FlushWCBLine(size_t index)
         
     if (!m_outgoing.Push(request))
     {
+        ++m_numStallingWMisses;
         DeadlockWrite("Unable to push request from wcb line flush to outgoing buffer");
         return false;
     } 
@@ -419,6 +420,7 @@ Result Processor::DCache::Read(MemAddr address, void* data, MemSize size, LFID f
                 memcpy(data, line->data + offset, (size_t)size);
                 line->state = (line->state == LINE_INVALID) ? LINE_EMPTY : LINE_FULL;
                 ++m_wcbRHits;
+                ++m_numRHits;
             }
             return SUCCESS;
         }
@@ -543,7 +545,7 @@ Result Processor::DCache::Write(MemAddr address, void* data, MemSize size, LFID 
             //
             
             // So for now, just stall the write
-            ++m_numInvLoadingWMisses;
+            ++m_numLoadingWMisses;
             DeadlockWrite("Unable to write into loading cache line");
             return FAILED;
         }
@@ -553,16 +555,9 @@ Result Processor::DCache::Write(MemAddr address, void* data, MemSize size, LFID 
             assert(line->state == LINE_FULL);
             COMMIT{ 
                 memcpy(line->data + offset, data, (size_t)size); 
-                ++m_numWHits;
-            }
+               }
         }
     }
-    else 
-    {
-       
-        COMMIT{ ++m_numPassThroughWMisses;}
-    }
-    
     if(!WriteWCB(address, size, data, fid))
     {
         DeadlockWrite("Unable to merge write into WCB");
@@ -978,6 +973,11 @@ void Processor::DCache::Cmd_Read(std::ostream& out, const std::vector<std::strin
 
             out << "Number of reads:     " << numRAccesses << endl
                 << "Read hits:           " << dec << m_numRHits << " (" << setprecision(2) << fixed << m_numRHits * factor << "%)" << endl
+                << "Breakdown of read hits:" << endl
+                << "- to a wcb line:                    " 
+                << dec << m_wcbRHits << " (" << setprecision(2) << fixed << m_wcbRHits * factor << "%)" << endl
+                << "- to a dcache line:                 " 
+                << dec << (m_numRHits-m_wcbRHits) << " (" << setprecision(2) << fixed << (m_numRHits-m_wcbRHits) * factor << "%)" << endl
                 << "Read misses:         " << dec << numRMisses << " (" << setprecision(2) << fixed << numRMisses * factor << "%)" << endl
                 << "Breakdown of read misses:" << endl
                 << "  (true misses)" << endl
@@ -997,7 +997,7 @@ void Processor::DCache::Cmd_Read(std::ostream& out, const std::vector<std::strin
                 << endl;
         }
 
-        uint64_t numWMisses = m_numPassThroughWMisses + m_numInvLoadingWMisses;
+        uint64_t numWMisses = m_wcbConflicts + m_numLoadingWMisses;
         uint64_t numWAccesses = m_numWHits + numWMisses;
         if (numWAccesses == 0)
             out << "No write accesses so far, cannot compute read hit/miss/conflict rates." << endl;
@@ -1009,10 +1009,10 @@ void Processor::DCache::Cmd_Read(std::ostream& out, const std::vector<std::strin
                 << "Write hits:          " << dec << m_numWHits << " (" << setprecision(2) << fixed << m_numWHits * factor << "%)" << endl
                 << "Write misses:        " << dec << numWMisses << " (" << setprecision(2) << fixed << numWMisses * factor << "%)" << endl
                 << "Breakdown of write misses:" << endl
-                << "- to an empty line or line with different tag (pass-through): " 
-                << dec << m_numPassThroughWMisses << " (" << setprecision(2) << fixed << m_numPassThroughWMisses * factor << "%)" << endl
-                << "- to a loading or invalid line with same tag (stalling):      " 
-                << dec << m_numInvLoadingWMisses << " (" << setprecision(2) << fixed << m_numInvLoadingWMisses * factor << "%)" << endl
+                << "- to a wcb line with different tag or FID (wcb flush): " 
+                << dec << m_wcbConflicts << " (" << setprecision(2) << fixed << m_wcbConflicts * factor << "%)" << endl
+                << "- to a loading or invalid dcache line with same tag (stalling):      " 
+                << dec << m_numLoadingWMisses << " (" << setprecision(2) << fixed << m_numLoadingWMisses * factor << "%)" << endl
                 << endl
                 << "Write miss stalls by upstream: " << dec << m_numStallingWMisses << " cycles" << endl
                 << endl;
@@ -1060,7 +1060,7 @@ void Processor::DCache::Cmd_Read(std::ostream& out, const std::vector<std::strin
         for (size_t j = 0; j < m_wcblines.size(); ++j)
         {
             const WCB_Line& wcb_line = m_wcblines[j];
-            if (1) // !wcb_line.free)
+            if (!wcb_line.free)
             {
                 out << (int)wcb_line.free << " | " 
                 << setw(3) << setfill(' ')<< dec << right << j <<" | " 

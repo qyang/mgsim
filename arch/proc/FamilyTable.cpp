@@ -193,7 +193,7 @@ void Processor::FamilyTable::Cmd_Read(ostream& out, const vector<string>& argume
     else
     {
         out << "    |     Initial PC     | Allocated | Threads | P/S/A/D/B/Rd/Wr/ |  Cores  | Link |    Sync    |     Capability     | State         | Symbol" << endl;
-        out << "----+--------------------+-----------+---------+-----------------+---------+------+------------+--------------------+---------------+--------" << endl;
+        out << "----+--------------------+-----------+---------+------------------+---------+------+------------+--------------------+---------------+--------" << endl;
         for (set<LFID>::const_iterator p = fids.begin(); p != fids.end(); ++p)
         {
             const Family& family = m_families[*p];

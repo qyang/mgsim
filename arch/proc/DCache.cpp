@@ -263,7 +263,6 @@ bool Processor::DCache::WriteWCB(MemAddr address, MemSize size, void* data, LFID
         COMMIT{ ++m_numWHits; }
     COMMIT {
         memcpy(wcb_line.data + offset, data, (size_t)size);
-        //std::fill(wcb_line.tid + offset, wcb_line.tid + oqffset + size, tid);
         std::fill(wcb_line.valid + offset, wcb_line.valid + offset + size, true);
         wcb_line.tag  = tag;
         wcb_line.fid  = fid;
@@ -1055,14 +1054,14 @@ void Processor::DCache::Cmd_Read(std::ostream& out, const std::vector<std::strin
     else if (arguments[0] == "wcb")
     {
         out << endl << "Write Combine Buffer line in use:" << endl << endl
-        << "F | Set |       Address      |  FID  |                       Data                     " << endl
-        << "--+-----+--------------------+-------+------------------------------------------------" << endl;
+        << "Free | Set |       Address      |  FID  |                       Data                     " << endl
+        << "-----+-----+--------------------+-------+------------------------------------------------" << endl;
         for (size_t j = 0; j < m_wcblines.size(); ++j)
         {
             const WCB_Line& wcb_line = m_wcblines[j];
             if (!wcb_line.free)
             {
-                out << (int)wcb_line.free << " | " 
+                out <<setw(4) << setfill(' ')<< (wcb_line.free?"T":"F") << " | " 
                 << setw(3) << setfill(' ')<< dec << right << j <<" | " 
                 << hex << "0x" << setw(16) << setfill('0') << m_selector->Unmap(wcb_line.tag, j) * m_lineSize << " | "
                 << dec << setw(5) << right << setfill(' ') << wcb_line.fid << " |";
@@ -1075,16 +1074,16 @@ void Processor::DCache::Cmd_Read(std::ostream& out, const std::vector<std::strin
                         if (wcb_line.valid[x]) {
                             out << setw(2) << (unsigned)(unsigned char)wcb_line.data[x];
                         } else {
-                            out << "  ";
+                           out << "  ";
                         }
                     }             
                                     
                     if (y + BYTES_PER_LINE < m_lineSize) {
                         // This was not yet the last line
-                        out << endl << "  |    |                    |       |";
+                        out << endl << "     |     |                    |       |";
                     }
                 }
-                out << endl << "--+----+--------------------+-------+------------------------------------------------+--" << endl;
+                out << endl << "-----+-----+--------------------+-------+------------------------------------------------" << endl;
             }
             
         }

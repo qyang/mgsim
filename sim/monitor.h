@@ -9,7 +9,7 @@
 #include <pthread.h>
 
 
-static void* runmonitor(void*);
+void* runmonitor(void*);
 
 class Monitor
 {

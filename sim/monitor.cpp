@@ -10,7 +10,7 @@
 
 #define pthread(Function, ...) do { if (pthread_ ## Function(__VA_ARGS__)) perror("pthread_" #Function); } while(0)
 
-static void* runmonitor(void *arg)
+void* runmonitor(void *arg)
 {
     sigset_t sigset;
     sigemptyset(&sigset);

@@ -102,8 +102,8 @@ bool COMA::Cache::Write(MCID id, MemAddr address, const void* data, MemSize /* u
     req.client      = id;
     req.fid         = fid;
     req.consistency = consistency;
-    memcpy(req.data, data, m_lineSize);
-    memcpy(req.mask, mask, sizeof(mask[0]) * m_lineSize);
+    memcpy(req.data, data, (size_t)m_lineSize);
+    memcpy(req.mask, mask, (size_t)m_lineSize);
     
     
     // Client should have been registered

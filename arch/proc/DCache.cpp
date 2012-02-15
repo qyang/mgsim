@@ -319,6 +319,10 @@ bool Processor::DCache::FlushWCBLine(size_t index)
         DeadlockWrite("Unable to push request from wcb line flush to outgoing buffer");
         return false;
     } 
+    
+    DebugMemWrite("F%u flush WCB line %#16llx, index %u, free %d, size %u, valid %s", (unsigned)wcb_line.fid, (unsigned long long)request.address, 
+                  (unsigned)index, (int)wcb_line.free, (unsigned)m_lineSize, valid2str(wcb_line.valid, m_lineSize).c_str());
+    
     if (!m_allocator.IncreaseFamilyDependency(wcb_line.fid,FAMDEP_OUTSTANDING_WRITES))
     {
         return false;
@@ -328,9 +332,9 @@ bool Processor::DCache::FlushWCBLine(size_t index)
         std::fill(wcb_line.valid, wcb_line.valid + m_lineSize, false);
         wcb_line.free = true;
     }
-    DebugMemWrite("F%u flush WCB line %#16llx, index %u, free %d, size %u, valid %s", (unsigned)wcb_line.fid, (unsigned long long)request.address, 
-                  (unsigned)index, (int)wcb_line.free, (unsigned)m_lineSize, valid2str(wcb_line.valid, m_lineSize).c_str());
     
+    DebugMemWrite("Flush reset WCB line %#16llx, index %u to: free %d, valid %s", (unsigned long long)request.address, 
+                  (unsigned)index, (int)wcb_line.free, valid2str(wcb_line.valid, m_lineSize).c_str());
     return true;  
 }
 
@@ -450,9 +454,10 @@ Result Processor::DCache::Read(MemAddr address, void* data, MemSize size, LFID f
             // Data is not entirely in the cache; it should be loading from memory
             if (line->state != LINE_LOADING)
             {
-                    //assert(line->state == LINE_INVALID);
+                //assert(line->state == LINE_INVALID);
                 ++m_numInvalidRMisses;
-                //return FAILED;
+                if (line->state == LINE_INVALID)
+                    return FAILED;
             }
             else
             {
@@ -553,7 +558,8 @@ Result Processor::DCache::Write(MemAddr address, void* data, MemSize size, LFID 
             // Update the line
             assert(line->state == LINE_FULL);
             COMMIT{ 
-                memcpy(line->data + offset, data, (size_t)size); 
+                memcpy(line->data + offset, data, (size_t)size);
+                std::fill(line->valid + offset, line->valid + offset + size, true);
                }
         }
     }
@@ -601,13 +607,31 @@ bool Processor::DCache::OnMemoryReadCompleted(MemAddr addr, const MemData& data)
                     std::copy(p->data.data, p->data.data + p->data.size, mdata.data + offset);
                 }
             }
+            
+            MemAddr tag;
+            size_t index;            
+            m_selector->Map(addr / m_lineSize, tag, index);
+            
+            WCB_Line wcb_line = m_wcblines[index];
+            
+            if(!wcb_line.free && wcb_line.tag == tag)
+            {
+                for( size_t i = 0; i <(size_t)m_lineSize; ++i)
+                {
+                    if (wcb_line.valid[i]) {
+                        line->data[i]  = wcb_line.data[i];
+                        line->valid[i] = true;
+                    }                    
+                  
+                }
+            }
             // Copy the data into the cache line.
             // Mask by valid bytes (don't overwrite already written data).
             for (size_t i = 0; i < (size_t)m_lineSize; ++i)
             {
                 if (!line->valid[i]) {
                     line->data[i]  = mdata.data[i];
-                     line->valid[i] = true;
+                    line->valid[i] = true;
                 }
             }
             
@@ -665,7 +689,7 @@ bool Processor::DCache::OnMemorySnooped(MemAddr address, const MemData& data, bo
             
             for (size_t i = 0; i <  data.size; ++i)
             {
-                if (mask[i + offset])
+                if (mask[i + offset])//&& !line->valid[i + offset])
                 {
                     line->data[i + offset]  = data.data[i + offset];
                     line->valid[i + offset] = true;
@@ -684,9 +708,9 @@ bool Processor::DCache::OnMemorySnooped(MemAddr address, const MemData& data, bo
         {
             for (size_t i = 0; i < data.size; ++i)
             {
-                if (!wcb_line.valid[i + offset] && mask[i])
+                if (!wcb_line.valid[i + offset] && mask[ i + offset])
                 {
-                    wcb_line.data[i + offset]  = data.data[i];
+                    wcb_line.data[i + offset]  = data.data[i + offset];
                     wcb_line.valid[i + offset] = true;
                 }               
             }

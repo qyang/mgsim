@@ -605,7 +605,7 @@ Result COMA::Cache::OnWriteRequest(const Request& req)
 
             if (!EvictLine(line, req))
             {
-                ++m_numStallingWMisses;
+                ++m_numStallingEviction;
                 DeadlockWrite("Unable to evict line for bus write request");
                 return FAILED;
             }
@@ -640,13 +640,13 @@ Result COMA::Cache::OnWriteRequest(const Request& req)
             msg->ignore    = false;
             msg->data.size = m_lineSize;
             msg->tokens    = 0;
-            msg->times     = 1; 
             msg->sender    = m_id;
+            
         }
             
         if (!SendMessage(msg, MINSPACE_INSERTION))
         {
-            ++m_numStallingWMisses;
+            ++m_numStallingWMessage;
             DeadlockWrite("Unable to buffer read request for next node");
             return FAILED;
         }
@@ -670,37 +670,44 @@ Result COMA::Cache::OnWriteRequest(const Request& req)
         }
 
         // Statistics
-        COMMIT{ ++m_numWHits; }
+        COMMIT{ ++m_numWEHits; }
     }
     else
     {
         // There are other copies out there, send out an update message
         TraceWrite(req.address, "Processing Bus Write Request: Shared Hit; Sending Update");
+        
         Message* msg = NULL;
         COMMIT
         {
             msg = new Message;
-            msg->address        = req.address;
-            msg->type           = Message::UPDATE;
-            msg->sender         = m_id;
-            msg->ignore         = false;
-            msg->client         = req.client;
-            msg->fid            = req.fid;
-            msg->data.size      = req.size;
-            msg->consistency    = req.consistency;
+            msg->address   = req.address;
+            msg->type      = Message::UPDATE;
+            msg->sender    = m_id;
+            msg->ignore    = false;
+            msg->client    = req.client;
+            msg->fid       = req.fid;
+            msg->data.size = req.size;
+            msg->consistency = req.consistency;
             memcpy(msg->data.data, req.data, req.size);
-            memcpy(msg->mask, req.mask, req.size);
-                
+            memcpy(msg->mask, req.mask, req.size);    
             // Lock the line to prevent eviction
             line->updating++;
 
             // Statistics
-            COMMIT{ ++m_numPartialWMisses; }
+            if(line->state == LINE_LOADING)
+            {
+                COMMIT{ ++m_numLoadingWMisses; }
+            }
+            else
+            {
+                COMMIT{ ++m_numWSHits; }
+            }
         }
             
         if (!SendMessage(msg, MINSPACE_INSERTION))
         {
-            ++m_numStallingWMisses;
+            ++m_numStallingWMessage;
             DeadlockWrite("Unable to buffer update request for next node");
             return FAILED;
         }
@@ -764,7 +771,7 @@ Result COMA::Cache::OnReadRequest(const Request& req)
             
             if (!EvictLine(line, req))
             {
-                ++m_numStallingRMisses;
+                ++m_numStallingEviction;
                 DeadlockWrite("Unable to evict line for bus read request");
                 return FAILED;
             }
@@ -799,13 +806,12 @@ Result COMA::Cache::OnReadRequest(const Request& req)
             msg->ignore    = false;
             msg->data.size = req.size;
             msg->tokens    = 0;
-            msg->times     = 1;
             msg->sender    = m_id;
         }
             
         if (!SendMessage(msg, MINSPACE_INSERTION))
         {
-            ++m_numStallingRMisses;
+            ++m_numStallingRMessage;
             DeadlockWrite("Unable to buffer read request for next node");
             return FAILED;
         }
@@ -891,18 +897,20 @@ COMA::Cache::Cache(const std::string& name, COMA& parent, Clock& clock, CacheID 
     m_numHardWConflicts(0),
     m_numInjectedEvictions(0),
     m_numLoadingRMisses(0),
+    m_numLoadingWMisses(0),
     m_numMergedEvictions(0),
     m_numNetworkRHits(0),
     m_numNetworkWHits(0),
-    m_numPartialWMisses(0),
     m_numRHits(0),
     m_numResolvedRConflicts(0),
     m_numResolvedWConflicts(0),
     m_numStallingRHits(0),
-    m_numStallingRMisses(0),
+    m_numStallingRMessage(0),
     m_numStallingWHits(0),
-    m_numStallingWMisses(0),
-    m_numWHits(0),
+    m_numStallingWMessage(0),
+    m_numStallingEviction(0),
+    m_numWEHits(0),
+    m_numWSHits(0),
     p_Requests (*this, "requests", delegate::create<Cache, &Cache::DoRequests>(*this)),
     p_In       (*this, "incoming", delegate::create<Cache, &Cache::DoReceive>(*this)),
     p_bus      (*this, clock, "p_bus"),
@@ -915,18 +923,22 @@ COMA::Cache::Cache(const std::string& name, COMA& parent, Clock& clock, CacheID 
     RegisterSampleVariableInObject(m_numHardWConflicts, SVC_CUMULATIVE);
     RegisterSampleVariableInObject(m_numInjectedEvictions, SVC_CUMULATIVE);
     RegisterSampleVariableInObject(m_numLoadingRMisses, SVC_CUMULATIVE);
+    RegisterSampleVariableInObject(m_numLoadingWMisses, SVC_CUMULATIVE);
     RegisterSampleVariableInObject(m_numMergedEvictions, SVC_CUMULATIVE);
     RegisterSampleVariableInObject(m_numNetworkRHits, SVC_CUMULATIVE);
     RegisterSampleVariableInObject(m_numNetworkWHits, SVC_CUMULATIVE);
-    RegisterSampleVariableInObject(m_numPartialWMisses, SVC_CUMULATIVE);
     RegisterSampleVariableInObject(m_numRHits, SVC_CUMULATIVE);
     RegisterSampleVariableInObject(m_numResolvedRConflicts, SVC_CUMULATIVE);
     RegisterSampleVariableInObject(m_numResolvedWConflicts, SVC_CUMULATIVE);
     RegisterSampleVariableInObject(m_numStallingRHits, SVC_CUMULATIVE);
-    RegisterSampleVariableInObject(m_numStallingRMisses, SVC_CUMULATIVE);
+    RegisterSampleVariableInObject(m_numStallingRMessage, SVC_CUMULATIVE);
     RegisterSampleVariableInObject(m_numStallingWHits, SVC_CUMULATIVE);
-    RegisterSampleVariableInObject(m_numStallingWMisses, SVC_CUMULATIVE);
-    RegisterSampleVariableInObject(m_numWHits, SVC_CUMULATIVE);
+    RegisterSampleVariableInObject(m_numStallingWMessage, SVC_CUMULATIVE);
+    RegisterSampleVariableInObject(m_numStallingEviction, SVC_CUMULATIVE);
+    RegisterSampleVariableInObject(m_numWEHits, SVC_CUMULATIVE);
+    RegisterSampleVariableInObject(m_numWSHits, SVC_CUMULATIVE);
+    
+    
 
     // Create the cache lines
     m_lines.resize(m_assoc * m_sets);
@@ -978,16 +990,14 @@ void COMA::Cache::Cmd_Read(std::ostream& out, const std::vector<std::string>& ar
     {
         // Read the buffers
         out << "Bus requests:" << endl << endl
-            << "      Address      | Size | Type  | Mask" << endl
-            << "-------------------+------+-------+--------" << endl;
+            << "      Address      | Size | Type  |" << endl
+            << "-------------------+------+-------+" << endl;
         for (Buffer<Request>::const_iterator p = m_requests.begin(); p != m_requests.end(); ++p)
         {
             out << hex << "0x" << setw(16) << setfill('0') << p->address << " | "
                 << dec << setw(4) << right << setfill(' ') << p->size << " | "
-                << (p->write ? "Write" : "Read ") << " | ";
-            for (size_t i = 0; i < m_lineSize; ++i)
-                out << (int)p->mask[i] << ' ';
-            out << endl;
+                << (p->write ? "Write" : "Read ") << " | "
+                << endl;
         }
         
         out << endl << "Ring interface:" << endl << endl;
@@ -1009,70 +1019,155 @@ void COMA::Cache::Cmd_Read(std::ostream& out, const std::vector<std::string>& ar
             << "Cache size:       " << dec << (m_lineSize * m_lines.size()) << " bytes" << endl
             << "Cache line size:  " << dec << m_lineSize << " bytes" << endl
             << endl;
-
-        uint64_t numRMisses = m_numEmptyRMisses + m_numLoadingRMisses + m_numHardRConflicts + m_numResolvedRConflicts;
+        
+        
+        uint64_t numRMisses   = m_numEmptyRMisses + m_numLoadingRMisses + m_numHardRConflicts;
         uint64_t numRAccesses = m_numRHits + numRMisses;
-        if (numRAccesses == 0)
-            out << "No read accesses so far, cannot compute read hit/miss/conflict rates." << endl;
+        uint64_t numRMessages = m_numEmptyRMisses + m_numResolvedRConflicts;
+        uint64_t numWMisses   = m_numLoadingWMisses; 
+        uint64_t numWHits     = m_numWEHits + m_numWSHits;
+        uint64_t numWAccesses = numWHits + numWMisses;
+        uint64_t numWMessages = numWMisses + m_numWSHits + m_numEmptyWMisses + m_numResolvedWConflicts;
+        uint64_t numMessages  = numWMessages + numRMessages;
+        uint64_t numStalls    = m_numStallingWHits + m_numStallingWMessage + m_numStallingRHits + m_numStallingRMessage + m_numStallingEviction;
+        
+        if (numRAccesses == 0 || numWAccesses == 0 )
+            out << "No accesses so far, cannot provide statistical data." << endl;
         else
         {
-            float factor = 100.0f / numRAccesses;
+            float r_factor = 100.0f / numRAccesses;
+            float w_factor = 100.0f / numWAccesses;
+            float m_factor = 100.f / numMessages;
+             
 
-            out << "Number of reads from downstream: " << numRAccesses << endl
-                << "Read hits:   " << dec << m_numRHits << " (" << setprecision(2) << fixed << m_numRHits * factor << "%)" << endl
-                << "Read misses: " << dec << numRMisses << " (" << setprecision(2) << fixed << numRMisses * factor << "%)" << endl
-                << "Breakdown of read misses:" << endl
-                << "  (true misses)" << endl
-                << "- to an empty line (async):                    " 
-                << dec << m_numEmptyRMisses << " (" << setprecision(2) << fixed << m_numEmptyRMisses * factor << "%)" << endl
-                << "- to a loading line with same tag (async):     " 
-                << dec << m_numLoadingRMisses << " (" << setprecision(2) << fixed << m_numLoadingRMisses * factor << "%)" << endl
-                << "  (conflicts)" << endl
-                << "- to a non-empty, reusable line with different tag (async):        " 
-                << dec << m_numResolvedRConflicts << " (" << setprecision(2) << fixed << m_numResolvedRConflicts * factor << "%)" << endl
-                << "- to a non-empty, non-reusable line with different tag (stalling): " 
-                << dec << m_numHardRConflicts << " (" << setprecision(2) << fixed << m_numHardRConflicts * factor << "%)" << endl
+            out << "***********************************************************" << endl
+                << "                      General Info.                        " << endl
+                << "***********************************************************" << endl
                 << endl
-                << "Read hit stalls by upstream/snoop:  " << dec << m_numStallingRHits << " cycles" << endl
-                << "Read miss stalls by upstream/snoop: " << dec << m_numStallingRMisses << " cycles" << endl
-                << endl;
+                << " Number of read requests from downstream:          " << dec << numRAccesses << endl
+                << " Number of write requests from downstream:         " << dec << numWAccesses << endl
+                << " Number of Messages issued to upstream:            " << dec << numMessages  << endl
+                << " Number of Stalls:                                 " << dec << numStalls    << endl
+                << endl << endl;
+                
+            out << "***********************************************************" << endl
+                << "                      Read Info.                           " << endl
+                << "***********************************************************" << endl 
+                << endl
+                << "Number of reads from downstream:                   " << numRAccesses << endl
+                << "  Read hits:                                         " 
+                << dec << m_numRHits << " (" << setprecision(2) << fixed << m_numRHits * r_factor << "%)" << endl
+                << endl
+                << "  Read misses:                                       " 
+                << dec << numRMisses << " (" << setprecision(2) << fixed << numRMisses * r_factor << "%)" << endl
+                << "  Breakdown of read misses:                          " << endl
+                << "    True misses:                                       " << endl 
+                << "      - to an empty line (async):                        " 
+                << dec << (m_numEmptyRMisses - m_numResolvedRConflicts) << " (" << setprecision(2) << fixed << (m_numEmptyRMisses- m_numResolvedRConflicts) * r_factor << "%)" << endl
+                << "      - to a loading line with same tag (async):         " 
+                << dec << m_numLoadingRMisses << " (" << setprecision(2) << fixed << m_numLoadingRMisses * r_factor << "%)" << endl
+                << "    Conflicts:                                         " << endl
+                << "      - to a non-empty, reusable line with different tag (async):        " 
+                << dec << m_numResolvedRConflicts << " (" << setprecision(2) << fixed << m_numResolvedRConflicts * r_factor << "%)" << endl
+                << "      - to a non-empty, non-reusable line with different tag (stalling): " 
+                << dec << m_numHardRConflicts << " (" << setprecision(2) << fixed << m_numHardRConflicts * r_factor << "%)" << endl
+                << endl
+                << "Number of read hits from other caches:  " << dec << m_numNetworkRHits << endl
+                << endl                
+                << endl << endl;
+                
+            out << "***********************************************************" << endl
+                << "                      Write Info.                          " << endl
+                << "***********************************************************" << endl
+                << endl
+                << "Number of writes from downstream:                  " << dec << numWAccesses << endl
+                << "  Write hits:                                      " 
+                << dec << numWHits << " (" << setprecision(2) << fixed << numWHits * w_factor << "%)" << endl
+                << "  Breakdown of write hits:" << endl
+                << "    - exclusive:                                      " 
+                << dec << m_numWEHits << " (" << setprecision(2) << fixed <<  m_numWEHits * w_factor << "%)" << endl
+                << "    - shared:                                         " 
+                << dec << m_numWSHits << " (" << setprecision(2) << fixed <<  m_numWSHits * w_factor << "%)" << endl
+                << endl
+                << "  Write misses:                                        " 
+                << dec << numWMisses << " (" << setprecision(2) << fixed << numWMisses * w_factor << "%)" << endl
+                << "  Breakdown of write misses(true misses):                  " << endl
+                << "    - to an empty line (async):                        " 
+                << dec << (m_numEmptyWMisses - m_numResolvedWConflicts) 
+                << " (" << setprecision(2) << fixed << (m_numEmptyWMisses - m_numResolvedWConflicts) * w_factor << "%)" << endl
+                << "    - to a loading line with same tag (async):         " 
+                << dec << (m_numLoadingWMisses - m_numEmptyWMisses) << " (" << setprecision(2) << fixed << (m_numLoadingWMisses - m_numEmptyWMisses)* w_factor << "%)" << endl
+                << "    - to a non-empty, reusable line with different tag (async):        " 
+                << dec << m_numResolvedWConflicts << " (" << setprecision(2) << fixed << m_numResolvedWConflicts * w_factor << "%)" << endl
+                << "    - to a non-empty, non-reusable line with different tag (stalling): " 
+                << dec << m_numHardWConflicts << " (" << setprecision(2) << fixed << m_numHardWConflicts * w_factor << "%)" << endl
+                << endl
+                << "Number of injections to empty lines:    " << dec << m_numInjectedEvictions << endl
+                << "Number of merged injections:            " << dec << m_numMergedEvictions << endl
+                << "Number of write hits from other caches: " << dec << m_numNetworkWHits << endl
+                << endl << endl;
+                
+            out << "***********************************************************" << endl
+                << "                      Message Info.                        " << endl
+                << "***********************************************************" << endl
+                << endl
+                << " Number of Messages issued to upstream:            " << dec << numMessages  << endl
+                << "   Read Messages:                                    " 
+                << dec << numRMessages << " (" << setprecision(2) << fixed <<  numRMessages * m_factor << "%)" << endl
+                << "   Break down of read messages:                      " << endl
+                << "     - cache line eviction:                            " 
+                << dec << m_numResolvedRConflicts << " (" << setprecision(2) << fixed <<  m_numResolvedRConflicts * m_factor << "%)" << endl
+                << "     - cache line request:                             "
+                << dec << m_numEmptyRMisses << " (" << setprecision(2) << fixed <<  m_numEmptyRMisses * m_factor << "%)" << endl
+                << endl
+                << "   Write Messages:                                   " 
+                << dec << numWMessages << " (" << setprecision(2) << fixed <<  numWMessages * m_factor << "%)" << endl
+                << "   Break down of write messages:                     " << endl
+                << "     - cache line eviction:                            " 
+                << dec << m_numResolvedWConflicts << " (" << setprecision(2) << fixed <<  m_numResolvedWConflicts * m_factor << "%)" << endl
+                << "     - cache line request:                             "
+                << dec << m_numEmptyWMisses << " (" << setprecision(2) << fixed << m_numEmptyWMisses * m_factor << "%)" << endl
+                << "     - cache line update:                              "
+                << dec << (numWAccesses - m_numWEHits) << " (" << setprecision(2) << fixed <<  (numWAccesses - m_numWEHits) * m_factor << "%)" << endl
+                << endl << endl;
+                
+            if (numStalls != 0)
+            {
+                float s_factor = 100.f / numStalls;   
+                out << "***********************************************************" << endl
+                    << "                      Stall Info.                          " << endl
+                    << "***********************************************************" << endl
+                    << endl
+                    << " Number of Stall cycles:                           " << dec << numStalls  << endl
+                    << "   Hit stalls by snoop:                              "
+                    << dec << (m_numStallingWHits + m_numStallingRHits) << " (" << setprecision(2) << fixed << (m_numStallingWHits + m_numStallingRHits) * s_factor << "%)" << endl
+                    << "   Break down of Hit Stalls:                         " << endl
+                    << "     - read completion notify:                         "
+                    << dec << m_numStallingRHits << " (" << setprecision(2) << fixed << m_numStallingRHits * s_factor << "%)" << endl
+                    << "     - write completion notify:                        "
+                    << dec << m_numStallingWHits << " (" << setprecision(2) << fixed << m_numStallingWHits * s_factor << "%)" << endl
+                    << endl
+                    << "   Upstream stalls:                                  " 
+                    << dec << (m_numStallingRMessage + m_numStallingWMessage) << " (" << setprecision(2) << fixed << (m_numStallingRMessage + m_numStallingWMessage) * s_factor << "%)" << endl
+                    << "   Break down of Upstream Stalls:                    " << endl
+                    << "     - read message insertion:                         " 
+                    << dec << m_numStallingRMessage << " (" << setprecision(2) << fixed << m_numStallingRMessage * s_factor << "%)" << endl
+                    << "     - write message insertion:                        " 
+                    << dec << m_numStallingWMessage << " (" << setprecision(2) << fixed << m_numStallingWMessage * s_factor << "%)" << endl
+                    << endl
+                    << "   Cache line Eviction:                              " 
+                    << dec << m_numStallingEviction << " (" << setprecision(2) << fixed << m_numStallingEviction * s_factor << "%)" << endl           
+                    << endl << endl; 
+            }
+                
+                       
         }
 
-        out << "Number of read hits from other caches:  " << dec << m_numNetworkRHits << endl
-            << endl;
+       
 
-        uint64_t numWMisses = m_numEmptyWMisses + m_numPartialWMisses + m_numHardWConflicts + m_numResolvedWConflicts;
-        uint64_t numWAccesses = m_numWHits + numWMisses;
-        if (numWAccesses == 0)
-            out << "No write accesses so far, cannot compute read hit/miss/conflict rates." << endl;
-        else
-        {
-            float factor = 100.0f / numWAccesses;
-
-            out << "Number of writes from downstream: " << numWAccesses << endl
-                << "Write hits:   " << dec << m_numWHits << " (" << setprecision(2) << fixed << m_numWHits * factor << "%)" << endl
-                << "Write misses: " << dec << numWMisses << " (" << setprecision(2) << fixed << numWMisses * factor << "%)" << endl
-                << "Breakdown of write misses:" << endl
-                << "  (true misses)" << endl
-                << "- to an empty line (async):                               " 
-                << dec << m_numEmptyWMisses << " (" << setprecision(2) << fixed << m_numEmptyWMisses * factor << "%)" << endl
-                << "- to a non-empty line, loading or missing tokens (async): "
-                << dec << m_numPartialWMisses << " (" << setprecision(2) << fixed << m_numPartialWMisses * factor << "%)" << endl
-                << "  (conflicts)" << endl
-                << "- to a non-empty, reusable line with different tag (async):        " 
-                << dec << m_numResolvedWConflicts << " (" << setprecision(2) << fixed << m_numResolvedWConflicts * factor << "%)" << endl
-                << "- to a non-empty, non-reusable line with different tag (stalling): " 
-                << dec << m_numHardWConflicts << " (" << setprecision(2) << fixed << m_numHardWConflicts * factor << "%)" << endl
-                << endl
-                << "Write hit stalls by upstream/snoop:  " << dec << m_numStallingWHits << " cycles" << endl
-                << "Write miss stalls by upstream/snoop: " << dec << m_numStallingWMisses << " cycles" << endl
-                << endl;
-        }
-
-        out << "Number of injections to empty lines:    " << dec << m_numInjectedEvictions << endl
-            << "Number of merged injections:            " << dec << m_numMergedEvictions << endl
-            << "Number of write hits from other caches: " << dec << m_numNetworkWHits << endl
-            << endl;
+        
+        
+       
 
 
     }
@@ -1158,7 +1253,6 @@ void COMA::Cache::Cmd_Read(std::ostream& out, const std::vector<std::string>& ar
             out << endl;
         }
     }
-
 }
-
+    
 }

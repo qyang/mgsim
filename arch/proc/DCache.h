@@ -82,15 +82,17 @@ private:
     std::vector<Line>    m_lines;           ///< The cache-lines.
     size_t               m_assoc;           ///< Config: Cache associativity.
 	size_t               m_sets;            ///< Config: Number of sets in the cace.
+    size_t               m_wcbsize;         ///< Config: Numger of sets in the WCB
 	size_t               m_lineSize;        ///< Config: Size of a cache line, in bytes.
     IBankSelector*       m_selector;        ///< Mapping of cache line addresses to tags and set indices.
+    IBankSelector*       m_wcbselect;       ///< Mapping of wcb line addresses to tags and set indices.
     Buffer<CID>          m_completed;       ///< Completed cache-line reads waiting to be processed.
     Buffer<LFID>         m_famflush;        ///< WCB line of family to be flushed away.
     Buffer<Response>     m_incoming;        ///< Incoming buffer from memory bus.
     Buffer<Request>      m_outgoing;        ///< Outgoing buffer to memory bus.
     WritebackState       m_wbstate;         ///< Writeback state
     uint64_t             m_numRHits;         ///< Number of rhits so far.
-    uint64_t             m_wcbRHits;        ///< Number of WCB rhits so far.
+  //  uint64_t             m_wcbRHits;        ///< Number of WCB rhits so far.
     uint64_t             m_numEmptyRMisses;  ///< Number of rmisses so far (rmiss to an empty cache line).
     uint64_t             m_numLoadingRMisses;///< Number of rmisses so far (rmiss to a loading cache line with same tag).
     uint64_t             m_numInvalidRMisses;///< Number of rmisses so far (rmiss to an invalid cache line with same tag).
@@ -98,7 +100,8 @@ private:
     uint64_t             m_numResolvedConflicts;///< Number of resolved conflicts so far (rmiss to a non-empty, substitutable line with different tag).
 
     uint64_t             m_numWHits;          ///< Number of whits so far.
-    uint64_t             m_wcbConflicts;     ///< Number of WCB whits so far.
+    uint64_t             m_wcbConflicts;      ///< Number of WCB whits so far.
+    uint64_t             m_wcbFlushes;        ///< Number of WCB flushes so far.
     uint64_t             m_numLoadingWMisses;///< Number of wmisses so far (wmiss to an invalid/loading line)
 
     uint64_t             m_numStallingRMisses;///< Number of rmisses that cannot be serviced upstream

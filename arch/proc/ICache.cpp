@@ -526,33 +526,48 @@ void Processor::ICache::Cmd_Read(std::ostream& out, const std::vector<std::strin
             << "Cache line size:     " << dec << m_lineSize << " bytes" << endl
             << endl;
 
-        uint64_t numMisses = m_numEmptyMisses + m_numLoadingMisses + m_numInvalidMisses + m_numHardConflicts + m_numResolvedConflicts;
+        uint64_t numMisses   = m_numEmptyMisses + m_numLoadingMisses + m_numInvalidMisses + m_numHardConflicts + m_numResolvedConflicts;
         uint64_t numAccesses = m_numHits + numMisses;
+        uint64_t numRqst     = m_numEmptyMisses + m_numResolvedConflicts;
         if (numAccesses == 0)
-            out << "No accesses so far, cannot compute hit/miss/conflict rates." << endl;
+            out << "No accesses so far, cannot provide statistical data." << endl;
         else
-        {
-            float factor = 100.0f / numAccesses;
-
-            out << "Number of reads:     " << numAccesses << endl
-                << "Read hits:           " << dec << m_numHits << " (" << setprecision(2) << fixed << m_numHits * factor << "%)" << endl
-                << "Read misses:         " << dec << numMisses << " (" << setprecision(2) << fixed << numMisses * factor << "%)" << endl
-                << "Breakdown of read misses:" << endl
-                << "  (true misses)" << endl
-                << "- to an empty line (async):                    " 
-                << dec << m_numEmptyMisses << " (" << setprecision(2) << fixed << m_numEmptyMisses * factor << "%)" << endl
-                << "- to a loading line with same tag (async):     " 
-                << dec << m_numLoadingMisses << " (" << setprecision(2) << fixed << m_numLoadingMisses * factor << "%)" << endl
-                << "- to an invalid line with same tag (stalling): " 
-                << dec << m_numInvalidMisses << " (" << setprecision(2) << fixed << m_numInvalidMisses * factor << "%)" << endl
-                << "  (conflicts)" << endl
-                << "- to a non-empty, reusable line with different tag (async):        " 
-                << dec << m_numResolvedConflicts << " (" << setprecision(2) << fixed << m_numResolvedConflicts * factor << "%)" << endl
-                << "- to a non-empty, non-reusable line with different tag (stalling): " 
-                << dec << m_numHardConflicts << " (" << setprecision(2) << fixed << m_numHardConflicts * factor << "%)" << endl
+        {           
+            out << "***********************************************************" << endl
+                << "                      General Info.                        " << endl
+                << "***********************************************************" << endl
                 << endl
-                << "Number of miss stalls by upstream: " << dec << m_numStallingMisses << " cycles" << endl
-                << endl;
+                << " Number of read requests from client:          " << dec << numAccesses << endl
+                << " Number of request to upstream:                " << dec << numRqst      << endl
+                << " Number of Stalls from upstream:               " << dec << m_numStallingMisses    << endl
+                << endl << endl;
+                
+            float factor = 100.0f / numAccesses;
+            
+            out << "***********************************************************" << endl
+                << "                      Read Info.                           " << endl
+                << "***********************************************************" << endl
+                << endl
+                << "Number of reads:                                  " << dec << numAccesses << endl
+                << "  Read hits:                                      " 
+                << dec << m_numHits << " (" << setprecision(2) << fixed << m_numHits * factor << "%)" << endl
+                << endl
+                << "  Read misses:                                    " 
+                << dec << numMisses << " (" << setprecision(2) << fixed << numMisses * factor << "%)" << endl
+                << "  Breakdown of read misses:          " << endl
+                << "    True misses:                       " << endl
+                << "      - to an empty line (async):                    " 
+                << dec << m_numEmptyMisses << " (" << setprecision(2) << fixed << m_numEmptyMisses * factor << "%)" << endl
+                << "      - to a loading line with same tag (async):     " 
+                << dec << m_numLoadingMisses << " (" << setprecision(2) << fixed << m_numLoadingMisses * factor << "%)" << endl
+                << "      - to an invalid line with same tag (stalling): " 
+                << dec << m_numInvalidMisses << " (" << setprecision(2) << fixed << m_numInvalidMisses * factor << "%)" << endl
+                << "    Conflicts:                         " << endl
+                << "      - to a non-empty, reusable line with different tag (async):        " 
+                << dec << m_numResolvedConflicts << " (" << setprecision(2) << fixed << m_numResolvedConflicts * factor << "%)" << endl
+                << "      - to a non-empty, non-reusable line with different tag (stalling): " 
+                << dec << m_numHardConflicts << " (" << setprecision(2) << fixed << m_numHardConflicts * factor << "%)" << endl
+                << endl << endl;
         }
         return;
     }

@@ -57,28 +57,49 @@ private:
     std::vector<char>             m_data;
     
     // Statistics
-    uint64_t                      m_numEmptyRMisses; //hitting an empty line
-    uint64_t                      m_numEmptyWMisses;
-    uint64_t                      m_numHardRConflicts; //hitting null line
+
+    /* reads */
+    uint64_t                      m_numRAccesses;
+    uint64_t                      m_numHardRConflicts;
+    uint64_t                      m_numStallingREvictions;
+    uint64_t                      m_numREvictions;
+    uint64_t                      m_numStallingRLoads;
+    uint64_t                      m_numRLoads;
+    uint64_t                      m_numRFullHits;
+    uint64_t                      m_numStallingRHits; 
+    uint64_t                      m_numLoadingRMisses;
+
+    /* writes */
+    uint64_t                      m_numWAccesses;
     uint64_t                      m_numHardWConflicts;
-    uint64_t                      m_numInjectedEvictions;
-    uint64_t                      m_numLoadingRMisses; //hitting loading line
-    uint64_t                      m_numLoadingWMisses;
-    uint64_t                      m_numMergedEvictions;
-    uint64_t                      m_numNetworkRHits;
-    uint64_t                      m_numNetworkWHits;
-    uint64_t                      m_numRHits;
-    uint64_t                      m_numResolvedRConflicts; //hit empty line after eviction
-    uint64_t                      m_numResolvedWConflicts;
-    uint64_t                      m_numStallingRHits;      //stalled notifying read completion
-    uint64_t                      m_numStallingRMessage;   //stalled message insertion 
-    uint64_t                      m_numStallingWHits;      //stalled notifying write completion
-    uint64_t                      m_numStallingWMessage;   //stalled message insertion
-    uint64_t                      m_numStallingEviction;   //stalled cache line eviction
-    uint64_t                      m_numWEHits;             //Exclusive Write hit 
-    uint64_t                      m_numWSHits;             //Shared Write hit 
+    uint64_t                      m_numStallingWEvictions;
+    uint64_t                      m_numWEvictions;
+    uint64_t                      m_numStallingWLoads;
+    uint64_t                      m_numWLoads;
+    uint64_t                      m_numStallingWHits; 
+    uint64_t                      m_numWEHits;
+    uint64_t                      m_numLoadingWUpdates;
+    uint64_t                      m_numSharedWUpdates;
+    uint64_t                      m_numStallingWUpdates;
     
-  
+    /* accesses from network */
+    uint64_t                      m_numReceivedMessages;
+    uint64_t                      m_numIgnoredMessages;
+    uint64_t                      m_numForwardStalls;
+
+    // read and read completions
+    uint64_t                      m_numNetworkRHits;
+    uint64_t                      m_numRCompletions; 
+    uint64_t                      m_numStallingRCompletions;
+    // evictions
+    uint64_t                      m_numInjectedEvictions;
+    uint64_t                      m_numMergedEvictions;
+    // updates
+    uint64_t                      m_numStallingWCompletions;
+    uint64_t                      m_numWCompletions;
+    uint64_t                      m_numNetworkWHits;
+    
+    uint64_t                      m_numStallingWSnoops;
    
     // Processes
     Process p_Requests;

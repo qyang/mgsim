@@ -28,19 +28,20 @@ Processor::DCache::DCache(const std::string& name, Processor& parent, Clock& clo
     m_incoming       ("b_incoming",  *this, clock, config.getValue<BufferSize>(*this, "IncomingBufferSize")),
     m_outgoing       ("b_outgoing",  *this, clock, config.getValue<BufferSize>(*this, "OutgoingBufferSize")),
     m_numRHits        (0),
-   // m_wcbRHits        (0),
+    m_numDelayedReads (0),
     m_numEmptyRMisses (0),
-    m_numLoadingRMisses(0),
     m_numInvalidRMisses(0),
+    m_numLoadingRMisses(0),
     m_numHardConflicts(0),
     m_numResolvedConflicts(0),
+    m_numWAccesses    (0),
     m_numWHits        (0),
-    m_wcbConflicts   (0),
-    m_wcbFlushes      (0),
     m_numLoadingWMisses(0),
     m_numStallingRMisses(0),
     m_numStallingWMisses(0),
-    
+    m_numSnoops(0),
+    m_wcbConflicts   (0),
+    m_wcbFlushes      (0),
 
     p_CompletedReads(*this, "completed-reads", delegate::create<DCache, &Processor::DCache::DoCompletedReads   >(*this) ),
     p_Incoming      (*this, "incoming",        delegate::create<DCache, &Processor::DCache::DoIncomingResponses>(*this) ),
@@ -50,18 +51,17 @@ Processor::DCache::DCache(const std::string& name, Processor& parent, Clock& clo
     p_service        (*this, clock, "p_service")
 {
     RegisterSampleVariableInObject(m_numRHits, SVC_CUMULATIVE);
-   // RegisterSampleVariableInObject(m_wcbRHits, SVC_CUMULATIVE);
     RegisterSampleVariableInObject(m_numEmptyRMisses, SVC_CUMULATIVE);
     RegisterSampleVariableInObject(m_numLoadingRMisses, SVC_CUMULATIVE);
     RegisterSampleVariableInObject(m_numInvalidRMisses, SVC_CUMULATIVE);
     RegisterSampleVariableInObject(m_numHardConflicts, SVC_CUMULATIVE);
     RegisterSampleVariableInObject(m_numResolvedConflicts, SVC_CUMULATIVE);
     RegisterSampleVariableInObject(m_numWHits, SVC_CUMULATIVE);
-    RegisterSampleVariableInObject(m_wcbConflicts, SVC_CUMULATIVE);
-    RegisterSampleVariableInObject(m_wcbFlushes, SVC_CUMULATIVE);
     RegisterSampleVariableInObject(m_numLoadingWMisses, SVC_CUMULATIVE);
     RegisterSampleVariableInObject(m_numStallingRMisses, SVC_CUMULATIVE);
     RegisterSampleVariableInObject(m_numStallingWMisses, SVC_CUMULATIVE);
+    RegisterSampleVariableInObject(m_wcbConflicts, SVC_CUMULATIVE);
+    RegisterSampleVariableInObject(m_wcbFlushes, SVC_CUMULATIVE);
     
     StorageTraceSet traces;
     m_mcid = m_memory.RegisterClient(*this, p_Outgoing, traces, m_incoming, true);
@@ -499,6 +499,9 @@ Result Processor::DCache::Read(MemAddr address, void* data, MemSize size, RegAdd
         {    
             line->create  = true;
         }
+
+        // Statistics:
+        ++m_numDelayedReads;
     }
     return DELAYED;
 }
@@ -576,8 +579,11 @@ Result Processor::DCache::Write(MemAddr address, void* data, MemSize size, LFID 
         DeadlockWrite("Unable to merge write into WCB");
         return FAILED;
     }
-     
-    return SUCCESS;
+
+    COMMIT{ ++m_numWAccesses; }
+
+    return DELAYED;
+
 }
 
 bool Processor::DCache::OnMemoryReadCompleted(MemAddr addr, const MemData& data)
@@ -670,13 +676,27 @@ bool Processor::DCache::OnMemoryWriteCompleted(LFID fid)
 
 bool Processor::DCache::OnMemorySnooped(MemAddr address, const MemData& data, bool* mask)
 {
-    COMMIT
-    {
-        size_t offset = (size_t)(address % m_lineSize);
-        Line*  line;
+    size_t offset = (size_t)(address % m_lineSize);
+    Line*  line;
 
-        // Cache coherency: check if we have the same address
-        if (FindLine(address, line, true) == SUCCESS)
+    // FIXME: snoops should really either lock the line or access
+    // through a different port. Here we cannot (yet) invoke the
+    // arbitrator because there is no scaffolding to declare which
+    // processes can call OnMemorySnooped via AddProcess().
+    /*
+    if (!p_service.Invoke())
+    {
+        DeadlockWrite("Unable to acquire port for D-Cache snoop access (%#016llx, %zd)",
+                      (unsigned long long)address, (size_t)data.size);
+
+        return false;
+    }
+    */
+
+    // Cache coherency: check if we have the same address
+    if (FindLine(address, line, true) == SUCCESS)
+    {
+        COMMIT
         {
             // We do, update the data
            
@@ -722,6 +742,10 @@ bool Processor::DCache::OnMemorySnooped(MemAddr address, const MemData& data, bo
             
              DebugMemWrite("WCB snooping from address 0x%016llx ", (unsigned long long)address);
             
+            std::fill(line->valid + offset, line->valid + offset + data.size, true);
+
+            // Statistics
+            ++m_numSnoops;
         }
         
     }
@@ -994,106 +1018,91 @@ void Processor::DCache::Cmd_Read(std::ostream& out, const std::vector<std::strin
             << "Cache line size:     " << dec << m_lineSize << " bytes" << endl
             << endl;
 
-        uint64_t numRMisses   = m_numEmptyRMisses + m_numLoadingRMisses + m_numInvalidRMisses + m_numHardConflicts + m_numResolvedConflicts;
-        uint64_t numRAccesses = m_numRHits + numRMisses;
-        uint64_t numWMisses   = m_wcbConflicts + m_numLoadingWMisses;
-        uint64_t numWAccesses = m_numWHits + numWMisses;
-        uint64_t numStalls    = m_numStallingRMisses + m_numStallingWMisses;
-        uint64_t numRqst      = m_wcbFlushes + m_numEmptyRMisses + m_numResolvedConflicts;
-        if (numRAccesses == 0 || numWAccesses == 0)
+        uint64_t numRAccesses = m_numRHits + m_numDelayedReads;
+
+        uint64_t numRRqst = m_numEmptyRMisses + m_numResolvedConflicts;
+        uint64_t numWRqst = m_wcbFlushes;
+        uint64_t numRqst  = numRRqst + numWRqst;
+
+        uint64_t numRStalls = m_numHardConflicts + m_numInvalidRMisses + m_numStallingRMisses;
+        uint64_t numWStalls = m_numLoadingWMisses + m_numStallingWMisses;
+        uint64_t numStalls  = numRStalls + numWStalls;
+
+        if (numRAccesses == 0 && m_numWAccesses == 0 && numStalls == 0)
             out << "No accesses so far, cannot provide statistical data." << endl;
         else
         {
             out << "***********************************************************" << endl
-                << "                      General Info.                        " << endl
+                << "                      Summary                              " << endl
                 << "***********************************************************" << endl
-                << endl
-                << " Number of read requests from client:          " << dec << numRAccesses << endl
-                << " Number of write requests from client:         " << dec << numWAccesses << endl
-                << " Number of request to upstream:                " << dec << numRqst      << endl
-                << " Number of Stalls:                             " << dec << numStalls    << endl
-                << endl << endl;
+                << endl << dec
+                << "Number of read requests from client:  " << numRAccesses << endl
+                << "Number of write requests from client: " << m_numWAccesses << endl
+                << "Number of requests to upstream:       " << numRqst      << endl
+                << "Number of snoops from siblings:       " << m_numSnoops  << endl
+                << "Number of stalled cycles:             " << numStalls    << endl
+                << endl;
                 
+#define PRINTVAL(X, q) dec << (X) << " (" << setprecision(2) << fixed << (X) * q << "%)"
+            
             float r_factor = 100.0f / numRAccesses;
-            float w_factor = 100.0f / numWAccesses;
-            float q_factor = 100.0f / numRqst;
-            
             out << "***********************************************************" << endl
-                << "                      Read Info.                           " << endl
+                << "                      Cache reads                          " << endl
                 << "***********************************************************" << endl
                 << endl
-                << "Number of reads:                                   " << dec << numRAccesses << endl
-                << "  Read hits:                                   " 
-                << dec << m_numRHits << " (" << setprecision(2) << fixed << m_numRHits * r_factor << "%)" << endl
-                << endl
-                << "  Read misses:                                 " 
-                << dec << numRMisses << " (" << setprecision(2) << fixed << numRMisses * r_factor << "%)" << endl
-                << "  Breakdown of read misses:                    " << endl
-                << "    True misses:                                 " << endl
-                << "      - to an empty line (async):                    " 
-                << dec << m_numEmptyRMisses << " (" << setprecision(2) << fixed << m_numEmptyRMisses * r_factor << "%)" << endl
-                << "      - to a loading line with same tag (async):     " 
-                << dec << m_numLoadingRMisses << " (" << setprecision(2) << fixed << m_numLoadingRMisses * r_factor << "%)" << endl
-                << "      - to an invalid line with same tag (stalling): " 
-                << dec << m_numInvalidRMisses << " (" << setprecision(2) << fixed << m_numInvalidRMisses * r_factor << "%)" << endl
-                << "    Conflicts:                                   " << endl
-                << "      - to a non-empty, reusable line with different tag (async):        " 
-                << dec << m_numResolvedConflicts << " (" << setprecision(2) << fixed << m_numResolvedConflicts * r_factor << "%)" << endl
-                << "      - to a non-empty, non-reusable line with different tag (stalling): " 
-                << dec << m_numHardConflicts << " (" << setprecision(2) << fixed << m_numHardConflicts * r_factor << "%)" << endl
-                << endl << endl;
-                
-           
+                << "Number of read requests from client:                " << numRAccesses << endl
+                << "Read hits:                                          " << PRINTVAL(m_numRHits, r_factor) << endl
+                << "Read misses:                                        " << PRINTVAL(m_numDelayedReads, r_factor) << endl
+                << "Breakdown of read misses:" << endl                  
+                << "- to an empty line:                                 " << PRINTVAL(m_numEmptyRMisses, r_factor) << endl
+                << "- to a loading line with same tag:                  " << PRINTVAL(m_numLoadingRMisses, r_factor) << endl
+                << "- to a reusable line with different tag (conflict): " << PRINTVAL(m_numResolvedConflicts, r_factor) << endl
+                << "(percentages relative to " << numRAccesses << " read requests)" << endl
+                << endl;
             
+            float w_factor = 100.0f / m_numWAccesses;
             out << "***********************************************************" << endl
-                << "                      Write Info.                          " << endl
+                << "                      Cache writes                         " << endl
                 << "***********************************************************" << endl
                 << endl
-                << "Number of writes:                                 " << dec << numWAccesses << endl
-                << "  Write hits:                                       " 
-                << dec << m_numWHits << " (" << setprecision(2) << fixed << m_numWHits * w_factor << "%)" << endl
-                << endl
-                << "  Write misses:                                     " 
-                << dec << numWMisses << " (" << setprecision(2) << fixed << numWMisses * w_factor << "%)" << endl
-                << "  Breakdown of write misses:                        " << endl
-                << "    - to a wcb line with different tag or FID:          " 
-                << dec << m_wcbConflicts << " (" << setprecision(2) << fixed << m_wcbConflicts * w_factor << "%)" << endl
-                << "    - to a loading or invalid dcache line with same tag (stalling):      " 
-                << dec << m_numLoadingWMisses << " (" << setprecision(2) << fixed << m_numLoadingWMisses * w_factor << "%)" << endl
-                << endl << endl;
+                << "Number of write requests from client:                           " << m_numWAccesses << endl
+                << "Breakdown of writes:" << endl
+                << "- to a loaded line with same tag:                               " << PRINTVAL(m_numWHits, w_factor) << endl
+                << "- to a wcb line with different tag : "                            << PRINTVAL( m_wcbConflicts, w_factor) << endl
+                << "(percentages relative to " << m_numWAccesses << " write requests)" << endl
+                << endl;
             
-                
+            float q_factor = 100.0f / numRqst;                
             out << "***********************************************************" << endl
-                << "                      Request Info.                        " << endl
+                << "                      Requests to upstream                 " << endl
                 << "***********************************************************" << endl
                 << endl
-                << " Number of Request to upstream:            " << dec << numRqst  << endl
-                << "   Read Requests                                     " 
-                << dec << (m_numEmptyRMisses + m_numResolvedConflicts) << " (" << setprecision(2) << fixed <<  (m_numEmptyRMisses + m_numResolvedConflicts) * q_factor << "%)" << endl
-                << endl
-                << "   Write Requests:                                   "
-                << dec << m_wcbFlushes << " (" << setprecision(2) << fixed <<  m_wcbFlushes * q_factor << "%)" << endl
-                << "   Break down of write request:                      " << endl
-                << "     - memory writes:                                  " 
-                << dec << m_wcbConflicts << " (" << setprecision(2) << fixed <<  m_wcbConflicts * q_factor << "%)" << endl
-                << "     - memory barriers:                                " 
-                << dec << (m_wcbFlushes - m_wcbConflicts) << " (" << setprecision(2) << fixed <<  (m_wcbFlushes - m_wcbConflicts) * q_factor << "%)" << endl
-                << endl << endl;
+                << "Number of requests to upstream: " << numRqst  << endl
+                << "Read requests:                  " << PRINTVAL(numRRqst, q_factor) << endl
+                << "Write requests:                 " << PRINTVAL(numWRqst, q_factor) << endl
+                << "(percentages relative to " << numRqst << " requests)" << endl
+                << endl;
                 
                 
             if (numStalls != 0)
             {
                 float s_factor = 100.f / numStalls;   
                 out << "***********************************************************" << endl
-                    << "                      Stall Info.                          " << endl
+                    << "                      Stall cycles                         " << endl
                     << "***********************************************************" << endl
                     << endl
-                    << "Number of stall cycles by upstream:                " << dec << numStalls << endl
-                    << " Read stalls                                         "
-                    << dec << m_numStallingRMisses << " (" << setprecision(2) << fixed << m_numStallingRMisses * s_factor << "%)" << endl
-                    << " Write stalls                                        "
-                    << dec << m_numStallingWMisses << " (" << setprecision(2) << fixed << m_numStallingWMisses * s_factor << "%)" << endl
-                    << endl << endl;
+                    << "Number of stall cycles:               " << numStalls << endl
+                    << "Read-related stalls:                  " << PRINTVAL(numRStalls, s_factor) << endl 
+                    << "Write-related stalls:                 " << PRINTVAL(numWStalls, s_factor) << endl
+                    << "Breakdown of read-related stalls:" << endl
+                    << "- read conflict to non-reusable line: " << PRINTVAL(m_numHardConflicts, s_factor) << endl
+                    << "- read to invalidated line:           " << PRINTVAL(m_numInvalidRMisses, s_factor) << endl
+                    << "- unable to send request upstream:    " << PRINTVAL(m_numStallingRMisses, s_factor) << endl
+                    << "Breakdown of write-related stalls:" << endl
+                    << "- writes to loading line:             " << PRINTVAL(m_numLoadingWMisses, s_factor) << endl
+                    << "- unable to send request upstream:    " << PRINTVAL(m_numStallingWMisses, s_factor) << endl
+                    << "(percentages relative to " << numStalls << " stall cycles)" << endl
+                    << endl;
             }
              
         }

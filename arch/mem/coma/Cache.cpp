@@ -242,7 +242,6 @@ bool COMA::Cache::EvictLine(Line* line, const Request& req)
         msg->tokens    = line->tokens;
         msg->data.size = m_lineSize;
         msg->dirty     = line->dirty;
-        msg->times     = 1;
         memcpy(msg->data.data, line->data, m_lineSize);
     }
     
@@ -303,8 +302,10 @@ bool COMA::Cache::OnMessageReceived(Message* msg)
     switch (msg->type)
     {
     case Message::REQUEST:
-         // Some cache had a read miss. See if we have the line.
+    case Message::REQUEST_DATA:
+        // Some cache had a read miss. See if we have the line.
         assert(msg->data.size == m_lineSize);
+        
         if (line != NULL && line->state == LINE_FULL)
         {
             // We have a copy of the line
@@ -312,23 +313,25 @@ bool COMA::Cache::OnMessageReceived(Message* msg)
             {
                 // We can give the request data and tokens
                 TraceWrite(msg->address, "Received Read Request; Attaching data and tokens");
-                    
+                        
                 COMMIT
                 {
                     msg->type   = Message::REQUEST_DATA_TOKEN;
                     msg->tokens = 1;
                     msg->dirty  = line->dirty;
                     memcpy(msg->data.data, line->data, msg->data.size);
-        
+
                     line->tokens -= msg->tokens;
-                        
+                                
                     // Also update last access time.
                     line->access = GetKernel()->GetCycleNo();
                 }
             }
-            else if(line->updating || msg->times == 0)
+            else if (msg->type == Message::REQUEST)
             {
-                // For a updating line or request from other directories, we can only give the request data, not tokens
+                // We can only give the request data, not tokens
+                TraceWrite(msg->address, "Received Read Request; Attaching data");
+
                 COMMIT
                 {
                     msg->type  = Message::REQUEST_DATA;
@@ -336,80 +339,11 @@ bool COMA::Cache::OnMessageReceived(Message* msg)
                     memcpy(msg->data.data, line->data, msg->data.size);
                 }
             }
-            else
-            {   
-                // Request from the same dirctory or other directories but we have more copies in the sub ring, we give both the request data and tokens
-                TraceWrite(msg->address, "Received Read Request; copy data and invalidate line due to single token");
-                        
-                COMMIT
-                {
-                    msg->type   = Message::REQUEST_DATA_TOKEN;
-                    msg->tokens = 1;
-                    msg->dirty  = line->dirty;
-                    memcpy(msg->data.data, line->data, msg->data.size);
-                            
-                }
-                // Cache line invalidation for all clients
-                if (!p_bus.Invoke())
-                {
-                    DeadlockWrite("Unable to acquire the bus for sending invalidation");
-                    return false;
-                }
-                        
-                for (std::vector<IMemoryCallback*>::const_iterator p = m_clients.begin(); p != m_clients.end(); ++p)
-                {
-                    if (*p != NULL && !(*p)->OnMemoryInvalidated(msg->address))
-                    {
-                        DeadlockWrite("Unable to send invalidation to clients");
-                        return false;
-                    }
-                }
-                        
-                COMMIT{ line->state = LINE_EMPTY; }      
-            }
+
             // Statistics
-            COMMIT{ ++m_numNetworkRHits; }            
-        }        
-        // Forward the message.
-        if (!SendMessage(msg, MINSPACE_FORWARD))
-        {
-            DeadlockWrite("Unable to buffer request for next node");
-            return false;
+            COMMIT{ ++m_numNetworkRHits; }
         }
-        break;        
-        
-        
-    case Message::REQUEST_DATA:    
-        // Some cache had a read miss. See if we have the line.
-        assert(msg->data.size == m_lineSize);
-        if(msg->times < m_parent.GetNumActiveCachePeers())
-        {
-           COMMIT{ ++msg->times; }
-            if (line != NULL && line->state == LINE_FULL)
-            {
-                // We have a copy of the line
-                if (line->tokens > 1)
-                {
-                    // We can give the request data and tokens
-                    TraceWrite(msg->address, "Received Read Request; Attaching data and tokens");
-                    
-                    COMMIT
-                    {
-                        msg->type   = Message::REQUEST_DATA_TOKEN;
-                        msg->tokens = 1;
-                        msg->dirty  = line->dirty;
-                        memcpy(msg->data.data, line->data, msg->data.size);
-        
-                        line->tokens -= msg->tokens;
-                        
-                        // Also update last access time.
-                        line->access = GetKernel()->GetCycleNo();
-                    }
-                }                          
-                // Statistics
-                COMMIT{ ++m_numNetworkRHits; }
-            }
-        }        
+
         // Forward the message.
         if (!SendMessage(msg, MINSPACE_FORWARD))
         {
@@ -417,7 +351,6 @@ bool COMA::Cache::OnMessageReceived(Message* msg)
             return false;
         }
         break;
-        
 
     case Message::REQUEST_DATA_TOKEN:
     {
@@ -485,62 +418,56 @@ bool COMA::Cache::OnMessageReceived(Message* msg)
     }
     
     case Message::EVICTION:
-        if(msg->times < m_parent.GetNumActiveCachePeers())
+        if (line != NULL)
         {
-            //Message hasn't finished traveling the sub ring.
-            COMMIT{ ++msg->times; }
-            if (line != NULL)
+            if (line->state == LINE_FULL)
             {
-                if (line->state == LINE_FULL)
-                {
-                    // We have the line, merge it.
-                    TraceWrite(msg->address, "Merging Evict Request with %u tokens into line with %u tokens", msg->tokens, line->tokens);
+                // We have the line, merge it.
+                TraceWrite(msg->address, "Merging Evict Request with %u tokens into line with %u tokens", msg->tokens, line->tokens);
             
-                    // Just add the tokens count to the line.
-                    assert(msg->tokens > 0);
-                    COMMIT
-                    {
-                        line->tokens += msg->tokens;
-                
-                        // Combine the dirty flags
-                        line->dirty = line->dirty || msg->dirty;
-                
-                        delete msg;
-
-                        // Statistics
-                        ++m_numMergedEvictions;
-                    }
-                    break;
-                }
-            }
-        
-            // We don't have the line, see if we have an empty spot
-            else
-            {
-                MemAddr tag;
-                if ((line = AllocateLine(msg->address, true, &tag)) != NULL)
+                // Just add the tokens count to the line.
+                assert(msg->tokens > 0);
+                COMMIT
                 {
-                    // Yes, place the line there
-                    TraceWrite(msg->address, "Storing Evict Request for line %#016llx locally with %u tokens", (unsigned long long)msg->address, msg->tokens);
+                    line->tokens += msg->tokens;
                 
-                    COMMIT
-                    {
-                        line->state    = LINE_FULL;
-                        line->tag      = tag;
-                        line->tokens   = msg->tokens;
-                        line->dirty    = msg->dirty;
-                        line->updating = 0;
-                        line->access   = GetKernel()->GetCycleNo();
-                        std::fill(line->valid, line->valid + MAX_MEMORY_OPERATION_SIZE, true);
-                        memcpy(line->data, msg->data.data, msg->data.size);
-                        
-                        delete msg; 
+                    // Combine the dirty flags
+                    line->dirty = line->dirty || msg->dirty;
+                
+                    delete msg;
 
-                        // Statistics
-                        ++m_numInjectedEvictions;
-                    }
-                    break;
+                    // Statistics
+                    ++m_numMergedEvictions;
                 }
+                break;
+            }
+        }
+        // We don't have the line, see if we have an empty spot
+        else
+        {
+            MemAddr tag;
+            if ((line = AllocateLine(msg->address, true, &tag)) != NULL)
+            {
+                // Yes, place the line there
+                TraceWrite(msg->address, "Storing Evict Request for line %#016llx locally with %u tokens", (unsigned long long)msg->address, msg->tokens);
+                
+                COMMIT
+                {
+                    line->state    = LINE_FULL;
+                    line->tag      = tag;
+                    line->tokens   = msg->tokens;
+                    line->dirty    = msg->dirty;
+                    line->updating = 0;
+                    line->access   = GetKernel()->GetCycleNo();
+                    std::fill(line->valid, line->valid + MAX_MEMORY_OPERATION_SIZE, true);
+                    memcpy(line->data, msg->data.data, msg->data.size);
+
+                    delete msg; 
+
+                    // Statistics
+                    ++m_numInjectedEvictions;
+                }
+                break;
             }
         }
 
@@ -555,7 +482,7 @@ bool COMA::Cache::OnMessageReceived(Message* msg)
     case Message::UPDATE:
         if (msg->sender == m_id)
         {
-            // The update has come full circle in the sub ring.
+            // The update has come full circle.
             // Notify the sender of write consistency.
             assert(line != NULL);
             assert(line->updating > 0);

@@ -88,7 +88,7 @@ public:
     void UnmapMemory(ProcessID pid);
     bool CheckPermissions(MemAddr address, MemSize size, int access) const;
     bool IsLocalStorage(LFID fid, MemAddr address) const;
-    bool GetMemConsistency(LFID fid, MemAddr address) const;
+   // bool GetMemConsistency(LFID fid, MemAddr address) const;
     
 	
     Network& GetNetwork() { return m_network; }

@@ -458,10 +458,10 @@ bool Processor::IsLocalStorage(LFID fid, MemAddr address) const
     return true;
 }
 
-bool Processor::GetMemConsistency(LFID fid, MemAddr address) const
+/*bool Processor::GetMemConsistency(LFID fid, MemAddr address) const
 {
     return   m_familyTable[fid].hasShareds | IsLocalStorage(fid,address);
-}
+}*/
 
 static Integer GenerateCapability(unsigned int bits)
 {

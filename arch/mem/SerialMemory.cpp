@@ -158,9 +158,14 @@ Result SerialMemory::DoRequests()
                 {
                     return FAILED;
                 }
-                COMMIT {
+                COMMIT { 
                     ++m_nwrites;
-                    m_nwrite_bytes += request.data.size;
+                    for(size_t i = 0; i < sizeof(request.mask); i++)
+                    {
+                        if(request.mask[i])
+                            m_nwrite_bytes++;
+                        
+                    }
                 }
             } else {
                 MemData data(request.data);

@@ -390,7 +390,14 @@ bool BankedMemory::Write(MCID id, MemAddr address, const void* data, MemSize siz
         return false;
     }
 
-    COMMIT { ++m_nwrites; m_nwrite_bytes += size; }
+    COMMIT {
+         ++m_nwrites;
+          for(size_t i = 0; i < sizeof(mask); i++)
+          {
+            if(mask[i])
+                m_nwrite_bytes++;
+          }
+    }
     return true;
 }
 

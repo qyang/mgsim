@@ -85,7 +85,7 @@ bool ZLCOMA::Write(MCID id, MemAddr address, const void* data, MemSize size, LFI
     COMMIT
     {
         m_nwrites++;
-        m_nwrite_bytes += size;
+        m_nwrite_bytes += size;        
     }
     // Forward the write to the cache associated with the callback
     return m_clientMap[id].first->Write(m_clientMap[id].second, address, data, size, fid, mask, consistency);

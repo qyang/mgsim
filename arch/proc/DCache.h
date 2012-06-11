@@ -155,6 +155,7 @@ public:
     size_t GetAssociativity() const { return m_assoc; }
     size_t GetNumLines()      const { return m_lines.size(); }
     size_t GetNumSets()       const { return m_sets; }
+    size_t GetWCBSize()       const { return m_wcbsize;}
 
     const Line& GetLine(size_t i) const { return m_lines[i];  }
 };

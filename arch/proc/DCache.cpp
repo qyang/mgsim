@@ -19,14 +19,16 @@ Processor::DCache::DCache(const std::string& name, Processor& parent, Clock& clo
 
     m_assoc          (config.getValue<size_t>(*this, "Associativity")),
     m_sets           (config.getValue<size_t>(*this, "NumSets")),
+    m_wcbsize        (config.getValue<size_t>(*this, "WCBSize")),
     m_lineSize       (config.getValue<size_t>("CacheLineSize")),
     m_selector       (IBankSelector::makeSelector(*this, config.getValue<string>(*this, "BankSelector"), m_sets)),
+    m_wcbselect      (IBankSelector::makeSelector(*this, config.getValue<string>(*this, "BankSelector"), m_wcbsize)),
     m_completed      ("b_completed", *this, clock, m_sets * m_assoc),
-    m_famflush       ("b_famflush",  *this, clock, m_sets >> 1),
+    m_famflush       ("b_famflush",  *this, clock, m_wcbsize),
     m_incoming       ("b_incoming",  *this, clock, config.getValue<BufferSize>(*this, "IncomingBufferSize")),
     m_outgoing       ("b_outgoing",  *this, clock, config.getValue<BufferSize>(*this, "OutgoingBufferSize")),
     m_numRHits        (0),
-    m_wcbRHits        (0),
+   // m_wcbRHits        (0),
     m_numEmptyRMisses (0),
     m_numLoadingRMisses(0),
     m_numInvalidRMisses(0),
@@ -78,6 +80,11 @@ Processor::DCache::DCache(const std::string& name, Processor& parent, Clock& clo
     {
         throw exceptf<InvalidArgumentException>(*this, "DCacheNumSets = %zd is not a power of two", (size_t)m_sets);
     }
+    
+    if (m_wcbsize == 0 || !IsPowerOfTwo(m_wcbsize))
+    {
+        throw exceptf<InvalidArgumentException>(*this, "WCBSize = %zd is not a power of two", (size_t)m_wcbsize);
+    }
 
     if (m_lineSize == 0 || !IsPowerOfTwo(m_lineSize))
     {
@@ -99,7 +106,7 @@ Processor::DCache::DCache(const std::string& name, Processor& parent, Clock& clo
         m_lines[i].create = false;
     }
     
-    m_wcblines.resize(m_sets);
+    m_wcblines.resize(m_wcbsize);
     for (size_t i = 0; i < m_wcblines.size(); ++i)
     {
         m_wcblines[i].free   = true;

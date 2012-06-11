@@ -302,9 +302,7 @@ bool Processor::Allocator::SuspendThread(TID tid, MemAddr pc, bool barrier)
         }
     
     }
-
-   
-    
+ 
     return true;
 }
 
@@ -539,7 +537,7 @@ bool Processor::Allocator::DecreaseFamilyDependency(LFID fid, FamilyDependency d
                 
             if(!m_dcache.FlushWCBInFam(fid))
             {
-                DeadlockWrite(" Failed Queueing  F%u to flush pending writes in WCB on family termination",(unsigned)fid);       
+                DeadlockWrite(" Failed Queueing F%u to flush pending writes in WCB at family termination",(unsigned)fid);       
                 return false;
             }
           
@@ -548,6 +546,12 @@ bool Processor::Allocator::DecreaseFamilyDependency(LFID fid, FamilyDependency d
     case FAMDEP_OUTSTANDING_WRITES:
         if(deps->hasBarrier && !deps->numPendingWrites)
         {
+            if(family->pending.head == INVALID_TID)
+            {
+                DeadlockWrite("No pending thread from Memory barrier of F%u ", (unsigned)fid);
+                return false;                
+            }
+            
             deps->hasBarrier = false;
             if(!ActivateThreads(family->pending))
             {
@@ -1483,7 +1487,7 @@ Result Processor::Allocator::DoBundle()
     if (m_bundleState == BUNDLE_INITIAL)
     {
         Result      result;
-        if ((result = m_dcache.Read(info.addr, m_bundleData, sizeof(Integer) * 2 + sizeof(MemAddr), 0, 0)) == FAILED)
+        if ((result = m_dcache.Read(info.addr, m_bundleData, sizeof(Integer) * 2 + sizeof(MemAddr), /*0,*/ 0)) == FAILED)
         {
             DeadlockWrite("Unable to fetch the D-Cache line for %#016llx for bundle creation", (unsigned long long)info.addr);
             return FAILED;

@@ -41,9 +41,16 @@ void COMA::Cache::UnregisterClient(MCID id)
 
 // Called from the processor on a memory read (typically a whole cache-line)
 // Just queues the request.
-bool COMA::Cache::Read(MCID id, MemAddr address, MemSize /* unused, remove! */)
+bool COMA::Cache::Read(MCID id, MemAddr address, MemSize size)
 {
+    if (size != m_lineSize)
+    {
+        throw InvalidArgumentException("Read size is not a single cache-line");
+    }
+
+    assert(size <= MAX_MEMORY_OPERATION_SIZE);
     assert(address % m_lineSize == 0);
+    assert(size == m_lineSize);
     
     if (address % m_lineSize != 0)
     {
@@ -62,7 +69,7 @@ bool COMA::Cache::Read(MCID id, MemAddr address, MemSize /* unused, remove! */)
     Request req;
     req.address = address;
     req.write   = false;
-    req.size    = m_lineSize;
+    req.size    = size;
     
     // Client should have been registered
     assert(m_clients[id] != NULL);
@@ -74,16 +81,22 @@ bool COMA::Cache::Read(MCID id, MemAddr address, MemSize /* unused, remove! */)
         return false;
     }
     
+    
     return true;
 }
 
 // Called from the processor on a memory write (can be any size with write-through/around)
 // Just queues the request.
-bool COMA::Cache::Write(MCID id, MemAddr address, const void* data, MemSize /* unused, to remove */, LFID fid, const bool* mask, bool consistency)
+bool COMA::Cache::Write(MCID id, MemAddr address, const void* data, MemSize size, LFID fid, const bool* mask, bool consistency)
 {
-    if ((address & (m_lineSize-1)) != 0)
+    if (size > m_lineSize || size > MAX_MEMORY_OPERATION_SIZE)
     {
-        throw InvalidArgumentException("Write request not aligned on cache line");
+        throw InvalidArgumentException("Write size is too big");
+    }
+
+    if (address / m_lineSize != (address + size - 1) / m_lineSize)
+    {
+        throw InvalidArgumentException("Write request straddles cache-line boundary");
     }
 
     // We need to arbitrate between the different processes on the cache,
@@ -96,15 +109,14 @@ bool COMA::Cache::Write(MCID id, MemAddr address, const void* data, MemSize /* u
     }
     
     Request req;
-    req.address     = address;
-    req.write       = true;
-    req.size        = m_lineSize;
-    req.client      = id;
-    req.fid         = fid;
+    req.address = address;
+    req.write   = true;
+    req.size    = size;
+    req.client  = id;
+    req.fid     = fid;
     req.consistency = consistency;
     memcpy(req.data, data, (size_t)m_lineSize);
     memcpy(req.mask, mask, (size_t)m_lineSize);
-    
     
     // Client should have been registered
     assert(m_clients[req.client] != NULL);
@@ -128,7 +140,7 @@ bool COMA::Cache::Write(MCID id, MemAddr address, const void* data, MemSize /* u
                 return false;
             }
         }
-    }
+    } 
     
     return true;
 }
@@ -156,26 +168,24 @@ COMA::Cache::Line* COMA::Cache::FindLine(MemAddr address)
 
 // Attempts to find a line for the specified address.
 const COMA::Cache::Line* COMA::Cache::FindLine(MemAddr address) const
+{
+    MemAddr tag;
+    size_t  setindex;
+    m_selector.Map(address / m_lineSize, tag, setindex);
+    const size_t  set  = setindex * m_assoc;
+
+    // Find the line
+    for (size_t i = 0; i < m_assoc; ++i)
     {
-        MemAddr tag;
-        size_t  setindex;
-        m_selector.Map(address / m_lineSize, tag, setindex);
-        const size_t  set  = setindex * m_assoc;
-    
-        // Find the line
-        for (size_t i = 0; i < m_assoc; ++i)
+        const Line& line = m_lines[set + i];
+        if (line.state != LINE_EMPTY && line.tag == tag)
         {
-            const Line& line = m_lines[set + i];
-            if (line.state != LINE_EMPTY && line.tag == tag)
-            {
-                // The wanted line was in the cache
-                return &line;
-            }
+            // The wanted line was in the cache
+            return &line;
         }
-        return NULL;
     }
-
-
+    return NULL;
+}
 
 // Attempts to allocate a line for the specified address.
 // If empty_only is true, only empty lines will be considered.
@@ -202,10 +212,10 @@ COMA::Cache::Line* COMA::Cache::AllocateLine(MemAddr address, bool empty_only, M
         {
             // We're also considering non-empty lines; use LRU
             assert(line.tag != tag);
-            DeadlockWrite("New line, tag %#016llx: considering busy line %zu from set %zu, tag %#016llx, state %u, updating %u, access %llu, %u tokens",
+            DeadlockWrite("New line, tag %#016llx: considering busy line %zu from set %zu, tag %#016llx, state %u, updating %u, access %llu",
                           (unsigned long long)tag,
                           i, setindex,
-                          (unsigned long long)line.tag, (unsigned)line.state, (unsigned)line.updating, (unsigned long long)line.access,(unsigned int)line.tokens);
+                          (unsigned long long)line.tag, (unsigned)line.state, (unsigned)line.updating, (unsigned long long)line.access);
             if (line.state != LINE_LOADING && line.updating == 0 && (replace == NULL || line.access < replace->access))
             {
                 // The line is available to be replaced and has a lower LRU rating,
@@ -267,7 +277,7 @@ bool COMA::Cache::EvictLine(Line* line, const Request& req)
         }
     }
     
-    COMMIT{ line->state = LINE_EMPTY; }
+    COMMIT{ line->state = LINE_EMPTY;}
     return true;
 }
 
@@ -398,11 +408,25 @@ bool COMA::Cache::OnMessageReceived(Message* msg)
         {
             for (Buffer<Request>::const_iterator p = m_requests.begin(); p != m_requests.end(); ++p)
             {
-                unsigned int offset = p->address % m_lineSize;
+               /* unsigned int offset = p->address % m_lineSize;
                 if (p->write && p->address - offset == msg->address)
                 {
                     // This is a write to the same line, merge it
                     std::copy(p->data, p->data + p->size, data.data + offset);
+                }
+                */
+                if (p->write && p->address == msg->address)
+                {
+                    // This is a write to the same line, merge it
+                    for(size_t i = 0; i <(size_t)m_lineSize; ++i)
+                    {
+                        if (p->mask[i]) 
+                        {
+                            data.data[i]  = p->data[i];
+                            
+                        }                    
+                        
+                    }
                 }
             }
         }
@@ -493,28 +517,27 @@ bool COMA::Cache::OnMessageReceived(Message* msg)
             }
 
             COMMIT
-            {                
-               line->updating--;
-               delete msg;
+            {
+                line->updating--;
+                delete msg;
             }
         }
-        else 
-        { 
+        else
+        {
             // Update the line, if we have it, and forward the message
             if (line != NULL)
             {
                 COMMIT
                 {
                     unsigned int offset = msg->address % m_lineSize;
-                    for (size_t i = 0; i < msg->data.size; ++i)
+                    for(size_t i = offset; i < offset + msg->data.size; i++)
                     {
-                        if (msg->mask[i])
+                        if(msg->mask[i])
                         {
-                            line->data[i + offset] = msg->data.data[i];
-                            line->valid[i + offset] = true;
-                        }               
-                    }     
-
+                            line->data[i] = msg->data.data[i];
+                            line->valid[i]= true;
+                        }
+                    }
                     // Statistics
                     ++m_numNetworkWHits;
                 }
@@ -529,6 +552,7 @@ bool COMA::Cache::OnMessageReceived(Message* msg)
                             DeadlockWrite("Unable to snoop update to cache clients");
                             return false;
                         }
+                        
                     }
                 }
             }
@@ -564,6 +588,7 @@ bool COMA::Cache::OnReadCompleted(MemAddr addr, const MemData& data)
             DeadlockWrite("Unable to send read completion to clients");
             return false;
         }
+        
     }
     
     return true;
@@ -717,17 +742,14 @@ Result COMA::Cache::OnWriteRequest(const Request& req)
     // write the data into it.
     COMMIT
     {
-       
-        // Store the data, masked by the already-valid bitmask
-        for (size_t i = 0; i < req.size; ++i)
+        for(size_t i = offset; i < offset + req.size; i++)
         {
-            if (req.mask[i])
+            if(req.mask[i])
             {
-                line->data[i + offset] = req.data[i];
-                line->valid[i + offset] = true;
-            }               
-        }            
-               
+                line->data[i] = req.data[i];
+                line->valid[i]= true;
+            }
+        }
         // The line is now dirty
         line->dirty = true;
         

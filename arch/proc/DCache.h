@@ -113,7 +113,8 @@ private:
     Result DoIncomingResponses();
     Result DoOutgoingRequests();
     Result DoFamFlush  ();
-    bool   ReadWCB(MemAddr address, size_t size, Line* &line, LFID fid);
+    bool   ReadWCB(MemAddr address, /*size_t size,*/ Line* &line);//, LFID fid);
+    //bool   ReadWCB(MemAddr address, size_t size, void* data, LFID fid, Line* &line, bool check_only);
     bool   WriteWCB(MemAddr address, MemSize size, void* data, LFID fid);
     bool   FlushWCBLine(size_t index);
     
@@ -133,7 +134,7 @@ public:
     ArbitratedService<> p_service;
 
     // Public interface
-    Result Read (MemAddr address, void* data, MemSize size, LFID fid, RegAddr* reg);
+    Result Read (MemAddr address, void* data, MemSize size, /*LFID fid,*/ RegAddr* reg);
     Result Write(MemAddr address, void* data, MemSize size, LFID fid, TID tid);
     bool   FamtoFlush(LFID fid);
     

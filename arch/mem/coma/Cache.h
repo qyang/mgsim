@@ -116,7 +116,7 @@ public:
     MCID RegisterClient  (IMemoryCallback& callback, Process& process, StorageTraceSet& traces, Storage& storage);
     void UnregisterClient(MCID id);
     bool Read (MCID id, MemAddr address, MemSize size);
-    bool Write(MCID id, MemAddr address, const void* data, MemSize size, LFID fid, const bool* mask, bool consistency);
+    bool Write(MCID id, MemAddr address, const void* data, MemSize size, LFID fid, const bool* mask, bool /*consistency*/);
 };
 
 }

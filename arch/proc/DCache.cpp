@@ -150,113 +150,33 @@ static std::string valid2str(bool* valid, size_t ms)
     return os.str();
 }
 
-Result Processor::DCache::FindLine(MemAddr address, Line* &line, bool check_only)
+
+void Processor::DCache::ReadWCB(MemAddr address, Line* line)  
 {
     MemAddr tag;
-    size_t setindex;
-    m_selector->Map(address / m_lineSize, tag, setindex);
-    const size_t  set  = setindex * m_assoc;
-
-    // Find the line
-    Line* empty   = NULL;
-    Line* replace = NULL;
-    for (size_t i = 0; i < m_assoc; ++i)
-    {
-        line = &m_lines[set + i];
-        
-        // Invalid lines may not be touched or considered
-        if (line->state == LINE_EMPTY)
-        {
-            // Empty, unused line, remember this one
-            empty = line;
-        }
-        else if (line->tag == tag)
-        {
-            // The wanted line was in the cache
-            return SUCCESS;
-        }
-        else if (line->state == LINE_FULL && (replace == NULL || line->access < replace->access))
-        {
-            // The line is available to be replaced and has a lower LRU rating,
-            // remember it for replacing
-            replace = line;
-        }
-    }
-
-    // The line could not be found, allocate the empty line or replace an existing line
-    line = (empty != NULL) ? empty : replace;
-    if (line == NULL)
-    {
-        // No available line
-        if (!check_only)
-        {
-            DeadlockWrite("Unable to allocate a free cache-line in set %u", (unsigned)(set / m_assoc) );
-        }
-        return FAILED;
-    }
-
-    if (!check_only)
-    {
-        // Reset the line
-        COMMIT
-        {
-            line->processing = false;
-            line->tag        = tag;
-            line->waiting    = INVALID_REG;
-            std::fill(line->valid, line->valid + m_lineSize, false);
-        }
-    }
-
-    return DELAYED;
-}
-
-
-bool Processor::DCache::ReadWCB(MemAddr address, /*size_t size,*/ Line* &line)   //LFID fid);//ReadWCB(MemAddr address, size_t size, void* data, LFID fid, Line* &line, bool check_only)
-{
-    MemAddr tag;
-    size_t index, offset = address % m_lineSize;
-    m_wcbselect->Map(address / m_lineSize, tag, index);
+    size_t index, i, offset = address % m_lineSize;
+    m_wcbselect->Map((address - offset) / m_lineSize, tag, index);
     
     WCB_Line& wcb_line = m_wcblines[index];
     
-    if(!wcb_line.free && (wcb_line.tag == tag))// && (wcb_line.fid == fid))
+    if(!wcb_line.free && (wcb_line.tag == tag))
     {
-        size_t i;
-        /*
-        for (i = 0; i < size; ++i)
-        {
-            if (!wcb_line.valid[offset + i])
-            {
-                break;
-            }
-        }        
-        // Data match in WCB, copy it
-       if(!check_only)
-       {
-           if(i == size)
-           {
-               COMMIT {memcpy(data, wcb_line.data + offset, size);}
-            
-           }
-        
-           DebugMemWrite("F%u read %s from WCB %#16llx, index %u, free %d, size %u, valid %s", (unsigned)fid, (i==size)? "hits" : "misses", (unsigned long long)address, 
-                         (unsigned)index, (int)wcb_line.free, (unsigned)size, valid2str(wcb_line.valid, m_lineSize).c_str());
-        
-           return (i == size); 
-       }*/
        
-       for (i = 0; i < m_lineSize; ++i)
+        for (i = 0; i < m_lineSize; ++i)
        {
            if(wcb_line.valid[i])
            {
-               line->data[i] = wcb_line.data[i];
-               line->valid[i]= true;
+               COMMIT{
+                   line->data[i] = wcb_line.data[i];
+                   line->valid[i]= true;
+               }
            }
        } 
-       DebugMemWrite("Line updates data from WCB:%#16llx, valid %s", (unsigned long long)(address - offset), valid2str(wcb_line.valid, m_lineSize).c_str());
+      
+       DebugMemWrite("Cache line update from WCB:%#16llx, index %u, valid %s", (unsigned long long)(address - offset), (unsigned)index, valid2str(wcb_line.valid, m_lineSize).c_str());
     }
     
-    return true;    
+    return;    
 }
 
 bool Processor::DCache::WriteWCB(MemAddr address, MemSize size, void* data, LFID fid)
@@ -264,7 +184,7 @@ bool Processor::DCache::WriteWCB(MemAddr address, MemSize size, void* data, LFID
     MemAddr tag;
     size_t index;
     size_t offset = (size_t)(address % m_lineSize);
-    m_wcbselect->Map(address / m_lineSize, tag, index);
+    m_wcbselect->Map((address - offset) / m_lineSize, tag, index);
     
     WCB_Line& wcb_line = m_wcblines[index];
       
@@ -385,8 +305,69 @@ bool Processor::DCache::FlushWCBInFam(LFID fid)
    return true;
 }
 
+Result Processor::DCache::FindLine(MemAddr address, Line* &line, bool check_only)
+{
+    MemAddr tag;
+    size_t setindex;
+    m_selector->Map(address / m_lineSize, tag, setindex);
+    const size_t  set  = setindex * m_assoc;
 
-Result Processor::DCache::Read(MemAddr address, void* data, MemSize size, /*LFID fid,*/ RegAddr* reg)
+    // Find the line
+    Line* empty   = NULL;
+    Line* replace = NULL;
+    for (size_t i = 0; i < m_assoc; ++i)
+    {
+        line = &m_lines[set + i];
+        
+        // Invalid lines may not be touched or considered
+        if (line->state == LINE_EMPTY)
+        {
+            // Empty, unused line, remember this one
+            empty = line;
+        }
+        else if (line->tag == tag)
+        {
+            // The wanted line was in the cache
+            return SUCCESS;
+        }
+        else if (line->state == LINE_FULL && (replace == NULL || line->access < replace->access))
+        {
+            // The line is available to be replaced and has a lower LRU rating,
+            // remember it for replacing
+            replace = line;
+        }
+    }
+
+    // The line could not be found, allocate the empty line or replace an existing line
+    line = (empty != NULL) ? empty : replace;
+    if (line == NULL)
+    {
+        // No available line
+        if (!check_only)
+        {
+            DeadlockWrite("Unable to allocate a free cache-line in set %u", (unsigned)(set / m_assoc) );
+        }
+        return FAILED;
+    }
+
+    if (!check_only)
+    {
+        // Reset the line
+        COMMIT
+        {
+            line->processing = false;
+            line->tag        = tag;
+            line->waiting    = INVALID_REG;
+            std::fill(line->valid, line->valid + m_lineSize, false);
+        }
+    }
+
+    return DELAYED;
+}
+
+
+
+Result Processor::DCache::Read(MemAddr address, void* data, MemSize size, RegAddr* reg)
 {
     size_t offset = (size_t)(address % m_lineSize);
     if (offset + size > m_lineSize)
@@ -420,18 +401,6 @@ Result Processor::DCache::Read(MemAddr address, void* data, MemSize size, /*LFID
     
     Line*  line;
     
-   /* if(ReadWCB(address, size, data, fid, line, false))
-    {
-        //WCB hit
-        COMMIT
-        {
-            ++m_wcbRHits;
-            ++m_numRHits;
-        }
-        return SUCCESS;
-    }*/
-
-    
     Result result;
     // SUCCESS - A line with the address was found
     // DELAYED - The line with the address was not found, but a line has been allocated
@@ -447,11 +416,47 @@ Result Processor::DCache::Read(MemAddr address, void* data, MemSize size, /*LFID
     // Update last line access
     COMMIT{ line->access = GetCycleNo(); }
     
+   //Update data from WCB
     ReadWCB(address, line);
-
-    if (result == DELAYED)
+    
+    // Check if the data that we want is valid in the line.
+    // This happens when the line is FULL, or LOADING and has been
+    // snooped to (written to from another core) in the mean time.
+    
+    size_t i;
+    for (i = 0; i < size; ++i)
     {
-        // A new line has been allocated; send the request to memory
+        if (!line->valid[offset + i])
+        {
+            break;
+        }
+    }
+    
+    COMMIT
+    {
+        if (i == size)
+        {
+            // Data is entirely in the cache, copy it
+            memcpy(data, line->data + offset, (size_t)size);
+            
+            if(line->state != LINE_LOADING)
+                line->state =  LINE_FULL;
+           
+            ++m_numRHits;
+            
+            return SUCCESS;            
+        }    
+        
+    }
+    
+    if(line->state != LINE_LOADING)
+    {
+        if(line->state == LINE_INVALID)  //hit an invalid line
+        {
+            ++m_numInvalidRMisses;
+            return FAILED;
+        }
+        // required data is not available, send the request to memory 
         Request request;
         request.write     = false;
         request.address   = address - offset;
@@ -462,53 +467,23 @@ Result Processor::DCache::Read(MemAddr address, void* data, MemSize size, /*LFID
             DeadlockWrite("Unable to push request to outgoing buffer");
             return FAILED;
         }
-
+    
         // statistics
-        COMMIT { 
+        COMMIT
+        { 
             if (line->state == LINE_EMPTY)
                 ++m_numEmptyRMisses;
             else
                 ++m_numResolvedConflicts; 
+                
         }
     }
     else 
     {
-        // Check if the data that we want is valid in the line.
-        // This happens when the line is FULL, or LOADING and has been
-        // snooped to (written to from another core) in the mean time.
-        size_t i;
-        for (i = 0; i < size; ++i)
-        {
-            if (!line->valid[offset + i])
-            {
-                break;
-            }
-        }
-        
-        if (i == size)
-        {
-            // Data is entirely in the cache, copy it
-            COMMIT
-            {
-                memcpy(data, line->data + offset, (size_t)size);                
-                ++m_numRHits;
-            }
-            return SUCCESS;
-        }
-        
-        // Data is not entirely in the cache; it should be loading from memory
-        if (line->state != LINE_LOADING)
-        {
-            assert(line->state == LINE_INVALID);
-            ++m_numInvalidRMisses;
-            return FAILED;
-        }
-        else
-        {
-            COMMIT{ ++m_numLoadingRMisses; }
-        }
+        // Data is loading from memory
+        COMMIT{ ++m_numLoadingRMisses; }
     }
-
+        
     // Data is being loaded, add request to the queue
     COMMIT
     {
@@ -593,6 +568,7 @@ Result Processor::DCache::Write(MemAddr address, void* data, MemSize size, LFID 
                 memcpy(line->data + offset, data, (size_t)size);
                 std::fill(line->valid + offset, line->valid + offset + size, true);
                }
+           DebugMemWrite("Cache line update from write hit: %#16llx, F%u/T%u", (unsigned long long)address, (unsigned)fid,(unsigned)tid);
         }
     }
     if(!WriteWCB(address, size, data, fid))
@@ -629,12 +605,10 @@ bool Processor::DCache::OnMemoryReadCompleted(MemAddr addr, const MemData& data)
             
             for (Buffer<Request>::const_iterator p = m_outgoing.begin(); p != m_outgoing.end(); ++p)
             {
-                //unsigned int offset = p->address % m_lineSize;
-               // if (p->write && p->address - offset == addr)
+              
                 if (p->write && p->address == addr)
                 {
                     // This is a write to the same line, merge it
-                   // std::copy(p->data.data, p->data.data + p->data.size, mdata.data + offset);
                     for(size_t i = 0; i <(size_t)m_lineSize; ++i)
                     {
                         if (p->mask[i]) 
@@ -645,29 +619,8 @@ bool Processor::DCache::OnMemoryReadCompleted(MemAddr addr, const MemData& data)
                     }
                     DebugMemWrite("Merge outgoing buffer data with load response from 0x%016llx ", (unsigned long long)addr);
                 }
-            }
-            
-            /*
-            MemAddr tag;
-            size_t index;            
-            m_wcbselect->Map(addr/m_lineSize, tag, index);
-            
-            WCB_Line wcb_line = m_wcblines[index];
-            
-            if(!wcb_line.free && wcb_line.tag == tag)
-            {
-                for( size_t i = 0; i <(size_t)m_lineSize; ++i)
-                {
-                    if (wcb_line.valid[i]) 
-                    {
-                        mdata.data[i]  = wcb_line.data[i];
-                    }                    
-                  
-                }
-                
-                DebugMemWrite("Merge WCB data with load response from 0x%016llx ", (unsigned long long)addr);
-            }*/
-            
+            }       
+          
             
             DebugMemWrite("Finished checking data consistency for load response from 0x%016llx ", (unsigned long long)addr);
             
@@ -736,19 +689,21 @@ bool Processor::DCache::OnMemorySnooped(MemAddr address, const MemData& data, bo
             
             for (size_t i = 0; i < data.size; ++i)
             {
-                if (mask[i + offset])//&& !line->valid[i + offset])
+                if (mask[i + offset])
                 {
                     line->data[i + offset]  = data.data[i + offset];
                     line->valid[i + offset] = true;
                 }               
-            }     
+            }
+            
+            DebugMemWrite("Cache line update from snoop: 0x%016llx ", (unsigned long long)address);
         }
         
         //Update WCB with dropping valid bytes if matched
         
         MemAddr tag;
         size_t index,count = 0;
-        m_wcbselect->Map(address / m_lineSize, tag, index);
+        m_wcbselect->Map((address - offset) / m_lineSize, tag, index);
         
         WCB_Line& wcb_line = m_wcblines[index];
         if (!wcb_line.free && wcb_line.tag == tag)
@@ -757,7 +712,6 @@ bool Processor::DCache::OnMemorySnooped(MemAddr address, const MemData& data, bo
             {
                 if (wcb_line.valid[i + offset] && mask[ i + offset])
                 {
-                    //wcb_line.data[i + offset]  = data.data[i + offset];
                     wcb_line.valid[i + offset] = false;
                     count++;
                 }               
@@ -765,6 +719,8 @@ bool Processor::DCache::OnMemorySnooped(MemAddr address, const MemData& data, bo
             
             if(count == m_lineSize)
                 wcb_line.free = true;
+            
+             DebugMemWrite("WCB snooping from address 0x%016llx ", (unsigned long long)address);
             
         }
         
@@ -1069,11 +1025,6 @@ void Processor::DCache::Cmd_Read(std::ostream& out, const std::vector<std::strin
                 << "Number of reads:                                   " << dec << numRAccesses << endl
                 << "  Read hits:                                   " 
                 << dec << m_numRHits << " (" << setprecision(2) << fixed << m_numRHits * r_factor << "%)" << endl
-               /// << "  Breakdown of read hits:                      " << endl
-               /// << "    - to a wcb line:                           " 
-               /// << dec << m_wcbRHits << " (" << setprecision(2) << fixed << m_wcbRHits * r_factor << "%)" << endl
-              ///  << "    - to a dcache line:                        " 
-              ///  << dec << (m_numRHits-m_wcbRHits) << " (" << setprecision(2) << fixed << (m_numRHits-m_wcbRHits) * r_factor << "%)" << endl
                 << endl
                 << "  Read misses:                                 " 
                 << dec << numRMisses << " (" << setprecision(2) << fixed << numRMisses * r_factor << "%)" << endl

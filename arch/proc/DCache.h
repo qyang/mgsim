@@ -92,7 +92,6 @@ private:
     Buffer<Request>      m_outgoing;        ///< Outgoing buffer to memory bus.
     WritebackState       m_wbstate;         ///< Writeback state
     uint64_t             m_numRHits;         ///< Number of rhits so far.
-  //  uint64_t             m_wcbRHits;        ///< Number of WCB rhits so far.
     uint64_t             m_numEmptyRMisses;  ///< Number of rmisses so far (rmiss to an empty cache line).
     uint64_t             m_numLoadingRMisses;///< Number of rmisses so far (rmiss to a loading cache line with same tag).
     uint64_t             m_numInvalidRMisses;///< Number of rmisses so far (rmiss to an invalid cache line with same tag).
@@ -113,13 +112,10 @@ private:
     Result DoIncomingResponses();
     Result DoOutgoingRequests();
     Result DoFamFlush  ();
-    bool   ReadWCB(MemAddr address, /*size_t size,*/ Line* &line);//, LFID fid);
-    //bool   ReadWCB(MemAddr address, size_t size, void* data, LFID fid, Line* &line, bool check_only);
+    void  ReadWCB(MemAddr address, Line* line);
     bool   WriteWCB(MemAddr address, MemSize size, void* data, LFID fid);
     bool   FlushWCBLine(size_t index);
-    
-    //bool   FlushWCBInLine(size_t index);
-    
+       
 
 public:
     DCache(const std::string& name, Processor& parent, Clock& clock, Allocator& allocator, FamilyTable& familyTable, RegisterFile& regFile, IMemory& memory, Config& config);
@@ -134,7 +130,7 @@ public:
     ArbitratedService<> p_service;
 
     // Public interface
-    Result Read (MemAddr address, void* data, MemSize size, /*LFID fid,*/ RegAddr* reg);
+    Result Read (MemAddr address, void* data, MemSize size,RegAddr* reg);
     Result Write(MemAddr address, void* data, MemSize size, LFID fid, TID tid);
     bool   FamtoFlush(LFID fid);
     

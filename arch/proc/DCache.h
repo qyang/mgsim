@@ -120,7 +120,7 @@ private:
     Result DoIncomingResponses();
     Result DoOutgoingRequests();
     Result DoFamFlush  ();
-    void  ReadWCB(MemAddr address, Line* line);
+    void  ReadWCB(MemAddr address, bool &found_wcb, const char* &wcb_data, const bool* &wcb_valid); 
     bool   WriteWCB(MemAddr address, MemSize size, void* data, LFID fid);
     bool   FlushWCBLine(size_t index);
        

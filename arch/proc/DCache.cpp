@@ -151,28 +151,21 @@ static std::string valid2str(bool* valid, size_t ms)
 }
 
 
-void Processor::DCache::ReadWCB(MemAddr address, Line* line)  
+void Processor::DCache::ReadWCB(MemAddr address, bool &found_wcb, const char* &wcb_data, const bool* &wcb_valid)  
 {
     MemAddr tag;
-    size_t index, i, offset = address % m_lineSize;
+    size_t index;
+    size_t offset = address % m_lineSize;
     m_wcbselect->Map((address - offset) / m_lineSize, tag, index);
     
     WCB_Line& wcb_line = m_wcblines[index];
     
     if(!wcb_line.free && (wcb_line.tag == tag))
     {
-       
-        for (i = 0; i < m_lineSize; ++i)
-       {
-           if(wcb_line.valid[i])
-           {
-               COMMIT{
-                   line->data[i] = wcb_line.data[i];
-                   line->valid[i]= true;
-               }
-           }
-       } 
-      
+        found_wcb = true;
+        wcb_data = wcb_line.data;
+        wcb_valid = wcb_line.valid;
+               
        DebugMemWrite("Cache line update from WCB:%#16llx, index %u, valid %s", (unsigned long long)(address - offset), (unsigned)index, valid2str(wcb_line.valid, m_lineSize).c_str());
     }
     
@@ -417,37 +410,60 @@ Result Processor::DCache::Read(MemAddr address, void* data, MemSize size, RegAdd
     COMMIT{ line->access = GetCycleNo(); }
     
    //Update data from WCB
-    ReadWCB(address, line);
-    
-    // Check if the data that we want is valid in the line.
-    // This happens when the line is FULL, or LOADING and has been
-    // snooped to (written to from another core) in the mean time.
-    
+    bool found_wcb = false;
+    const char *wcb_data = 0;
+    const bool *wcb_valid = 0;
+
+    ReadWCB(address, found_wcb, wcb_data, wcb_valid);
+
+    if (found_wcb)
+    {
+        // If found in WCB, will propagate to L1 "at end of cycle".
+        COMMIT{
+            for (size_t i = 0; i < m_lineSize; ++i)
+            {
+               if (wcb_valid[i])
+               {
+                   line->data[i] = wcb_data[i];
+                   line->valid[i] = true;
+               } 
+            }
+        }     
+    }
+
+    // Check if the data that we want is valid in the WCB or L1.
+        
     size_t i;
     for (i = 0; i < size; ++i)
     {
-        if (!line->valid[offset + i])
+        if ((found_wcb && !wcb_valid[offset + i]) && !line->valid[offset + i])
         {
             break;
         }
     }
-    
-    COMMIT
+
+    if (i == size)
     {
-        if (i == size)
-        {
-            // Data is entirely in the cache, copy it
-            memcpy(data, line->data + offset, (size_t)size);
+            // Data is entirely in the WCB, copy it
+            COMMIT
+            {
+              if(line->state != LINE_LOADING)
+                 line->state =  LINE_FULL;
+              
+              std::copy(line->data + offset, line->data + offset + size, (char*)data);
+ 
+              // Statistics
+              ++m_numRHits;
             
-            if(line->state != LINE_LOADING)
-                line->state =  LINE_FULL;
-           
-            ++m_numRHits;
-            
+            }
+                      
             return SUCCESS;            
-        }    
-        
-    }
+    }    
+
+    // Check if the data that we want is valid in the line.
+    // This happens when the line is FULL, or LOADING and has been
+    // snooped to (written to from another core) in the mean time.
+    
     
     if(line->state != LINE_LOADING)
     {

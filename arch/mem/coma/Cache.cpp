@@ -739,15 +739,6 @@ Result COMA::Cache::OnWriteRequest(const Request& req)
             // Lock the line to prevent eviction
             line->updating++;
 
-            // Statistics
-            if(line->state == LINE_LOADING)
-            {
-                COMMIT{ ++m_numLoadingWMisses; }
-            }
-            else
-            {
-                COMMIT{ ++m_numWSHits; }
-            }
         }
             
         if (!SendMessage(msg, MINSPACE_INSERTION))

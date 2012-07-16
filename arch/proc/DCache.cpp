@@ -718,37 +718,40 @@ bool Processor::DCache::OnMemorySnooped(MemAddr address, const MemData& data, bo
             
             DebugMemWrite("Cache line update from snoop: 0x%016llx ", (unsigned long long)address);
         }
+    }
         
         //Update WCB with dropping valid bytes if matched
-        
-        MemAddr tag;
-        size_t index,count = 0;
-        m_wcbselect->Map((address - offset) / m_lineSize, tag, index);
-        
-        WCB_Line& wcb_line = m_wcblines[index];
-        if (!wcb_line.free && wcb_line.tag == tag)
-        {
+    
+    MemAddr tag;
+    size_t index,count = 0;
+    m_wcbselect->Map((address - offset) / m_lineSize, tag, index);
+    
+    WCB_Line& wcb_line = m_wcblines[index]; 
+    if (!wcb_line.free && wcb_line.tag == tag)
+    {
+        COMMIT{
+
             for (size_t i = 0; i < data.size; ++i)
             {
                 if (wcb_line.valid[i + offset] && mask[ i + offset])
                 {
-                    wcb_line.valid[i + offset] = false;
+                    wcb_line.valid[i + offset] = false;                    
                     count++;
                 }               
             }
             
             if(count == m_lineSize)
                 wcb_line.free = true;
-            
-             DebugMemWrite("WCB snooping from address 0x%016llx ", (unsigned long long)address);
-            
-            std::fill(line->valid + offset, line->valid + offset + data.size, true);
-
-            // Statistics
-            ++m_numSnoops;
         }
         
+        DebugMemWrite("WCB snooping from address 0x%016llx ", (unsigned long long)address);
+
     }
+    
+    // Statistics
+    COMMIT{ ++m_numSnoops;}
+        
+    
     return true;
 }
 

@@ -217,7 +217,7 @@ Processor::Pipeline::PipeAction Processor::Pipeline::ExecuteStage::SetFamilyProp
 Processor::Pipeline::PipeAction Processor::Pipeline::ExecuteStage::ExecCreate(const FID& fid, MemAddr address, RegIndex completion)
 {
     // Create
-    if (m_allocator.CheckFamilyDependency(m_input.fid, FAMDEP_MEMBARRIER) || m_allocator.CheckFamilyDependency(m_input.fid,FAMDEP_OUTSTANDING_WRITES))
+    if (m_allocator.CheckFamilyDependency(m_input.fid,FAMDEP_OUTSTANDING_WRITES)|| m_allocator.BarrierFam(m_input.fid))
     {
         // We need to wait for the pending writes to complete
         COMMIT

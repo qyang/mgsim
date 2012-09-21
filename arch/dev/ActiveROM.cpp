@@ -375,22 +375,22 @@ namespace Simulator
             }
             break;
         case 2:
-            COMMIT { m_loadable[0].rom_offset = m_loadable[0].rom_offset & 0xffffffff00000000ULL | value; }
+            COMMIT { m_loadable[0].rom_offset = (m_loadable[0].rom_offset & 0xffffffff00000000ULL) | value; }
             break;
         case 3:
-            COMMIT { m_loadable[0].rom_offset = m_loadable[0].rom_offset & 0xffffffffULL | ((unsigned long long)value << 32); }
+            COMMIT { m_loadable[0].rom_offset = (m_loadable[0].rom_offset & 0xffffffffULL) | ((unsigned long long)value << 32); }
             break;
         case 4:
-            COMMIT { m_loadable[0].vaddr = m_loadable[0].vaddr & 0xffffffff00000000ULL | value; }
+            COMMIT { m_loadable[0].vaddr = (m_loadable[0].vaddr & 0xffffffff00000000ULL) | value; }
             break;
         case 5:
-            COMMIT { m_loadable[0].vaddr = m_loadable[0].vaddr & 0xffffffffULL | ((unsigned long long)value << 32); }
+            COMMIT { m_loadable[0].vaddr = (m_loadable[0].vaddr & 0xffffffffULL) | ((unsigned long long)value << 32); }
             break;
         case 6:
-            COMMIT { m_loadable[0].rom_size = m_loadable[0].rom_size & 0xffffffff00000000ULL | value; }
+            COMMIT { m_loadable[0].rom_size = (m_loadable[0].rom_size & 0xffffffff00000000ULL) | value; }
             break;
         case 7:
-            COMMIT { m_loadable[0].rom_size = m_loadable[0].rom_size & 0xffffffffULL | ((unsigned long long)value << 32); }
+            COMMIT { m_loadable[0].rom_size = (m_loadable[0].rom_size & 0xffffffffULL) | ((unsigned long long)value << 32); }
             break;
         }
         return true;

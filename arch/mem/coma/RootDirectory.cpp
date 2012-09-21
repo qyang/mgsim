@@ -270,12 +270,13 @@ Result COMA::RootDirectory::DoRequests()
     {
         // Since we stripe cache lines across root directories, adjust the 
         // address before we send it to memory for timing.
-        unsigned int mem_address = (msg->address / m_lineSize) / m_numRoots * m_lineSize;
-        
+                
         if (msg->type == Message::REQUEST)
         {
             // It's a read
 #if 0
+            unsigned int mem_address = (msg->address / m_lineSize) / m_numRoots * m_lineSize;
+            
             if (!m_memory->Read(mem_address, m_lineSize))
             {
                 return FAILED;

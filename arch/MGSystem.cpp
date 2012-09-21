@@ -4,6 +4,7 @@
 #include "mem/ParallelMemory.h"
 #include "mem/BankedMemory.h"
 #include "mem/DDRMemory.h"
+#include "mem/ESAMemory.h"
 #include "mem/coma/COMA.h"
 #include "mem/zlcoma/COMA.h"
 
@@ -664,6 +665,9 @@ MGSystem::MGSystem(Config& config,
         m_memory = memory;
     } else if (memory_type == "ZLCOMA") {
         ZLCOMA* memory = new ZLCOMA("memory", m_root, memclock, config);
+        m_memory = memory;
+    }else if (memory_type == "ESA") {
+        ESAMemory* memory = new ESAMemory("memory", m_root, memclock, config);
         m_memory = memory;
     } else {
         throw runtime_error("Unknown memory type: " + memory_type);

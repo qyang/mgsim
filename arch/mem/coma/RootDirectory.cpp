@@ -78,7 +78,6 @@ bool COMA::RootDirectory::OnReadCompleted()
     COMMIT
     {
         msg->type = Message::REQUEST_DATA_TOKEN;
-        msg->data.size = m_lineSize;
         msg->dirty = false;
         
         m_parent.Read(msg->address, msg->data.data, m_lineSize);
@@ -113,7 +112,6 @@ bool COMA::RootDirectory::OnMessageReceived(Message* msg)
         case Message::REQUEST:
         {
             // Cache-line read request
-            assert(msg->data.size == m_lineSize);
         
             // Find or allocate the line
             Line* line = FindLine(msg->address, false);
@@ -140,7 +138,6 @@ bool COMA::RootDirectory::OnMessageReceived(Message* msg)
         case Message::REQUEST_DATA:
         {
             // Cache-line read request with data
-            assert(msg->data.size == m_lineSize);
             
             // Find or allocate the line. This should not fail.
             Line* line = FindLine(msg->address, false);
@@ -294,7 +291,6 @@ Result COMA::RootDirectory::DoRequests()
                 ++m_nreads;
 
                 msg->type = Message::REQUEST_DATA_TOKEN;
-                msg->data.size = m_lineSize;
                 msg->dirty = false;
 
                 m_parent.Read(msg->address, msg->data.data, m_lineSize);
@@ -312,13 +308,13 @@ Result COMA::RootDirectory::DoRequests()
             // It's a write
             assert(msg->type == Message::EVICTION);
 #if 0
-            if (!m_memory->Write(mem_address, msg->data.size))
+            if (!m_memory->Write(msg->address, msg->data.data, m_lineSize))
             {
                 return FAILED;
             }
 #endif
             COMMIT { 
-                m_parent.Write(msg->address, msg->data.data, msg->data.size);
+                m_parent.Write(msg->address, msg->data.data, 0, m_lineSize);
                 ++m_nwrites;
                 delete msg;
             }
@@ -372,11 +368,11 @@ Result COMA::RootDirectory::DoResponses()
     return SUCCESS;
 }
 
-void COMA::RootDirectory::SetNumDirectories(size_t num_dirs)
+void COMA::RootDirectory::SetNumRings(size_t num_rings)
 {
     // Create the cache lines.
     // We need as many cache lines in the directory to cover all caches below it.
-    m_assoc = m_assoc_dir * num_dirs;
+    m_assoc = m_assoc_ring * num_rings;
     m_lines.resize(m_assoc * m_sets);
     for (size_t i = 0; i < m_lines.size(); ++i)
     {
@@ -386,11 +382,10 @@ void COMA::RootDirectory::SetNumDirectories(size_t num_dirs)
 
 COMA::RootDirectory::RootDirectory(const std::string& name, COMA& parent, Clock& clock, size_t id, size_t numRoots, const DDRChannelRegistry& ddr, Config& config) :
     Simulator::Object(name, parent),
-    //COMA::Object(name, parent),
     DirectoryBottom(name, parent, clock, config),
     m_selector (parent.GetBankSelector()),
     m_lineSize (config.getValue<size_t>("CacheLineSize")),
-    m_assoc_dir(config.getValue<size_t>(parent, "L2CacheAssociativity") * config.getValue<size_t>(parent, "NumL2CachesPerDirectory")),
+    m_assoc_ring(config.getValue<size_t>(parent, "L2CacheAssociativity") * config.getValue<size_t>(parent, "NumL2CachesPerRing")),
     m_sets     (m_selector.GetNumBanks()),
     m_id       (id),
     m_numRoots (numRoots),

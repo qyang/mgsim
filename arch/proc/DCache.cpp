@@ -170,7 +170,9 @@ Result Processor::DCache::FindLine(MemAddr address, Line* &line, bool check_only
     return DELAYED;
 }
 
-Result Processor::DCache::Read(MemAddr address, void* data, MemSize size, LFID /* fid */, RegAddr* reg)
+
+
+Result Processor::DCache::Read(MemAddr address, void* data, MemSize size, RegAddr* reg)
 {
     size_t offset = (size_t)(address % m_lineSize);
     if (offset + size > m_lineSize)
@@ -224,7 +226,6 @@ Result Processor::DCache::Read(MemAddr address, void* data, MemSize size, LFID /
         Request request;
         request.write     = false;
         request.address   = address - offset;
-        request.data.size = m_lineSize;
         if (!m_outgoing.Push(request))
         {
             ++m_numStallingRMisses;
@@ -362,7 +363,10 @@ Result Processor::DCache::Write(MemAddr address, void* data, MemSize size, LFID 
             // Update the line
             assert(line->state == LINE_FULL);
             COMMIT{ 
-                memcpy(line->data + offset, data, (size_t)size); 
+                std::copy((char*)data, (char*)data + size, line->data + offset);
+                std::fill(line->valid + offset, line->valid + offset + size, true);
+
+                // Statistics
                 ++m_numWHits;
             }
         }
@@ -375,10 +379,16 @@ Result Processor::DCache::Write(MemAddr address, void* data, MemSize size, LFID 
     // Store request for memory (pass-through)
     Request request;
     request.write     = true;
-    request.address   = address;
-    memcpy(request.data.data, data, size);
-    request.data.size = size;
-    request.tid       = tid;
+    request.address   = address - offset;
+    request.wid       = tid;
+
+    COMMIT{
+    std::copy((char*)data, ((char*)data)+size, request.data.data+offset);
+    std::fill(request.data.mask, request.data.mask+offset, false);
+    std::fill(request.data.mask+offset, request.data.mask+offset+size, true);
+    std::fill(request.data.mask+offset+size, request.data.mask+m_lineSize, false);
+    }
+
     if (!m_outgoing.Push(request))
     {
         ++m_numStallingWMisses;
@@ -391,10 +401,8 @@ Result Processor::DCache::Write(MemAddr address, void* data, MemSize size, LFID 
     return DELAYED;
 }
 
-bool Processor::DCache::OnMemoryReadCompleted(MemAddr addr, const MemData& data)
+bool Processor::DCache::OnMemoryReadCompleted(MemAddr addr, const char* data)
 {
-    assert(data.size == m_lineSize);
-    
     // Check if we have the line and if its loading.
     // This method gets called whenever a memory read completion is put on the
     // bus from memory, so we have to check if we actually need the data.
@@ -413,31 +421,27 @@ bool Processor::DCache::OnMemoryReadCompleted(MemAddr addr, const MemData& data)
                       This is kind of a hack; it's feasibility in hardware in a single cycle
                       is questionable.
             */
-            MemData mdata(data);
+            char mdata[m_lineSize];
+                
+            std::copy(data, data + m_lineSize, mdata);
 
             for (Buffer<Request>::const_iterator p = m_outgoing.begin(); p != m_outgoing.end(); ++p)
             {
-                unsigned int offset = p->address % m_lineSize;
-                if (p->write && p->address - offset == addr)
+                if (p->write && p->address == addr)
                 {
                     // This is a write to the same line, merge it
-                    std::copy(p->data.data, p->data.data + p->data.size, mdata.data + offset);
+                    line::blit(&mdata[0], p->data.data, p->data.mask, m_lineSize);
                 }
             }
 
             // Copy the data into the cache line.
             // Mask by valid bytes (don't overwrite already written data).
-            for (size_t i = 0; i < (size_t)m_lineSize; ++i)
-            {
-                if (!line->valid[i]) {
-                    line->data[i]  = mdata.data[i];
-                     line->valid[i] = true;
-                }
-            }
+            line::blitnot(line->data, mdata, line->valid, m_lineSize);
+            line::setifnot(line->valid, true, line->valid, m_lineSize);
             
             line->processing = true;
         }
-    
+
         // Push the cache-line to the back of the queue
         Response response;
         response.write = false;
@@ -451,14 +455,14 @@ bool Processor::DCache::OnMemoryReadCompleted(MemAddr addr, const MemData& data)
     return true;
 }
 
-bool Processor::DCache::OnMemoryWriteCompleted(TID tid)
+bool Processor::DCache::OnMemoryWriteCompleted(WClientID wid)
 {
     // Data has been written
-    if (tid != INVALID_TID) // otherwise for DCA
+    if (wid != INVALID_WCLIENTID) // otherwise for DCA
     {
         Response response;
         response.write = true;
-        response.tid   = tid;
+        response.wid  =  wid;
         if (!m_incoming.Push(response))
         {
             DeadlockWrite("Unable to push write completion to buffer");
@@ -468,9 +472,8 @@ bool Processor::DCache::OnMemoryWriteCompleted(TID tid)
     return true;
 }
 
-bool Processor::DCache::OnMemorySnooped(MemAddr address, const MemData& data)
+bool Processor::DCache::OnMemorySnooped(MemAddr address, const char* data, const bool* mask)
 {
-    size_t offset = (size_t)(address % m_lineSize);
     Line*  line;
 
     // FIXME: snoops should really either lock the line or access
@@ -492,14 +495,12 @@ bool Processor::DCache::OnMemorySnooped(MemAddr address, const MemData& data)
     {
         COMMIT
         {
-            // We do, update the data
-            memcpy(line->data + offset, data.data, (size_t)data.size);
-            
-            // Mark written bytes as valid
+            // We do, update the data and mark written bytes as valid
             // Note that we don't have to check against already written data or queued reads
             // because we don't have to guarantee sequential semantics from other cores.
             // This falls within the non-determinism behavior of the architecture.
-            std::fill(line->valid + offset, line->valid + offset + data.size, true);
+            line::blit(line->data, data, mask, m_lineSize);
+            line::setif(line->valid, true, mask, m_lineSize);
 
             // Statistics
             ++m_numSnoops;
@@ -677,13 +678,13 @@ Result Processor::DCache::DoIncomingResponses()
     const Response& response = m_incoming.Front();
     if (response.write)
     {
-        if (!m_allocator.DecreaseThreadDependency(response.tid, THREADDEP_OUTSTANDING_WRITES))
+        if (!m_allocator.DecreaseThreadDependency((TID)response.wid, THREADDEP_OUTSTANDING_WRITES))
         {
-            DeadlockWrite("Unable to decrease outstanding writes on T%u", (unsigned)response.tid);
+            DeadlockWrite("Unable to decrease outstanding writes on T%u", (unsigned)response.wid);
             return FAILED;
         }
 
-        DebugMemWrite("T%u completed store", (unsigned)response.tid);
+        DebugMemWrite("T%u completed store", (unsigned)response.wid);
 
     }
     else
@@ -702,25 +703,26 @@ Result Processor::DCache::DoOutgoingRequests()
 {
     assert(!m_outgoing.Empty());
     const Request& request = m_outgoing.Front();
+
     if (request.write)
     {
-        if (!m_memory.Write(m_mcid, request.address, request.data.data, request.data.size, request.tid))
+        if (!m_memory.Write(m_mcid, request.address, request.data, request.wid))
         {
-            DeadlockWrite("Unable to send write of %u bytes to 0x%016llx to memory", (unsigned)request.data.size, (unsigned long long)request.address);
+            DeadlockWrite("Unable to send write to 0x%016llx to memory", (unsigned long long)request.address);
             return FAILED;
         }
     }
     else
     {
-        if (!m_memory.Read(m_mcid, request.address, request.data.size))
+        if (!m_memory.Read(m_mcid, request.address))
         {
-            DeadlockWrite("Unable to send read of %u bytes to 0x%016llx to memory", (unsigned)request.data.size, (unsigned long long)request.address);
+            DeadlockWrite("Unable to send read to 0x%016llx to memory", (unsigned long long)request.address);
             return FAILED;
         }
     }
 
-    DebugMemWrite("T%d queued outgoing %s request for %.*llx",
-                  (request.write ? (int)request.tid : -1), (request.write ? "store" : "load"),
+    DebugMemWrite("F%d queued outgoing %s request for %.*llx",
+                  (request.write ? (int)request.wid : -1), (request.write ? "store" : "load"),
                   (int)(sizeof(MemAddr)*2), (unsigned long long)request.address);
 
     m_outgoing.Pop();
@@ -853,19 +855,21 @@ void Processor::DCache::Cmd_Read(std::ostream& out, const std::vector<std::strin
     else if (arguments[0] == "buffers")
     {
         out << endl << "Outgoing requests:" << endl << endl
-            << "      Address      | Size | Type  | Value (writes)" << endl
-            << "-------------------+------+-------+-------------------------" << endl;
+            << "      Address      | Type  | Value (writes)" << endl
+            << "-------------------+-------+-------------------------" << endl;
         for (Buffer<Request>::const_iterator p = m_outgoing.begin(); p != m_outgoing.end(); ++p)
         {
             out << hex << "0x" << setw(16) << setfill('0') << p->address << " | "
-                << dec << setw(4) << right << setfill(' ') << p->data.size << " | "
                 << (p->write ? "Write" : "Read ") << " |";
             if (p->write)
             {
                 out << hex << setfill('0');
-                for (size_t x = 0; x < p->data.size; ++x)
+                for (size_t x = 0; x < m_lineSize; ++x)
                 {
-                    out << " " << setw(2) << (unsigned)(unsigned char)p->data.data[x];
+                    if (p->data.mask[x])
+                        out << " " << setw(2) << (unsigned)(unsigned char)p->data.data[x];
+                    else
+                        out << " --";
                 }
             }
             out << dec << endl;

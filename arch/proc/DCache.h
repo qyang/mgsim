@@ -37,14 +37,14 @@ private:
         MemAddr address;
         bool    write;
         MemData data;
-        TID     tid;
+        WClientID wid;
     };
     
     struct Response
     {
         bool write;
         union {
-            TID tid;
+            WClientID wid;
             CID cid;
         };
     };
@@ -116,15 +116,15 @@ public:
     ArbitratedService<> p_service;
 
     // Public interface
-    Result Read (MemAddr address, void* data, MemSize size, LFID fid, RegAddr* reg);
+    Result Read (MemAddr address, void* data, MemSize size, RegAddr* reg);
     Result Write(MemAddr address, void* data, MemSize size, LFID fid, TID tid);
 
     size_t GetLineSize() const { return m_lineSize; }
 
     // Memory callbacks
-    bool OnMemoryReadCompleted(MemAddr addr, const MemData& data);
+    bool OnMemoryReadCompleted(MemAddr addr, const char* data);
     bool OnMemoryWriteCompleted(TID tid);
-    bool OnMemorySnooped(MemAddr addr, const MemData& data);
+    bool OnMemorySnooped(MemAddr addr, const char* data, const bool* mask);
     bool OnMemoryInvalidated(MemAddr addr);
 
     Object& GetMemoryPeer() { return m_parent; }

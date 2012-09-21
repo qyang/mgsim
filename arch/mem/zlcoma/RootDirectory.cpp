@@ -80,14 +80,9 @@ bool ZLCOMA::RootDirectory::OnReadCompleted()
         char data[m_lineSize];
         m_parent.Read(msg->address, data, m_lineSize);
 
-        for (size_t i = 0; i < m_lineSize; ++i)
-        {
-            if (!msg->bitmask[i])
-            {
-                msg->data[i] = data[i];
-                msg->bitmask[i] = true;
-            }
-        }
+        line::blitnot(msg->data, data, msg->bitmask, m_lineSize);
+        std::fill(msg->bitmask, msg->bitmask + m_lineSize, true);
+
         msg->dirty = false;
         
         m_active.pop();
@@ -386,7 +381,7 @@ Result ZLCOMA::RootDirectory::DoRequests()
             }
             
             COMMIT{
-                m_parent.Write(msg->address, msg->data, m_lineSize);
+                m_parent.Write(msg->address, msg->data, 0, m_lineSize);
                 
                 ++m_nwrites;
                 delete msg; 
@@ -455,7 +450,7 @@ ZLCOMA::RootDirectory::RootDirectory(const std::string& name, ZLCOMA& parent, Cl
     DirectoryBottom(name, parent, clock),
     m_selector (parent.GetBankSelector()),
     m_lineSize (config.getValue<size_t>("CacheLineSize")),
-    m_assoc_dir(config.getValue<size_t>(parent, "L2CacheAssociativity") * config.getValue<size_t>(parent, "NumL2CachesPerDirectory")),
+    m_assoc_dir(config.getValue<size_t>(parent, "L2CacheAssociativity") * config.getValue<size_t>(parent, "NumL2CachesPerRing")),
     m_sets     (m_selector.GetNumBanks()),
     m_id       (id),
     m_numRoots (numRoots),

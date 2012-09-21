@@ -103,7 +103,8 @@ COMA::Directory::Line* COMA::Directory::AllocateLine(MemAddr address)
 
 bool COMA::Directory::OnMessageReceivedBottom(Message* msg)
 {
-#if 0
+#if 1 /* set to 0 to attempt to flatten the COMA ring, ie remove the shortcut across (DEBUG FEATURE ONLY) -- also check below */
+
     // We need to grab p_line because it arbitrates access to the outgoing
     // buffer on the top ring as well.
     if (!p_lines.Invoke())
@@ -167,7 +168,7 @@ bool COMA::Directory::OnMessageReceivedBottom(Message* msg)
 
 bool COMA::Directory::OnMessageReceivedTop(Message* msg)
 {
-#if 0
+#if 1 /* set to 0 to attempt to flatten the COMA ring, ie remove the shortcut across (DEBUG FEATURE ONLY) -- also check above */
     if (!p_lines.Invoke())
     {
         DeadlockWrite("Unable to get access to lines");
@@ -269,10 +270,10 @@ COMA::Directory::Directory(const std::string& name, COMA& parent, Clock& clock, 
     m_selector  (parent.GetBankSelector()),
     p_lines     (*this, clock, "p_lines"),
     m_lineSize  (config.getValue<size_t>("CacheLineSize")),
-    m_assoc     (config.getValue<size_t>(parent, "L2CacheAssociativity") * config.getValue<size_t>(parent, "NumL2CachesPerDirectory")),
+    m_assoc     (config.getValue<size_t>(parent, "L2CacheAssociativity") * config.getValue<size_t>(parent, "NumL2CachesPerRing")),
     m_sets      (m_selector.GetNumBanks()),
     m_firstCache(firstCache),
-    m_lastCache (firstCache + config.getValue<size_t>(parent, "NumL2CachesPerDirectory") - 1),
+    m_lastCache (firstCache + config.getValue<size_t>(parent, "NumL2CachesPerRing") - 1),
     p_InBottom  (*this, "bottom-incoming", delegate::create<Directory, &Directory::DoInBottom >(*this)),
     p_InTop     (*this, "top-incoming",    delegate::create<Directory, &Directory::DoInTop    >(*this))
 {

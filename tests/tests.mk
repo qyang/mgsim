@@ -1,5 +1,6 @@
 LOG_COMPILER = \
-   MGSIM=$(top_builddir)/mgsim $(SHELL) $(srcdir)/runtest.sh \
+   $(SHELL) $(srcdir)/runtest.sh \
+	$(top_builddir)/mgsim \
 	$(top_srcdir)/tools/timeout \
 	$(top_srcdir)/programs/config.ini \
 	`test -f ../programs/nobounds.ini || echo '$(srcdir)/'`../programs/nobounds.ini
@@ -20,6 +21,8 @@ SUFFIXES = .c .s .bin .coma .zlcoma .serial .parallel .banked .randombanked .ddr
 	$(MKDIR_P) `dirname "$@"`
 	$(COMPILE) -o $@ `test -f "$<" || echo "$(srcdir)"/`$<
 
+.bin.flatcoma:
+	echo "$<" >"$@"
 .bin.coma:
 	echo "$<" >"$@"
 .bin.zlcoma:
@@ -48,7 +51,14 @@ TESTS = \
 	$(TEST_BINS:.bin=.ddr) \
 	$(TEST_BINS:.bin=.randomddr) \
 	$(TEST_BINS:.bin=.esa) \
+	$(TEST_BINS:.bin=.flatcoma) \
 	$(TEST_BINS:.bin=.coma) \
     $(TEST_BINS:.bin=.zlcoma)
+
+check_%: $(TEST_BINS)
+	$(MAKE) check TESTS="$(TEST_BINS:.bin=.$*)"
+
+recheck_%: $(TEST_BINS)
+	$(MAKE) recheck TESTS="$(TEST_BINS:.bin=.$*)"
 
 CLEANFILES = $(TESTS) *.out

@@ -25,7 +25,7 @@ public:
         bool         write;
         MemAddr      address;
         unsigned int client;
-        TID          tid;
+        WClientID    wid;
     };    
     enum LineState
     {
@@ -116,9 +116,10 @@ private:
     Line* FindLine(MemAddr address); 
     Line* AllocateLine(MemAddr address, bool empty_only, MemAddr *ptag = NULL);
     bool  EvictLine(Line* line, const Request& req);
-    bool OnReadCompleted(MemAddr addr, const MemData& data);
-    bool GetResponse(const Request& req);
-
+    bool  OnReadCompleted(MemAddr addr, const char * data);
+    bool  GetResponse(const Request& req);
+    
+    
     // Processes
     Result DoRequests();
     Result DoResponses();
@@ -130,12 +131,14 @@ private:
     
 public:
     
-     // IMemory
+    size_t GetLineSize() const { return m_lineSize; }
+    
+    // IMemory
     MCID RegisterClient(IMemoryCallback& callback, Process& process, StorageTraceSet& traces, Storage& storage, bool /*ignored*/);
     void RegisterProcess(Process& process);
     void UnregisterClient(MCID id);
-    bool Read (MCID id, MemAddr address, MemSize size);
-    bool Write(MCID id, MemAddr address, const void* data, MemSize size, TID tid);
+    bool Read (MCID id, MemAddr address);
+    bool Write(MCID id, MemAddr address, const MemData& data, WClientID wid);
 	bool CheckPermissions(MemAddr address, MemSize size, int access) const;
 
     // IMemoryAdmin
@@ -143,7 +146,7 @@ public:
     void Unreserve(MemAddr address, MemSize size);
     void UnreserveAll(ProcessID pid);
     void Read (MemAddr address, void* data, MemSize size);
-    void Write(MemAddr address, const void* data, MemSize size);
+    void Write(MemAddr address, const void* data, const bool* mask, MemSize size);
 
     void GetMemoryStatistics(uint64_t& nreads, uint64_t& nwrites, 
                              uint64_t& nread_bytes, uint64_t& nwrite_bytes,

@@ -13,6 +13,7 @@ class ESAMemory::Interface : public Object, public DDRChannel::ICallback
 {
    // ArbitratedService<CyclicArbitratedPort> p_service;
 
+    size_t              data_size;
     DDRChannel*         m_ddr;       //< DDR interface
     StorageTraceSet     m_ddrStorageTraces;
     Buffer<Request>     m_requests;  //< incoming from system, outgoing to memory
@@ -20,7 +21,7 @@ class ESAMemory::Interface : public Object, public DDRChannel::ICallback
     
     std::queue<Request> m_activeRequests; //< Requests currently active in DDR
 
-    // Processes
+        // Processes
     Process             p_Requests;
     Process             p_Responses;
 
@@ -45,7 +46,7 @@ public:
         Request& request = m_activeRequests.front();
 
         COMMIT {
-            m_memory.Read(request.address, request.data, request.size);
+            m_memory.Read(request.address, request.data, data_size);
         }
         
         DebugMemWrite("Complete Read for address %#016llx from external memory",(unsigned long long) request.address);
@@ -94,7 +95,7 @@ public:
         if (!req.write)
         {
             // It's a read
-            if (!m_ddr->Read(req.address, req.size))
+            if (!m_ddr->Read(req.address, data_size))
             {
                 DeadlockWrite("Unable to process read request in memory");
                 return FAILED;
@@ -107,13 +108,13 @@ public:
         }
         else
         {
-            if (!m_ddr->Write(req.address, req.size))
+            if (!m_ddr->Write(req.address, data_size))
             {
                 DeadlockWrite("Unable to process write request in memory");
                 return FAILED;
             }            
             COMMIT { 
-                m_memory.Write(req.address, req.data, req.size);
+                m_memory.Write(req.address, req.data, req.mask, data_size);
 
                 ++m_nwrites;
             }
@@ -150,7 +151,7 @@ public:
     {
         out << hex << setfill('0') << right
             << " 0x" << setw(16) << request.address << " | "
-            << setfill(' ') << setw(4) << dec << request.size << " | ";
+            << setfill(' ') << setw(4) << dec << sizeof(request.data) << " | ";
 
         if (request.write) {
             out << "Write";
@@ -162,7 +163,7 @@ public:
         if ( prefix == '<' || request.write)
         {
             out << hex << setfill('0');
-            for (size_t x = 0; x < request.size; ++x)
+            for (size_t x = 0; x < sizeof(request.data); ++x)
             {
                 out << " ";
                 out << setw(2) << (unsigned)(unsigned char)request.data[x];
@@ -219,11 +220,11 @@ public:
     
     Interface(const std::string& name, ESAMemory& parent, Clock& clock, size_t id, const DDRChannelRegistry& ddr, Config& config) :
           Simulator::Object(name, parent, clock),
-          //p_service  (*this, clock, "p_service"),
+          data_size  (parent.GetLineSize()),
           m_requests ("b_requests", *this, clock, config.getValue<size_t>(*this,  "ExternalOutputQueueSize")),
           m_responses("b_responses", *this, clock, config.getValue<size_t>(*this, "ExternalInputQueueSize")),
           p_Requests (*this, "requests",   delegate::create<Interface, &Interface::DoRequests>(*this)),
-          p_Responses(*this, "responses",  delegate::create<Interface, &Interface::DoResponses>(*this)),
+          p_Responses(*this, "responses",  delegate::create<Interface, &Interface::DoResponses>(*this)),          
           m_memory   (parent),
           m_parent   (parent),
           m_nreads(0),
@@ -284,22 +285,8 @@ void ESAMemory::UnregisterClient(MCID id)
 
 // Called from the processor on a memory read (typically a whole cache-line)
 // Just queues the request.
-bool ESAMemory::Read(MCID id, MemAddr address, MemSize size)
+bool ESAMemory::Read(MCID id, MemAddr address)
 {
-    if (size != m_lineSize)
-    {
-        throw InvalidArgumentException("Read size is not a single cache-line");
-    }
-
-    assert(size <= MAX_MEMORY_OPERATION_SIZE);
-    assert(address % m_lineSize == 0);
-    assert(size == m_lineSize);
-    
-    if (address % m_lineSize != 0)
-    {
-        throw InvalidArgumentException("Read address is not aligned to a cache-line");
-    }
-    
     // We need to arbitrate between the different processes on the cache,
     // and then between the different clients. There are 2 arbitrators for this.
     if (!p_bus.Invoke())
@@ -312,7 +299,7 @@ bool ESAMemory::Read(MCID id, MemAddr address, MemSize size)
     Request req;
     req.address = address;
     req.write   = false;
-    req.size    = size;
+    
     
     // Client should have been registered
     assert(m_clients[id] != NULL);
@@ -324,26 +311,16 @@ bool ESAMemory::Read(MCID id, MemAddr address, MemSize size)
         return false;
     }
     
-    COMMIT { ++m_nreads; m_nread_bytes += size; }
+    COMMIT { ++m_nreads; m_nread_bytes += m_lineSize; }
     
     return true;
 }
 
 // Called from the processor on a memory write (can be any size with write-through/around)
 // Just queues the request.
-bool ESAMemory::Write(MCID id, MemAddr address, const void* data, MemSize size, TID tid)
+bool ESAMemory::Write(MCID id, MemAddr address, const MemData& data, WClientID wid)
 {
-    if (size > m_lineSize || size > MAX_MEMORY_OPERATION_SIZE)
-    {
-        throw InvalidArgumentException("Write size is too big");
-    }
-
-    if (address / m_lineSize != (address + size - 1) / m_lineSize)
-    {
-        throw InvalidArgumentException("Write request straddles cache-line boundary");
-    }
-
-    // We need to arbitrate between the different processes on the cache,
+      // We need to arbitrate between the different processes on the cache,
     // and then between the different clients. There are 2 arbitrators for this.
     if (!p_bus.Invoke())
     {
@@ -355,10 +332,13 @@ bool ESAMemory::Write(MCID id, MemAddr address, const void* data, MemSize size, 
     Request req;
     req.address = address;
     req.write   = true;
-    req.size    = size;
     req.client  = id;
-    req.tid     = tid;
-    memcpy(req.data, data, (size_t)size);
+    req.wid     = wid;
+    COMMIT{
+        std::copy(data.data, data.data + m_lineSize, req.data);
+        std::copy(data.mask, data.mask + m_lineSize, req.mask);
+    }
+
     
     // Client should have been registered
     assert(m_clients[req.client] != NULL);
@@ -376,16 +356,16 @@ bool ESAMemory::Write(MCID id, MemAddr address, const void* data, MemSize size, 
         IMemoryCallback* client = m_clients[i];
         if (client != NULL && i != req.client)
         {
-            if (!client->OnMemorySnooped(req.address, req))
+            if (!client->OnMemorySnooped(req.address, req.data, req.mask))
             {
-                DeadlockWrite("Unable to snoop data to cache clients");
+                DeadlockWrite("Unable to snoop data to clients");
                 ++m_numStallingWSnoops;
                 return false;
             }
         }
     }
     
-    COMMIT { ++m_nwrites; m_nwrite_bytes += size; }
+    COMMIT { ++m_nwrites; m_nwrite_bytes += m_lineSize; }
     
     return true;
 }
@@ -468,8 +448,8 @@ bool ESAMemory::EvictLine(Line* line, const Request& req)
         
         Request request(req);
         request.write = true;
-        request.size  = m_lineSize;
-          
+        std::fill(request.mask, request.mask + m_lineSize, true);
+        
         if(!m_outgoing.Push(request))
         {
             DeadlockWrite("Unable to queue evictions to external memory");
@@ -498,7 +478,7 @@ bool ESAMemory::EvictLine(Line* line, const Request& req)
 }
 
     
-bool ESAMemory::OnReadCompleted(MemAddr addr, const MemData& data)
+bool ESAMemory::OnReadCompleted(MemAddr addr, const char * data)
 {
     // Send the completion on the bus
     if (!p_bus.Invoke())
@@ -531,8 +511,6 @@ Result ESAMemory::OnWriteRequest(const Request& req)
         return FAILED;
     }
     
-    // Note that writes may not be of entire cache-lines
-    unsigned int offset = req.address % m_lineSize;
     MemAddr tag;
     
     Line* line = FindLine(req.address);
@@ -586,8 +564,7 @@ Result ESAMemory::OnWriteRequest(const Request& req)
         // Send a request out for the cache-line
        
         Request request(req);
-        request.write = false;
-        request.size  = m_lineSize;
+        request.write = false;        
         
         if(!m_outgoing.Push(request))
         {
@@ -607,7 +584,7 @@ Result ESAMemory::OnWriteRequest(const Request& req)
     DebugMemWrite("Processing Bus Write Request to address %#016llx: Sending write completion to client %u",
                   (unsigned long long)req.address, (unsigned) req.client);
     
-    if (!m_clients[req.client]->OnMemoryWriteCompleted(req.tid))
+    if (!m_clients[req.client]->OnMemoryWriteCompleted(req.wid))
     {
         ++m_numStallingWCompletions;
         DeadlockWrite("Unable to process bus write completion for client %u", (unsigned)req.client);
@@ -620,10 +597,8 @@ Result ESAMemory::OnWriteRequest(const Request& req)
                   (unsigned long long)req.address,(unsigned long long)line->tag);
     COMMIT
     {
-        memcpy(line->data + offset, req.data, req.size);
-        
-        // Mark the written area valid
-        std::fill(line->valid + offset, line->valid + offset + req.size, true);
+        line::blit(line->data, req.data, req.mask, m_lineSize);
+        line::setif(line->valid, true, req.mask, m_lineSize);
         
         // The line is now dirty
         line->dirty = true;
@@ -720,10 +695,10 @@ Result ESAMemory::OnReadRequest(const Request& req)
 
         // Return the data
         MemData data;
-        data.size = req.size;
+        
         COMMIT
         {
-            memcpy(data.data, line->data, data.size);
+            memcpy(data.data, line->data, m_lineSize);
 
             // Update LRU information
             line->access = GetKernel()->GetCycleNo();
@@ -734,7 +709,7 @@ Result ESAMemory::OnReadRequest(const Request& req)
         DebugMemWrite("Processing Bus Read Request for address %#016llx: Sending read completion to client %u",
                       (unsigned long long)req.address, (unsigned) req.client);
         
-        if (!OnReadCompleted(req.address, data))
+        if (!OnReadCompleted(req.address, data.data))
         {
             ++m_numStallingRCompletions;
             DeadlockWrite("Unable to notify clients of read completion");
@@ -797,7 +772,7 @@ Result ESAMemory::DoResponses()
     COMMIT
     {
         // Store the data, masked by the already-valid bitmask
-        for (size_t i = 0; i < data.size; ++i)
+        for (size_t i = 0; i < m_lineSize; ++i)
         {
             if (!line->valid[i])
             {
@@ -828,16 +803,16 @@ Result ESAMemory::DoResponses()
     {
         for (Buffer<Request>::const_iterator p = m_requests.begin(); p != m_requests.end(); ++p)
         {
-            unsigned int offset = p->address % m_lineSize;
-            if (p->write && p->address - offset == request.address)
+           // unsigned int offset = p->address % m_lineSize;
+            if (p->write && p->address == request.address)
             {
                 // This is a write to the same line, merge it
-                std::copy(p->data, p->data + p->size, data.data + offset);
+                std::copy(p->data, p->data + m_lineSize, data.data);
             }
         }
     }
     
-    if (!OnReadCompleted(request.address, data))
+    if (!OnReadCompleted(request.address, data.data))
     {
         return FAILED;
     }
@@ -852,7 +827,7 @@ Result ESAMemory::DoOutgoing()
     assert(!m_outgoing.Empty());
     const Request& request = m_outgoing.Front();  
     
-    assert(request.size == m_lineSize);
+    
     
     // Send a request out
     size_t if_index;
@@ -910,12 +885,12 @@ void ESAMemory::UnreserveAll(ProcessID pid)
 
 void ESAMemory::Read(MemAddr address, void* data, MemSize size)
 {
-    return VirtualMemory::Read(address, data, size);
+    return VirtualMemory::Read(address, data,size);
 }
 
-void ESAMemory::Write(MemAddr address, const void* data, MemSize size)
+void ESAMemory::Write(MemAddr address, const void* data, const bool* mask, MemSize size)
 {
-    return VirtualMemory::Write(address, data, size);
+    return VirtualMemory::Write(address, data, mask, size);
 }
 
 bool ESAMemory::CheckPermissions(MemAddr address, MemSize size, int access) const
@@ -1204,7 +1179,7 @@ void ESAMemory::Cmd_Read(std::ostream& out, const std::vector<std::string>& argu
             for (Buffer<Request>::const_iterator p = m_requests.begin(); p != m_requests.end(); ++p)
             {
                 out << hex << "0x" << setw(16) << setfill('0') << p->address << " | "
-                    << dec << setw(4) << right << setfill(' ') << p->size << " | "
+                    << dec << setw(4) << right << setfill(' ') << m_lineSize << " | "
                     << (p->write ? "Write" : "Read ") << " | "
                     << endl;
             }
@@ -1382,7 +1357,7 @@ void ESAMemory::Cmd_Read(std::ostream& out, const std::vector<std::string>& argu
                 m_ifs[i]->Print(out);
             }
             else
-                out << "Interface "<< i <<" is busy now, no ready requests and responses"<<endl;
+                out << "Interface "<< i <<" has no ready requests and responses at the moment"<<endl;
         }
         
         return;

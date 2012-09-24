@@ -1188,6 +1188,33 @@ Result Processor::Allocator::DoFamilyAllocate()
         }
     }
     // Allocation succeeded
+    else if(req.bundle)
+    {
+        Family& family = m_familyTable[lfid];
+        
+        FID fid;
+        fid.pid        = m_parent.GetPID();
+        fid.lfid       = lfid;
+        fid.capability = family.capability;
+        
+        RemoteMessage msg;
+        msg.type                  = RemoteMessage::MSG_CREATE;
+        msg.create.fid            = fid;
+        msg.create.address        = req.pc;
+        msg.create.completion_reg = req.completion_reg;
+        msg.create.bundle         = true;
+        msg.create.parameter      = req.parameter;
+        msg.create.index          = req.index;
+        msg.create.completion_pid = req.completion_pid;
+        
+        
+        if (!m_network.SendMessage(msg))
+        {
+            DeadlockWrite("Unable to send remote bundle allocation");
+            return FAILED;
+        }
+        
+    }
     else if (req.type == ALLOCATE_SINGLE || (m_parent.GetPID() + 1) % req.placeSize == 0)
     {
         // We've grabbed the last context that we wanted in the place
@@ -1248,31 +1275,6 @@ Result Processor::Allocator::DoFamilyAllocate()
             }
         }
         
-        if (req.bundle)
-        {
-            FID fid;
-            fid.pid        = m_parent.GetPID();
-            fid.lfid       = lfid;
-            fid.capability = family.capability;
-            
-            RemoteMessage msg;
-            msg.type                  = RemoteMessage::MSG_CREATE;
-            msg.create.fid            = fid;
-            msg.create.address        = req.pc;
-            msg.create.completion_reg = req.completion_reg;
-            msg.create.bundle         = true;
-            msg.create.parameter      = req.parameter;
-            msg.create.index          = req.index;
-            msg.create.completion_pid = req.completion_pid;
-            
-            
-            if (!m_network.SendMessage(msg))
-            {
-                DeadlockWrite("Unable to send remote bundle allocation");
-                return FAILED;
-            }
-            
-        }
     }
     else
     {
@@ -1299,8 +1301,7 @@ Result Processor::Allocator::DoFamilyAllocate()
         //              (unsigned)req.placeSize, msg.allocate.exact ? "yes" : "no",
         //              (unsigned)req.completion_pid, (unsigned)req.completion_reg,
         //              (unsigned)lfid);
-    }
-    
+    }    
     UpdateStats();
     buffer->Pop();
     return SUCCESS;

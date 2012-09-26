@@ -50,12 +50,12 @@ private:
     DDRChannelRegistry           m_ddr;
     IBankSelector*               ddr_selector;         ///< Mapping of requests to ddr-channels
     IBankSelector*               cache_selector;       ///< Mapping of requests to ddr-channels
-
+    StorageTraceSet               m_storages;
+    
     size_t                        m_lineSize;
     size_t                        m_assoc;
     size_t                        m_sets;
     std::vector<IMemoryCallback*> m_clients;    
-    StorageTraceSet               m_storages;
     ArbitratedService<>           p_lines;
     std::vector<Line>             m_lines;
     std::vector<char>             m_data;
@@ -115,7 +115,7 @@ private:
     
     Line* FindLine(MemAddr address); 
     Line* AllocateLine(MemAddr address, bool empty_only, MemAddr *ptag = NULL);
-    bool  EvictLine(Line* line, const Request& req);
+    bool  EvictLine(Line* line);
     bool  OnReadCompleted(MemAddr addr, const char * data);
     bool  GetResponse(const Request& req);
     

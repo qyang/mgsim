@@ -177,7 +177,7 @@ public:
     void RegisterClient(StorageTraceSet& traces, const StorageTraceSet& storages)
     {
         //p_service.AddProcess(process);      
-        p_Requests.SetStorageTraces(m_ddrStorageTraces * storages);
+        p_Requests.SetStorageTraces(m_ddrStorageTraces * opt(storages));
         p_Responses.SetStorageTraces(storages);
         traces ^= m_requests;
     }
@@ -262,8 +262,10 @@ MCID ESAMemory::RegisterClient(IMemoryCallback& callback, Process& process, Stor
     p_bus.AddCyclicProcess(process);
     traces = m_requests;    
 
-    p_Requests.SetStorageTraces(opt(storage) ^ m_outgoing);
-    p_Responses.SetStorageTraces(storage);
+    m_storages *= opt(storage);
+    
+    p_Requests.SetStorageTraces(m_storages ^ m_outgoing);
+    p_Responses.SetStorageTraces(m_storages);
 
    // m_registry.registerBidiRelation(callback.GetMemoryPeer(), this, "ESAMemory");
     
@@ -433,7 +435,7 @@ ESAMemory::Line* ESAMemory::AllocateLine(MemAddr address, bool empty_only, MemAd
     return (empty != NULL) ? empty : replace;
 }
 
-bool ESAMemory::EvictLine(Line* line, const Request& req)
+bool ESAMemory::EvictLine(Line* line)
 {
     // We never evict loading or updating lines
     assert(line->state != LINE_LOADING);
@@ -443,12 +445,13 @@ bool ESAMemory::EvictLine(Line* line, const Request& req)
         size_t setindex = (line - &m_lines[0]) / m_assoc;
         MemAddr address = cache_selector->Unmap(line->tag, setindex) * m_lineSize;
     
-        DebugMemWrite("Cache line eviction due to miss for address %#016llx", (unsigned long long)req.address);
+        DebugMemWrite("Cache line eviction with address %#016llx due to mapping conflicts",(unsigned long long)address);
     
-        
-        Request request(req);
+        Request request;
         request.write = true;
+        request.address = address;
         std::fill(request.mask, request.mask + m_lineSize, true);
+        std::copy(line->data, line->data + m_lineSize, request.data);
         
         if(!m_outgoing.Push(request))
         {
@@ -531,7 +534,7 @@ Result ESAMemory::OnWriteRequest(const Request& req)
             DebugMemWrite("Processing Bus Write Request to address %#016llx:: Conflict; Evicting line with tag %#016llx",
                         (unsigned long long)req.address,(unsigned long long)line->tag);
 
-            if (!EvictLine(line, req))
+            if (!EvictLine(line))
             {
                 ++m_numStallingWEvictions;
                 DeadlockWrite("Unable to evict line for bus write request");
@@ -563,8 +566,9 @@ Result ESAMemory::OnWriteRequest(const Request& req)
         
         // Send a request out for the cache-line
        
-        Request request(req);
-        request.write = false;        
+        Request request;
+        request.write = false;
+        request.address = req.address;
         
         if(!m_outgoing.Push(request))
         {
@@ -645,7 +649,7 @@ Result ESAMemory::OnReadRequest(const Request& req)
             DebugMemWrite("Processing Bus Read Request for address %#016llx: Conflict; Evicting line with tag %#016llx",
                        (unsigned long long)req.address,(unsigned long long)line->tag);
             
-            if (!EvictLine(line, req))
+            if (!EvictLine(line))
             {
                 ++m_numStallingREvictions;
                 DeadlockWrite("Unable to evict line for bus read request");
@@ -834,8 +838,8 @@ Result ESAMemory::DoOutgoing()
     MemAddr unused;
     ddr_selector->Map(request.address / m_lineSize, unused, if_index);
     
-    DebugMemWrite("Send outgoing request for address %#016llx to DDR-channel %u",
-                  (unsigned long long)request.address, (unsigned int)if_index); 
+    DebugMemWrite("Send outgoing %s request for address %#016llx to DDR-channel %u",
+                 (request.write ? "write" : "read"),(unsigned long long)request.address, (unsigned int)if_index); 
     
     if (!m_ifs[if_index]->AddIncomingRequest(request))
     {
@@ -1132,7 +1136,7 @@ void ESAMemory::Cmd_Read(std::ostream& out, const std::vector<std::string>& argu
                     out << " | "
                         << hex << "0x" << setw(16) << setfill('0') << lineaddr
                         << " | "
-                        << ((line.state == LINE_LOADING) ? " L " : "  ")
+                        << ((line.state == LINE_LOADING) ? " L " : "   ")
                         << (line.dirty ? "D " : "  ")
                         << " |";
                     
@@ -1251,10 +1255,10 @@ void ESAMemory::Cmd_Read(std::ostream& out, const std::vector<std::string>& argu
                     << "                      Summary                              " << endl
                     << "***********************************************************" << endl
                     << endl
-                    << "Number of read requests from clients:   "     << m_numRAccesses << endl
-                    << "Number of write requests from clients:  "     << m_numWAccesses << endl
-                    << "Number of requests issued to DDR:     "       << numDDRRequests  << endl
-                    << "Stall cycles while notifying clients:   "     << numStalls_client << endl
+                    << "Number of read requests from clients:       "     << m_numRAccesses << endl
+                    << "Number of write requests from clients:      "     << m_numWAccesses << endl
+                    << "Number of requests issued to DDR:           "     << numDDRRequests  << endl
+                    << "Stall cycles while notifying clients:       "     << numStalls_client << endl
                     << "Stall cycles while sending requests to DDR: " << numStalls_ddr << endl 
                     << endl;
             
@@ -1264,12 +1268,12 @@ void ESAMemory::Cmd_Read(std::ostream& out, const std::vector<std::string>& argu
                     << "***********************************************************" << endl 
                     << endl
                     << "Number of reads from clients:         " << m_numRAccesses << endl
-                    << "Read hits:                               " << PRINTVAL(numRHits, r_factor) << endl
-                    << "Read misses:                             " << PRINTVAL(numRMisses, r_factor) << endl
+                    << "Read hits:                            " << PRINTVAL(numRHits, r_factor) << endl
+                    << "Read misses:                          " << PRINTVAL(numRMisses, r_factor) << endl
                     << "   Breakdown of read misses:" << endl             
-                    << "      - evictions:             " << PRINTVAL(m_numREvictions, r_factor) << endl
-                    << "      - empty misses:          " << PRINTVAL((m_numRLoads - m_numREvictions), r_factor) << endl
-                    << "      - loading misses:        " << PRINTVAL(m_numLoadingRMisses, r_factor) << endl
+                    << "      - evictions:                    " << PRINTVAL(m_numREvictions, r_factor) << endl
+                    << "      - empty misses:                 " << PRINTVAL((m_numRLoads - m_numREvictions), r_factor) << endl
+                    << "      - loading misses:               " << PRINTVAL(m_numLoadingRMisses, r_factor) << endl
                     << "(percentages relative to " << m_numRAccesses << " read requests)" << endl
                     << endl;
             
@@ -1282,9 +1286,9 @@ void ESAMemory::Cmd_Read(std::ostream& out, const std::vector<std::string>& argu
                     << "Write hits:                                " << PRINTVAL(numWHits, w_factor) << endl 
                     << "Write misses:                              " << PRINTVAL(numWMisses, w_factor) << endl
                     << "   Breakdown of write misses:" << endl                 
-                    << "      - evictions:                 " << PRINTVAL(m_numWEvictions, w_factor) << endl
-                    << "      - empty misses:              " << PRINTVAL((m_numWLoads - m_numWEvictions), w_factor) << endl
-                    << "      - loading misses:            " << PRINTVAL((m_numWAccesses - m_numWLoads - m_numWHits), w_factor) << endl
+                    << "      - evictions:                         " << PRINTVAL(m_numWEvictions, w_factor) << endl
+                    << "      - empty misses:                      " << PRINTVAL((m_numWLoads - m_numWEvictions), w_factor) << endl
+                    << "      - loading misses:                    " << PRINTVAL((m_numWAccesses - m_numWLoads - m_numWHits), w_factor) << endl
                     << "(percentages relative to " << m_numWAccesses << " write requests)" << endl
                     << endl;
     
@@ -1312,15 +1316,15 @@ void ESAMemory::Cmd_Read(std::ostream& out, const std::vector<std::string>& argu
                         << "       Stalls while sending requests to DDR-channel .        " << endl
                         << "***********************************************************" << endl
                         << endl
-                        << "Stall cycles while sendign reqests to dd-channel:  " << numStalls_ddr << endl
-                        << "Stalls while sending read requests:             " << PRINTVAL(numRStalls_ddr, s_factor) << endl
+                        << "Stall cycles while sending reqests to ddr-channel:  " << numStalls_ddr << endl
+                        << "Stalls while sending read requests:                 " << PRINTVAL(numRStalls_ddr, s_factor) << endl
                         << "   Breakdown of read stalls:" << endl
-                        << "      - stalled evictions during reads:                  " << PRINTVAL(m_numStallingREvictions, s_factor) << endl
-                        << "      - stalled loads during reads:                      " << PRINTVAL(m_numStallingRLoads, s_factor) << endl
-                        << "Stalls while sending write requests:            " << PRINTVAL(numWStalls_ddr, s_factor) << endl                    
+                        << "      - stalled evictions during reads:             " << PRINTVAL(m_numStallingREvictions, s_factor) << endl
+                        << "      - stalled loads during reads:                 " << PRINTVAL(m_numStallingRLoads, s_factor) << endl
+                        << "Stalls while sending write requests:                " << PRINTVAL(numWStalls_ddr, s_factor) << endl                    
                         << "   Breakdown of write stalls:" << endl
-                        << "      - stalled evictions during writes:                 " << PRINTVAL(m_numStallingWEvictions, s_factor) << endl
-                        << "      - stalled loads during writes:                     " << PRINTVAL(m_numStallingWLoads, s_factor) << endl
+                        << "      - stalled evictions during writes:            " << PRINTVAL(m_numStallingWEvictions, s_factor) << endl
+                        << "      - stalled loads during writes:                " << PRINTVAL(m_numStallingWLoads, s_factor) << endl
                         << "(stall percentages relative to " << numStalls_ddr << " cycles)" << endl
                         << endl; 
                 }

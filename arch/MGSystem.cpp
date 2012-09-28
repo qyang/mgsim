@@ -1,26 +1,23 @@
 #include "MGSystem.h"
 
-#include "mem/SerialMemory.h"
-#include "mem/ParallelMemory.h"
-#include "mem/BankedMemory.h"
-#include "mem/DDRMemory.h"
-#include "mem/ESAMemory.h"
-#include "mem/coma/COMA.h"
-#include "mem/zlcoma/COMA.h"
+#include <arch/mem/SerialMemory.h>
+#include <arch/mem/ParallelMemory.h>
+#include <arch/mem/BankedMemory.h>
+#include <arch/mem/DDRMemory.h>
+#include <arch/mem/coma/COMA.h>
+#include <arch/mem/zlcoma/COMA.h>
 
-#include "arch/dev/NullIO.h"
-#include "arch/dev/LCD.h"
-#include "arch/dev/RTC.h"
-#include "arch/dev/Display.h"
-#include "arch/dev/ActiveROM.h"
-#include "arch/dev/Selector.h"
-#include "arch/dev/SMC.h"
-#include "arch/dev/UART.h"
-#include "arch/dev/RPC.h"
+#include <arch/dev/NullIO.h>
+#include <arch/dev/LCD.h>
+#include <arch/dev/RTC.h>
+#include <arch/dev/Display.h>
+#include <arch/dev/ActiveROM.h>
+#include <arch/dev/Selector.h>
+#include <arch/dev/SMC.h>
+#include <arch/dev/UART.h>
+#include <arch/dev/RPC.h>
+#include <arch/dev/RPC_unix.h>
 
-// maybe replace the following if the host-guest syscall API ever
-// changes.
-#include "arch/dev/RPC_unix.h"
 
 #include <cstdlib>
 #include <iomanip>
@@ -213,6 +210,16 @@ static void PrintComponents(ostream& out, const Object* cur, const string& inden
 void MGSystem::PrintComponents(ostream& out, const string& pat, size_t levels) const
 {
     ::PrintComponents(out, &m_root, "", pat, levels, 0, false);
+}
+
+static size_t CountComponents(const Object& obj)
+{
+    size_t c = 1;
+    for (size_t i = 0; i < obj.GetNumChildren(); ++i)
+    {
+        c += CountComponents(*obj.GetChild(i));
+    }
+    return c;
 }
 
 void MGSystem::PrintCoreStats(ostream& os) const {
@@ -959,7 +966,11 @@ MGSystem::MGSystem(Config& config,
         {
             masterfreq /= 1000;
         }
-        clog << "Created Microgrid; simulation running at " << dec << masterfreq << " " << qual[q] << "Hz" << endl;
+        clog << "Created Microgrid: "
+             << dec
+             << CountComponents(m_root) << " components, "
+             << Process::GetAllProcesses().size() << " processes, "
+             << "simulation running at " << dec << masterfreq << " " << qual[q] << "Hz" << endl;
     }
 }
 

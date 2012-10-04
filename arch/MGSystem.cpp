@@ -4,6 +4,7 @@
 #include <arch/mem/ParallelMemory.h>
 #include <arch/mem/BankedMemory.h>
 #include <arch/mem/DDRMemory.h>
+#include <arch/mem/ESAMemory.h>
 #include <arch/mem/coma/COMA.h>
 #include <arch/mem/zlcoma/COMA.h>
 

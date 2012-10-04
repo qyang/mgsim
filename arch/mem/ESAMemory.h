@@ -1,11 +1,11 @@
 #ifndef ESAMEMORY_H
 #define ESAMEMORY_H
 
-#include "arch/BankSelector.h"
-#include "mem/DDR.h"
-#include "arch/Memory.h"
-#include "arch/VirtualMemory.h"
-#include "sim/inspect.h"
+#include <arch/BankSelector.h>
+#include <arch/mem/DDR.h>
+#include <arch/Memory.h>
+#include <arch/VirtualMemory.h>
+#include <sim/inspect.h>
 #include <queue>
 #include <set>
 

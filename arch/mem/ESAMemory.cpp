@@ -642,7 +642,6 @@ Result ESAMemory::OnReadRequest(const Request& req)
             DeadlockWrite("Unable to allocate line for bus read request");
             return FAILED;
         }
-
         if (line->state != LINE_EMPTY)
         {
             // We're overwriting another line, evict the old line
@@ -811,7 +810,7 @@ Result ESAMemory::DoResponses()
             if (p->write && p->address == request.address)
             {
                 // This is a write to the same line, merge it
-                std::copy(p->data, p->data + m_lineSize, data.data);
+                line::blit(data.data, p->data, p->mask, m_lineSize);
             }
         }
     }
@@ -1115,8 +1114,8 @@ void ESAMemory::Cmd_Read(std::ostream& out, const std::vector<std::string>& argu
                 seladdr = (seladdr / m_lineSize) * m_lineSize;
             }
             
-            out << "Set |       Address      |  L D  |                       Data" << endl;
-            out << "----+--------------------+-------+--------------------------------------------------" << endl;
+            out << "  Set  |       Address      |  L D  |                       Data" << endl;
+            out << "-------+--------------------+-------+--------------------------------------------------" << endl;
             for (size_t i = 0; i < m_lines.size(); ++i)
             {
                 const size_t set = i / m_assoc;
@@ -1125,7 +1124,14 @@ void ESAMemory::Cmd_Read(std::ostream& out, const std::vector<std::string>& argu
                 if (specific && lineaddr != seladdr)
                     continue;
                 
-                out << setw(3) << setfill(' ') << dec << right << set;
+                if (i % m_assoc == 0)
+                {
+                    out << setw(6) << setfill(' ') << dec << right << set;
+                } 
+                else 
+                {
+                    out << "      ";
+                }
                 
                 if (line.state == LINE_EMPTY) 
                 {
@@ -1166,60 +1172,78 @@ void ESAMemory::Cmd_Read(std::ostream& out, const std::vector<std::string>& argu
                         if (y + bytes_per_line < m_lineSize)
                         {
                             // This was not yet the last line
-                            out << endl << "    |                    |       |";
+                            out << endl << "       |                    |       |";
                         }
                     }
                 }
                 out << endl;
+                if((i + 1) % m_assoc == 0)
+                {
+                    out << "-------+--------------------+-------+--------------------------------------------------" << endl ;
+                }
             }
             
             return;            
         }
         else if (arguments[1] == "buffers")
         {
+            static const int BYTES_PER_LINE = 16;
             out << "Bus requests:" << endl << endl
-                << "      Address      | Size | Type  |" << endl
-                << "-------------------+------+-------+" << endl;
+                << "      Address      | Size | Type  |     Value (writes)" << endl
+                << "-------------------+------+-------+-------------------------" << endl;
             for (Buffer<Request>::const_iterator p = m_requests.begin(); p != m_requests.end(); ++p)
             {
                 out << hex << "0x" << setw(16) << setfill('0') << p->address << " | "
                     << dec << setw(4) << right << setfill(' ') << m_lineSize << " | "
-                    << (p->write ? "Write" : "Read ") << " | "
-                    << endl;
+                    << (p->write ? "Write" : "Read ") << " | ";
+                if (p->write)
+                {
+                    for (size_t y = 0; y < m_lineSize; y += BYTES_PER_LINE)
+                    {
+                        for (size_t x = y; x < y + BYTES_PER_LINE; ++x) 
+                        {
+                            if (p->mask[x])
+                            {
+                                out << " " << hex << setw(2) << (unsigned)(unsigned char)p->data[x];
+                            }
+                            else 
+                            {
+                                out << " " << setw(2);
+                            }
+                        }
+                        if (y + BYTES_PER_LINE < m_lineSize) 
+                        {
+                           // This was not yet the last line
+                           out << endl << "                   |       |";
+                        }
+                    }               
+                }
+                out << endl << "-------------------+------+-------+-------------------------" << endl;
             }
             
             out << endl << "Memory responses:" << endl << endl
                 << "      Address      |                       Data" << endl
                 << "-------------------+--------------------------------------------------" << endl;
-            enum { fmt_bytes, fmt_words, fmt_chars } fmt = fmt_words;
-            size_t bytes_per_line = m_lineSize;
-            
             for (Buffer<Request>::const_iterator p = m_responses.begin(); p != m_responses.end(); ++p)
             {
-                out << hex << "0x" << setw(16) << setfill('0') << p->address << " | "
-                    << dec << setw(4) << right << setfill(' ') ;
-                out << hex << setfill('0');
-                for (size_t y = 0; y < m_lineSize; y += bytes_per_line)
+                out << hex << "0x" << setw(16) << setfill('0') << p->address << " |";
+                out << hex;
+                for (size_t y = 0; y < m_lineSize; y += BYTES_PER_LINE)
                 {
-                    for (size_t x = y; x < y + bytes_per_line; ++x) 
+                    for (size_t x = y; x < y + BYTES_PER_LINE; ++x) 
                     {
-                        if ((fmt == fmt_bytes) || ((fmt == fmt_words) && (x % sizeof(Integer) == 0))) 
-                        {    out << " ";
-                            char byte = p->data[x];
-                            if (fmt == fmt_chars)
-                                out << (isprint(byte) ? byte : '.');
-                            else
-                                out << setw(2) << (unsigned)(unsigned char)byte;
-                        } else {
-                            out << ((fmt == fmt_chars) ? " " : "  ");
-                        }
-                    }                    
-                    if (y + bytes_per_line < m_lineSize)
-                    {
+                        out << " ";
+                        out << setw(2) << (unsigned)(unsigned char)p->data[x];
+                         
+                    } 
+                    if (y + BYTES_PER_LINE < m_lineSize) {
                         // This was not yet the last line
-                        out << endl << "                  |                                                 ";
-                    }
+                        out << endl << "                   |";
+                    }                  
                 }
+                
+                out << endl << "-------------------+--------------------------------------------------";
+                
             }
             return;
             

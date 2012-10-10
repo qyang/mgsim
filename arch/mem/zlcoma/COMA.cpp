@@ -1,8 +1,9 @@
 #include "Cache.h"
 #include "RootDirectory.h"
-#include "sim/config.h"
-#include "sim/sampling.h"
-#include "sim/log2.h"
+#include <sim/config.h>
+#include <sim/sampling.h>
+#include <sim/log2.h>
+
 #include <cassert>
 #include <cstring>
 using namespace std;
@@ -88,36 +89,6 @@ bool ZLCOMA::Write(MCID id, MemAddr address, const MemData& data, WClientID wid)
     }
     // Forward the write to the cache associated with the callback
     return m_clientMap[id].first->Write(m_clientMap[id].second, address, data, wid);
-}
-
-void ZLCOMA::Reserve(MemAddr address, MemSize size, ProcessID pid, int perm)
-{
-    return VirtualMemory::Reserve(address, size, pid, perm);
-}
-
-void ZLCOMA::Unreserve(MemAddr address, MemSize size)
-{
-    return VirtualMemory::Unreserve(address, size);
-}
-
-void ZLCOMA::UnreserveAll(ProcessID pid)
-{
-    return VirtualMemory::UnreserveAll(pid);
-}
-
-void ZLCOMA::Read(MemAddr address, void* data, MemSize size)
-{
-    return VirtualMemory::Read(address, data, size);
-}
-
-void ZLCOMA::Write(MemAddr address, const void* data, const bool* mask, MemSize size)
-{
-    return VirtualMemory::Write(address, data, mask, size);
-}
-
-bool ZLCOMA::CheckPermissions(MemAddr address, MemSize size, int access) const
-{
-	return VirtualMemory::CheckPermissions(address, size, access);
 }
 
 ZLCOMA::ZLCOMA(const std::string& name, Simulator::Object& parent, Clock& clock, Config& config) :

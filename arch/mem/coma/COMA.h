@@ -1,11 +1,12 @@
 #ifndef COMA_COMA_H
 #define COMA_COMA_H
 
-#include "arch/Memory.h"
-#include "arch/VirtualMemory.h"
-#include "arch/BankSelector.h"
-#include "sim/inspect.h"
-#include "mem/DDR.h"
+#include <arch/Memory.h>
+#include <arch/VirtualMemory.h>
+#include <arch/BankSelector.h>
+#include <sim/inspect.h>
+#include <arch/mem/DDR.h>
+
 #include <queue>
 #include <set>
 
@@ -15,7 +16,7 @@ class ComponentModelRegistry;
 namespace Simulator
 {
 
-class COMA : public Object, public IMemoryAdmin, public VirtualMemory, public Inspect::Interface<Inspect::Line|Inspect::Trace>
+class COMA : public Object, public VirtualMemory, public Inspect::Interface<Inspect::Line|Inspect::Trace>
 {
 public:
     class Node;
@@ -89,7 +90,6 @@ public:
     void UnregisterClient(MCID id);
     bool Read (MCID id, MemAddr address);
     bool Write(MCID id, MemAddr address, const MemData& data, WClientID wid);
-    bool CheckPermissions(MemAddr address, MemSize size, int access) const;
 
     void GetMemoryStatistics(uint64_t& nreads, uint64_t& nwrites, 
                              uint64_t& nread_bytes, uint64_t& nwrite_bytes,
@@ -98,14 +98,6 @@ public:
     void Cmd_Info (std::ostream& out, const std::vector<std::string>& arguments) const;
     void Cmd_Line (std::ostream& out, const std::vector<std::string>& arguments) const;
     void Cmd_Trace(std::ostream& out, const std::vector<std::string>& arguments);
-
-    // IMemoryAdmin
-    void Reserve(MemAddr address, MemSize size, ProcessID pid, int perm);
-    void Unreserve(MemAddr address, MemSize size);
-    void UnreserveAll(ProcessID pid);
-
-    void Read (MemAddr address, void* data, MemSize size);
-    void Write(MemAddr address, const void* data, const bool* mask, MemSize size);
 };
 
 class OneLevelCOMA : public COMA

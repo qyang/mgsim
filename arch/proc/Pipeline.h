@@ -9,8 +9,6 @@ class Pipeline : public Object, public Inspect::Interface<Inspect::Read>
 {
     friend class Processor;
     
-#include "ISA.h"
-
     /// A (possibly multi-) register value in the pipeline
     struct PipeValue
     {
@@ -31,6 +29,14 @@ class Pipeline : public Object, public Inspect::Interface<Inspect::Read>
         std::string str(RegType type) const;
     };
 
+#if defined(TARGET_MTALPHA)
+#include "ISA.mtalpha.h"
+#elif defined(TARGET_MTSPARC)
+#include "ISA.mtsparc.h"
+#elif defined(TARGET_MIPS32) || defined(TARGET_MIPS32EL)
+#include "ISA.mips.h"
+#endif
+
     static inline PipeValue MAKE_EMPTY_PIPEVALUE(unsigned int size)
     {
         PipeValue value;
@@ -50,42 +56,6 @@ class Pipeline : public Object, public Inspect::Interface<Inspect::Read>
         value.m_memory.size  = 0;
         return value;
     }
-
-#if defined(TARGET_MTALPHA)
-    struct ArchDecodeReadLatch
-    {
-        InstrFormat format;
-        uint8_t     opcode;
-        uint16_t    function;
-        int32_t     displacement;
-
-    ArchDecodeReadLatch() : format(IFORMAT_INVALID), opcode(0), function(0), displacement(0) {}
-    };
-
-    struct ArchReadExecuteLatch : public ArchDecodeReadLatch
-    {
-    };
-#elif defined(TARGET_MTSPARC)
-    struct ArchDecodeReadLatch
-    {
-        uint8_t  op1, op2, op3;
-        uint16_t function;
-        uint8_t  asi;
-        int32_t  displacement;
-        
-        // Memory store data source
-        RegAddr      Rs;
-        bool         RsIsLocal;
-        unsigned int RsSize;
-
-    ArchDecodeReadLatch() : op1(0), op2(0), op3(0), function(0), asi(0), displacement(0), RsSize(0) {}
-    };
-
-    struct ArchReadExecuteLatch : public ArchDecodeReadLatch
-    {
-        PipeValue Rsv;
-    };
-#endif
 
     /// Return code from the various pipeline stages, indicates the action for the pipeline.
     enum PipeAction
@@ -176,7 +146,9 @@ class Pipeline : public Object, public Inspect::Interface<Inspect::Read>
         
         PSize           placeSize;
 
-    DecodeReadLatch() : literal(0), regofs(0), RaSize(0), RbSize(0), RcSize(0), RaNotPending(false), placeSize(0) {}
+        bool            legacy;
+
+    DecodeReadLatch() : literal(0), regofs(0), RaSize(0), RbSize(0), RcSize(0), RaNotPending(false), placeSize(0), legacy(false) {}
     };
 
     struct ReadExecuteLatch : public Latch, public ArchReadExecuteLatch
@@ -191,11 +163,13 @@ class Pipeline : public Object, public Inspect::Interface<Inspect::Read>
         unsigned char   regofs;
         
         PSize           placeSize;
-        
+   
+        bool            legacy;
+
         // For debugging only
         RegAddr         Ra, Rb;
 
-    ReadExecuteLatch() : RcSize(0), regofs(0), placeSize(0) {}
+    ReadExecuteLatch() : RcSize(0), regofs(0), placeSize(0), legacy(false) {}
     };
 
     struct ExecuteMemoryLatch : public Latch

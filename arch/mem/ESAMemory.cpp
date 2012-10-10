@@ -872,37 +872,6 @@ bool ESAMemory::GetResponse(const Request& req)
 
 }
 
-void ESAMemory::Reserve(MemAddr address, MemSize size, ProcessID pid, int perm)
-{
-    return VirtualMemory::Reserve(address, size, pid, perm);
-}
-
-void ESAMemory::Unreserve(MemAddr address, MemSize size)
-{
-    return VirtualMemory::Unreserve(address, size);
-}
-
-void ESAMemory::UnreserveAll(ProcessID pid)
-{
-    return VirtualMemory::UnreserveAll(pid);
-}
-
-void ESAMemory::Read(MemAddr address, void* data, MemSize size)
-{
-    return VirtualMemory::Read(address, data,size);
-}
-
-void ESAMemory::Write(MemAddr address, const void* data, const bool* mask, MemSize size)
-{
-    return VirtualMemory::Write(address, data, mask, size);
-}
-
-bool ESAMemory::CheckPermissions(MemAddr address, MemSize size, int access) const
-{
-    return VirtualMemory::CheckPermissions(address, size, access);
-}
-
-
 ESAMemory::ESAMemory(const std::string& name, Simulator::Object& parent, Clock& clock, Config& config): 
     Simulator::Object(name, parent, clock),
     m_registry       (config),

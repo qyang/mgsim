@@ -20,10 +20,17 @@ AM_SILENT_RULES([yes])
 
 ## extra programs
 
-AC_CHECK_PROGS([HELP2MAN], [help2man], [$am_aux_dir/missing help2man])
-AC_CHECK_PROGS([SVN], [svn])
 AC_PROG_SED
 AM_PATH_PYTHON([2.6], [], [AC_MSG_WARN([The 'readtrace' utility requires Python >= 2.6.])])
+
+m4_define([MY_OPT_PROG],
+[AC_ARG_VAR(m4_toupper([$1]), [$2])
+AC_CHECK_PROGS(m4_toupper([$1]), [m4_default([$3], [$1])],
+               [$am_aux_dir/missing $1])
+])
+
+MY_OPT_PROG([help2man], [--help output to manpage converter], [help2man])
+MY_OPT_PROG([rst2man], [reStructuredText to manpage converter], [rst2man rst2man.py])
 
 ## language / library tests
 
@@ -38,6 +45,9 @@ AC_SUBST([WARN_CXXFLAGS])
 
 # enable extensions for the non-standard tests below
 AC_USE_SYSTEM_EXTENSIONS
+
+# check support for abi::__cxa_demangle
+AX_CXX_GCC_ABI_DEMANGLE
 
 AC_MSG_CHECKING([for the number of bits in a char])
 AC_COMPUTE_INT([char_size], [CHAR_BIT], [#include <limits.h>], [char_size=unknown])
@@ -88,6 +98,12 @@ AC_MSG_RESULT([$have_dev_ptmx])
 
 # --enable-assert
 AC_HEADER_ASSERT
+
+# argp 
+AC_SEARCH_LIBS([argp_parse], [c argp])
+if test "x$ac_cv_search_argp_parse" = xno; then
+   AC_MSG_ERROR([Unable to find argp. Is it installed? If necessary use CPPFLAGS=... LDFLAGS=... to specify its location.])
+fi
 
 # libev
 AC_SEARCH_LIBS([ev_version_minor], [ev])
@@ -181,7 +197,7 @@ AC_ARG_ENABLE([cacti],
               [AC_HELP_STRING([--disable-cacti], [disable support for area calculations with CACTI (default is try to enable)])],
               [], [enable_cacti=yes])
 if test "x$enable_cacti" = "xyes"; then
-  if ! test -d "$srcdir/cacti"; then
+  if ! test -r "$srcdir/cacti/cacti_interface.h"; then
      AC_MSG_WARN([CACTI sources not available, cannot use CACTI.])
      enable_cacti=no
   fi
@@ -196,11 +212,17 @@ AM_CONDITIONAL([ENABLE_CACTI], [test "x$enable_cacti" = "xyes"])
 ## Target selection
 enable_mtalpha_tests=no
 enable_mtsparc_tests=no
+enable_mips_tests=no
+enable_mipsel_tests=no
 
 AC_ARG_VAR([AS_MTALPHA], [Location of the `as' utility configured for the MT-Alpha binary format.])
 AC_ARG_VAR([LD_MTALPHA], [Location of the `ld' utility configured for the MT-Alpha binary format.])
 AC_ARG_VAR([AS_MTSPARC], [Location of the `as' utility configured for the MT-Sparc binary format.])
 AC_ARG_VAR([LD_MTSPARC], [Location of the `ld' utility configured for the MT-Sparc binary format.])
+AC_ARG_VAR([AS_MIPS], [Location of the `as' utility configured for the MIPS binary format.])
+AC_ARG_VAR([LD_MIPS], [Location of the `ld' utility configured for the MIPS binary format.])
+AC_ARG_VAR([AS_MIPSEL], [Location of the `as' utility configured for the MIPSel binary format.])
+AC_ARG_VAR([LD_MIPSEL], [Location of the `ld' utility configured for the MIPSel binary format.])
 
 case "$target_cpu" in
 mtalpha)
@@ -216,7 +238,7 @@ mtalpha)
   fi
 
   AC_DEFINE([TARGET_MTALPHA], [1],
-            [Define when building a simulator for MT-Sparc.])
+            [Define when building a simulator for MT-Alpha.])
 
   ;;
 
@@ -233,7 +255,39 @@ mtsparc)
   fi
 
   AC_DEFINE([TARGET_MTSPARC], [1],
-            [Define when building a simulator for MT-Alpha.])
+            [Define when building a simulator for MT-SPARC.])
+  ;;
+
+mips)
+
+  AC_PATH_PROG([AS_MIPS], [mips-linux-gnu-as], [no], [$prefix/bin$PATH_SEPARATOR$PATH])
+  AC_PATH_PROG([LD_MIPS], [mips-linux-gnu-ld], [no], [$prefix/bin$PATH_SEPARATOR$PATH])
+
+  enable_mips_tests=yes
+  if test "x$AS_MIPS" = "xno" \
+       -o "x$LD_MIPS" = "xno"; then
+     AC_MSG_WARN([Some MIPS utilities are missing. Cannot run MIPS test suite.])
+     enable_mips_tests=no
+  fi
+
+  AC_DEFINE([TARGET_MIPS32], [1],
+            [Define when building a simulator for MIPS32 (BE).])
+  ;;
+
+mipsel)
+
+  AC_PATH_PROG([AS_MIPSEL], [mipsel-linux-gnu-as], [no], [$prefix/bin$PATH_SEPARATOR$PATH])
+  AC_PATH_PROG([LD_MIPSEL], [mipsel-linux-gnu-ld], [no], [$prefix/bin$PATH_SEPARATOR$PATH])
+
+  enable_mipsel_tests=yes
+  if test "x$AS_MIPSEL" = "xno" \
+       -o "x$LD_MIPSEL" = "xno"; then
+     AC_MSG_WARN([Some MIPSel utilities are missing. Cannot run MIPSel test suite.])
+     enable_mipsel_tests=no
+  fi
+
+  AC_DEFINE([TARGET_MIPS32EL], [1],
+            [Define when building a simulator for MIPS32 (LE).])
   ;;
 
 *)
@@ -243,6 +297,8 @@ esac
 
 AM_CONDITIONAL([ENABLE_MTSPARC_TESTS], [test x$enable_mtsparc_tests = xyes])
 AM_CONDITIONAL([ENABLE_MTALPHA_TESTS], [test x$enable_mtalpha_tests = xyes])
+AM_CONDITIONAL([ENABLE_MIPS_TESTS], [test x$enable_mips_tests = xyes])
+AM_CONDITIONAL([ENABLE_MIPSEL_TESTS], [test x$enable_mipsel_tests = xyes])
 
 enable_compiled_tests=no
 
@@ -278,14 +334,9 @@ fi
 
 AM_CONDITIONAL([ENABLE_C_TESTS], [test x$enable_compiled_tests = xyes])
 
-
-AC_CONFIG_LINKS([arch/proc/ISA.h:arch/proc/ISA.$target_cpu.h
-                 arch/proc/ISA.cpp:arch/proc/ISA.$target_cpu.cpp])
-
 AC_CONFIG_FILES([
 	Makefile
 	tools/Makefile
-        tests/Makefile
 	programs/Makefile
 	doc/Makefile
 ])
@@ -313,6 +364,8 @@ cat <<EOF
 *
 * MT-Alpha tests:         $enable_mtalpha_tests
 * MT-SPARC tests:         $enable_mtsparc_tests
+* MIPS tests:             $enable_mips_tests
+* MIPSel tests:           $enable_mipsel_tests
 * Compiled tests:         $enable_compiled_tests
 *
 * C++ compiler:           $CXX $CPPFLAGS $AM_CXXFLAGS $CXXFLAGS $LDFLAGS

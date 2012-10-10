@@ -1,26 +1,23 @@
 #include "MGSystem.h"
 
-#include "mem/SerialMemory.h"
-#include "mem/ParallelMemory.h"
-#include "mem/BankedMemory.h"
-#include "mem/DDRMemory.h"
-#include "mem/ESAMemory.h"
-#include "mem/coma/COMA.h"
-#include "mem/zlcoma/COMA.h"
+#include <arch/mem/SerialMemory.h>
+#include <arch/mem/ParallelMemory.h>
+#include <arch/mem/BankedMemory.h>
+#include <arch/mem/DDRMemory.h>
+#include <arch/mem/ESAMemory.h>
+#include <arch/mem/coma/COMA.h>
+#include <arch/mem/zlcoma/COMA.h>
 
-#include "arch/dev/NullIO.h"
-#include "arch/dev/LCD.h"
-#include "arch/dev/RTC.h"
-#include "arch/dev/Display.h"
-#include "arch/dev/ActiveROM.h"
-#include "arch/dev/Selector.h"
-#include "arch/dev/SMC.h"
-#include "arch/dev/UART.h"
-#include "arch/dev/RPC.h"
-
-// maybe replace the following if the host-guest syscall API ever
-// changes.
-#include "arch/dev/RPC_unix.h"
+#include <arch/dev/NullIO.h>
+#include <arch/dev/LCD.h>
+#include <arch/dev/RTC.h>
+#include <arch/dev/Display.h>
+#include <arch/dev/ActiveROM.h>
+#include <arch/dev/Selector.h>
+#include <arch/dev/SMC.h>
+#include <arch/dev/UART.h>
+#include <arch/dev/RPC.h>
+#include <arch/dev/RPC_unix.h>
 
 #include <cstdlib>
 #include <iomanip>
@@ -28,9 +25,13 @@
 #include <fstream>
 #include <cmath>
 #include <limits>
-#include <cxxabi.h>
 #include <fnmatch.h>
 #include <cstring>
+
+#ifdef HAVE_GCC_ABI_DEMANGLE
+#include <cxxabi.h>
+#endif
+#include <typeinfo>
 
 using namespace Simulator;
 using namespace std;
@@ -89,9 +90,12 @@ static string GetClassName(const type_info& info)
     char *buf = (char*)malloc(len);
     assert(buf != 0);
 
-    int status;
+    int status = 0;
+    char *res = 0;
 
-    char *res = abi::__cxa_demangle(name, buf, &len, &status);
+#ifdef HAVE_GCC_ABI_DEMANGLE
+    res = abi::__cxa_demangle(name, buf, &len, &status);
+#endif
 
     if (res && status == 0)
     {
@@ -213,6 +217,16 @@ static void PrintComponents(ostream& out, const Object* cur, const string& inden
 void MGSystem::PrintComponents(ostream& out, const string& pat, size_t levels) const
 {
     ::PrintComponents(out, &m_root, "", pat, levels, 0, false);
+}
+
+static size_t CountComponents(const Object& obj)
+{
+    size_t c = 1;
+    for (size_t i = 0; i < obj.GetNumChildren(); ++i)
+    {
+        c += CountComponents(*obj.GetChild(i));
+    }
+    return c;
 }
 
 void MGSystem::PrintCoreStats(ostream& os) const {
@@ -618,12 +632,11 @@ void MGSystem::Disassemble(MemAddr addr, size_t sz) const
 }
 
 MGSystem::MGSystem(Config& config,
-                   const string& symtable,
                    const vector<pair<RegAddr, RegValue> >& regs,
                    const vector<pair<RegAddr, string> >& loads,
                    const vector<string>& extradevs,
-                   bool quiet, bool doload)
-    : m_kernel(m_symtable, m_breakpoints),
+                   bool quiet)
+    : m_kernel(m_breakpoints),
       m_clock(m_kernel.CreateClock(config.getValue<unsigned long>("CoreFreq"))),
       m_root("", m_clock),
       m_breakpoints(m_kernel),
@@ -684,6 +697,8 @@ MGSystem::MGSystem(Config& config,
     {
         clog << "memory: " << memory_type << endl;
     }
+    m_memory->SetSymbolTable(m_symtable);
+    m_breakpoints.SetSymbolTable(m_symtable);
 
     // Create the event selector
     Clock& selclock = m_kernel.CreateClock(config.getValue<unsigned long>("EventCheckFreq"));
@@ -931,21 +946,19 @@ MGSystem::MGSystem(Config& config,
     // Set program debugging per default
     m_kernel.SetDebugMode(Kernel::DEBUG_PROG);
 
-    // Load symbol table
-    if (doload && !symtable.empty())
-    {
-        ifstream in(symtable.c_str(), ios::in);
-        m_symtable.Read(in, quiet);
-    }
-
     // Find objdump command
 #if defined(TARGET_MTALPHA)
     const char *default_objdump = "mtalpha-linux-gnu-objdump";
     const char *objdump_var = "MTALPHA_OBJDUMP";
-#endif
-#if defined(TARGET_MTSPARC)
+#elif defined(TARGET_MTSPARC)
     const char *default_objdump = "mtsparc-linux-gnu-objdump";
     const char *objdump_var = "MTSPARC_OBJDUMP";
+#elif defined(TARGET_MIPS32)
+    const char *default_objdump = "mips-linux-gnu-objdump";
+    const char *objdump_var = "MIPS_OBJDUMP";
+#elif defined(TARGET_MIPS32EL)
+    const char *default_objdump = "mipsel-linux-gnu-objdump";
+    const char *objdump_var = "MIPSEL_OBJDUMP";
 #endif
     const char *v = getenv(objdump_var);
     if (!v) v = default_objdump;
@@ -959,7 +972,11 @@ MGSystem::MGSystem(Config& config,
         {
             masterfreq /= 1000;
         }
-        clog << "Created Microgrid; simulation running at " << dec << masterfreq << " " << qual[q] << "Hz" << endl;
+        clog << "Created Microgrid: "
+             << dec
+             << CountComponents(m_root) << " components, "
+             << Process::GetAllProcesses().size() << " processes, "
+             << "simulation running at " << dec << masterfreq << " " << qual[q] << "Hz" << endl;
     }
 }
 

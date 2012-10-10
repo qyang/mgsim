@@ -1,12 +1,12 @@
-SVN = svn
 bin_PROGRAMS =
 dist_man1_MANS = 
 MAINTAINERCLEANFILES =
 EXTRA_DIST = 
 
 include $(srcdir)/Makefile.inc
+include $(srcdir)/tests/Makefile.inc
 
-SUBDIRS = . tools tests programs doc
+SUBDIRS = tools programs doc .
 
 DISTCHECK_CONFIGURE_FLAGS = --target=mtalpha
 ACLOCAL_AMFLAGS = -I build-aux
@@ -28,7 +28,14 @@ check-mtalpha:
 	  $$cdir/configure --target=mtalpha && \
 	  $(MAKE) $(AM_MAKEFLAGS) check
 
-check-all: check-mtsparc check-mtalpha
+check-mips:
+	mkdir -p build-mips && \
+	  cdir=`cd $(top_srcdir) && pwd` && \
+	  cd build-mips && \
+	  $$cdir/configure --target=mips && \
+	  $(MAKE) $(AM_MAKEFLAGS) check
+
+check-all: check-mtsparc check-mtalpha check-mips
 
 distcheck-mtsparc:
 	$(MAKE) $(AM_MAKEFLAGS) distcheck DISTCHECK_CONFIGURE_FLAGS='--target=mtsparc --disable-sdl'
@@ -38,7 +45,11 @@ distcheck-mtalpha:
 	$(MAKE) $(AM_MAKEFLAGS) distcheck DISTCHECK_CONFIGURE_FLAGS='--target=mtalpha --disable-sdl'
 	$(MAKE) $(AM_MAKEFLAGS) distcheck DISTCHECK_CONFIGURE_FLAGS='--target=mtalpha --enable-sdl'
 
-distcheck-all: distcheck-mtsparc distcheck-mtalpha
+distcheck-mips:
+	$(MAKE) $(AM_MAKEFLAGS) distcheck DISTCHECK_CONFIGURE_FLAGS='--target=mips --disable-sdl'
+	$(MAKE) $(AM_MAKEFLAGS) distcheck DISTCHECK_CONFIGURE_FLAGS='--target=mips --enable-sdl'
+
+distcheck-all: distcheck-mtsparc distcheck-mtalpha distcheck-mips
 
 .PHONY: check-all distcheck-all
 

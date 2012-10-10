@@ -128,13 +128,16 @@ public:
     TSize GetMaxAllocated() const { return m_maxalloc; }
 
 private:
-    Processor&          m_parent;
     std::vector<Family> m_families;
     FSize               m_free[NUM_CONTEXT_TYPES];
+
+    // Admin
     FSize               m_totalalloc;
     FSize               m_maxalloc;
     CycleNo             m_lastcycle;
     FSize               m_curalloc;
+
+    Processor&          m_parent;
 
     void UpdateStats();    
     void CheckStateSanity() const;

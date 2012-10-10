@@ -1,6 +1,7 @@
 #include "RootDirectory.h"
-#include "mem/DDR.h"
-#include "sim/config.h"
+#include <arch/mem/DDR.h>
+#include <sim/config.h>
+
 #include <iomanip>
 using namespace std;
 
@@ -80,7 +81,7 @@ bool COMA::RootDirectory::OnReadCompleted()
         msg->type = Message::REQUEST_DATA_TOKEN;
         msg->dirty = false;
         
-        m_parent.Read(msg->address, msg->data.data, m_lineSize);
+        static_cast<VirtualMemory&>(m_parent).Read(msg->address, msg->data.data, m_lineSize);
         
         m_active.pop();
     }
@@ -270,13 +271,13 @@ Result COMA::RootDirectory::DoRequests()
     {
         // Since we stripe cache lines across root directories, adjust the 
         // address before we send it to memory for timing.
+        unsigned int mem_address = (msg->address / m_lineSize) / m_numRoots * m_lineSize;
                 
         if (msg->type == Message::REQUEST)
         {
             // It's a read
-#if 0
-            unsigned int mem_address = (msg->address / m_lineSize) / m_numRoots * m_lineSize;
-            
+#if 1 // set to 0 to shortcut DDR
+
             if (!m_memory->Read(mem_address, m_lineSize))
             {
                 return FAILED;
@@ -308,14 +309,18 @@ Result COMA::RootDirectory::DoRequests()
         {
             // It's a write
             assert(msg->type == Message::EVICTION);
-#if 0
-            if (!m_memory->Write(msg->address, msg->data.data, m_lineSize))
+
+#if 1 // set to 0  to shortcut DDR
+
+            if (!m_memory->Write(mem_address, m_lineSize))
             {
                 return FAILED;
             }
 #endif
             COMMIT { 
-                m_parent.Write(msg->address, msg->data.data, 0, m_lineSize);
+
+                static_cast<VirtualMemory&>(m_parent).Write(msg->address, msg->data.data, 0, m_lineSize);
+
                 ++m_nwrites;
                 delete msg;
             }

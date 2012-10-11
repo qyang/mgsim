@@ -1205,11 +1205,11 @@ Result Processor::Allocator::DoFamilyAllocate()
         RemoteMessage msg;
         msg.type                  = RemoteMessage::MSG_CREATE;
         msg.create.fid            = fid;
-        msg.create.address        = req.pc;
+        msg.create.address        = req.binfo.pc;
         msg.create.completion_reg = req.completion_reg;
         msg.create.bundle         = true;
-        msg.create.parameter      = req.parameter;
-        msg.create.index          = req.index;
+        msg.create.parameter      = req.binfo.parameter;
+        msg.create.index          = req.binfo.index;
         msg.create.completion_pid = req.completion_pid;
         
         

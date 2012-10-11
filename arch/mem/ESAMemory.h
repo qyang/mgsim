@@ -2,7 +2,7 @@
 #define ESAMEMORY_H
 
 #include <arch/BankSelector.h>
-#include "DDR.h"
+#include <arch/mem/DDR.h>
 #include <arch/Memory.h>
 #include <arch/VirtualMemory.h>
 #include <sim/inspect.h>
@@ -14,14 +14,15 @@ class Config;
 namespace Simulator
 {
 
-class ESAMemory : public Object, public VirtualMemory, public Inspect::Interface<Inspect::Read>
+class ESAMemory : public Object, public IMemory, public VirtualMemory, public Inspect::Interface<Inspect::Read>
 {
 public:  
     class Interface;   
     
     
-    struct Request : public MemData
+    struct Request
     {
+        MemData      mdata;
         bool         write;
         MemAddr      address;
         unsigned int client;
@@ -134,15 +135,17 @@ public:
     size_t GetLineSize() const { return m_lineSize; }
     
     // IMemory
-    MCID RegisterClient(IMemoryCallback& callback, Process& process, StorageTraceSet& traces, Storage& storage, bool /*ignored*/);
+    MCID RegisterClient(IMemoryCallback& callback, Process& process, StorageTraceSet& traces, Storage& storage, bool /*ignored*/) override;
     void RegisterProcess(Process& process);
-    void UnregisterClient(MCID id);
-    bool Read (MCID id, MemAddr address);
-    bool Write(MCID id, MemAddr address, const MemData& data, WClientID wid);
+    void UnregisterClient(MCID id) override;
+    bool Read (MCID id, MemAddr address) override;
+    bool Write(MCID id, MemAddr address, const MemData& data, WClientID wid) override;
+    using VirtualMemory::Read;
+    using VirtualMemory::Write;
 
     void GetMemoryStatistics(uint64_t& nreads, uint64_t& nwrites, 
                              uint64_t& nread_bytes, uint64_t& nwrite_bytes,
-                             uint64_t& nreads_ext, uint64_t& nwrites_ext) const
+                             uint64_t& nreads_ext, uint64_t& nwrites_ext) const override
     {
         nreads = m_nreads;
         nwrites = m_nwrites;
@@ -155,11 +158,13 @@ public:
 
 public:
     ESAMemory(const std::string& name, Simulator::Object& parent, Clock& clock, Config& config);
+    ESAMemory(const ESAMemory&) = delete;
+    ESAMemory& operator=(const ESAMemory&) = delete;
     ~ESAMemory();
     
     // Debugging
-    void Cmd_Info(std::ostream& out, const std::vector<std::string>& arguments) const;
-    void Cmd_Read(std::ostream& out, const std::vector<std::string>& arguments) const;
+    void Cmd_Info(std::ostream& out, const std::vector<std::string>& arguments) const override;
+    void Cmd_Read(std::ostream& out, const std::vector<std::string>& arguments) const override;
 };
 
 }

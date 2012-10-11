@@ -862,8 +862,9 @@ void Processor::DCache::Cmd_Read(std::ostream& out, const std::vector<std::strin
     }
     else if (arguments[0] == "buffers")
     {
+        static const int BYTES_PER_LINE = 16;
         out << endl << "Outgoing requests:" << endl << endl
-            << "      Address      | Type  | Value (writes)" << endl
+            << "      Address      | Type  |     Value (writes)" << endl
             << "-------------------+-------+-------------------------" << endl;
         for (Buffer<Request>::const_iterator p = m_outgoing.begin(); p != m_outgoing.end(); ++p)
         {
@@ -871,16 +872,27 @@ void Processor::DCache::Cmd_Read(std::ostream& out, const std::vector<std::strin
                 << (p->write ? "Write" : "Read ") << " |";
             if (p->write)
             {
-                out << hex << setfill('0');
-                for (size_t x = 0; x < m_lineSize; ++x)
+                for (size_t y = 0; y < m_lineSize; y += BYTES_PER_LINE)
                 {
-                    if (p->data.mask[x])
-                        out << " " << setw(2) << (unsigned)(unsigned char)p->data.data[x];
-                    else
-                        out << " --";
-                }
+                    for (size_t x = y; x < y + BYTES_PER_LINE; ++x) 
+                    {
+                        if (p->data.mask[x])
+                        {
+                            out << " " << hex  << setfill('0') << setw(2) << (unsigned)(unsigned char)p->data.data[x];
+                        }
+                        else 
+                        {
+                            out << setfill(' ') << " " << setw(2);
+                        }
+                    }
+                    if (y + BYTES_PER_LINE < m_lineSize) 
+                    {
+                        // This was not yet the last line
+                        out << endl << "                   |       |";
+                    }
+                }               
             }
-            out << dec << endl;
+            out << endl << "-------------------+-------+-------------------------" << endl;
         }
         return;
     }

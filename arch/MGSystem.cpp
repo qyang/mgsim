@@ -4,6 +4,7 @@
 #include <arch/mem/ParallelMemory.h>
 #include <arch/mem/BankedMemory.h>
 #include <arch/mem/DDRMemory.h>
+#include <arch/mem/ESAMemory.h>
 #include <arch/mem/coma/COMA.h>
 #include <arch/mem/zlcoma/COMA.h>
 
@@ -659,6 +660,9 @@ MGSystem::MGSystem(Config& config,
         memadmin = memory; m_memory = memory;
     } else if (memory_type == "ZLCOMA") {
         ZLCOMA* memory = new ZLCOMA("memory", m_root, memclock, config);
+        memadmin = memory; m_memory = memory;
+    }else if (memory_type == "ESA") {
+        ESAMemory* memory = new ESAMemory("memory", m_root, memclock, config);
         memadmin = memory; m_memory = memory;
     } else if (memory_type == "FLATCOMA") {
         COMA* memory = new OneLevelCOMA("memory", m_root, memclock, config);

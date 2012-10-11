@@ -276,7 +276,6 @@ Result COMA::RootDirectory::DoRequests()
         if (msg->type == Message::REQUEST)
         {
             // It's a read
-
 #if 1 // set to 0 to shortcut DDR
 
             if (!m_memory->Read(mem_address, m_lineSize))

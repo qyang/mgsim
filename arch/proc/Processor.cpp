@@ -232,7 +232,7 @@ void Processor::Initialize(Processor* prev, Processor* next)
         m_network.m_allocResponse.out ^ m_allocator.m_creates ^ m_network.m_link.out ^ DELEGATE * opt(DELEGATE) );
 
     m_allocator.p_FamilyCreate.SetStorageTraces(
-        /* CREATE_INITIAL */                opt(m_icache.m_outgoing) ^
+        /* CRqEATE_INITIAL */                opt(m_icache.m_outgoing) ^
         /* CREATE_BROADCASTING_CREATE */    opt(m_network.m_link.out) ^
         /* CREATE_ACTIVATING_FAMILY */      m_allocator.m_alloc ^
         /* CREATE_NOTIFY */                 opt(DELEGATE) );
@@ -259,8 +259,7 @@ void Processor::Initialize(Processor* prev, Processor* next)
 
     StorageTraceSet pls_writeback =
         opt(DELEGATE) *
-        opt(m_allocator.m_bundle ^ /* FIXME: is the bundle creation buffer really involved here? */
-            (m_allocator.m_readyThreads1 * m_allocator.m_cleanup) ^
+        opt((m_allocator.m_readyThreads1 * m_allocator.m_cleanup) ^ 
             m_allocator.m_cleanup ^
             m_allocator.m_readyThreads1);
     StorageTraceSet pls_memory =
@@ -286,7 +285,8 @@ void Processor::Initialize(Processor* prev, Processor* next)
     }
 
     StorageTraceSet pls_execute =
-        m_fpu.GetSourceTrace(m_pipeline.GetFPUSource());
+        m_fpu.GetSourceTrace(m_pipeline.GetFPUSource())
+        ^ m_allocator.m_bundle; // Queue bundle at execution stage
 
     m_pipeline.p_Pipeline.SetStorageTraces(
         /* Writeback */ opt(pls_writeback) *

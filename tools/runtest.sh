@@ -62,6 +62,11 @@ else
 fi
 
 mem=${TESTd##*.}
+    
+if test $mem="esa"
+then
+    cpuconf="1 2 4"
+fi
 
 for cfg in "$cfg1" "$cfg2"; do
  cfgname=`basename "$cfg"`

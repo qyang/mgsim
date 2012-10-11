@@ -7,6 +7,8 @@ MEMORY_SRC = \
 	arch/mem/SerialMemory.h \
         arch/mem/DDRMemory.cpp \
         arch/mem/DDRMemory.h \
+        arch/mem/ESAMemory.cpp \
+        arch/mem/ESAMemory.h \
         arch/mem/DDR.cpp \
         arch/mem/DDR.h
 
@@ -90,7 +92,7 @@ PROCESSOR_SRC = \
 	arch/proc/PerfCounters.cpp
 
 COMMON_SRC = \
-    arch/area.cpp \
+        arch/area.cpp \
 	arch/Archures.h \
         arch/BankSelector.h \
         arch/BankSelector.cpp \

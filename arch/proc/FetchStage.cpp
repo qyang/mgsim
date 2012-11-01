@@ -50,15 +50,16 @@ Processor::Pipeline::PipeAction Processor::Pipeline::FetchStage::OnCycle()
         size_t offset = (size_t)(pc % m_icache.GetLineSize());   // Offset within the cacheline
         if (!m_icache.Read(thread.cid, pc - offset, m_buffer, m_icache.GetLineSize()))
         {
-            DeadlockWrite("F%u/T%u(%llu) %s fetch stall due to I-cache miss",
-                          (unsigned)thread.family, (unsigned)tid, (unsigned long long)thread.index,
-                          GetKernel()->GetSymbolTable()[pc].c_str());
+            DeadlockWrite("F%u/T%u(priority:%u   index :%llu) %s fetch stall due to I-cache miss",
+                          (unsigned)thread.family, (unsigned)tid, (unsigned)thread.priority,
+                          (unsigned long long)thread.index, GetKernel()->GetSymbolTable()[pc].c_str());
             return PIPE_STALL;
         }
 
         COMMIT
         {
             m_output.tid       = tid;
+            m_output.priority  = thread.priority;
             m_output.fid       = thread.family;
             m_output.legacy    = family.legacy;
             m_output.placeSize = family.placeSize;
@@ -75,9 +76,9 @@ Processor::Pipeline::PipeAction Processor::Pipeline::FetchStage::OnCycle()
             thread.state = TST_RUNNING;
         }
 
-        DebugSimWrite("F%u/T%u(%llu) %s switched in",
-                      (unsigned)thread.family, (unsigned)tid, (unsigned long long)thread.index,
-                      GetKernel()->GetSymbolTable()[pc].c_str());
+        DebugSimWrite("F%u/T%u(priority:%u   index :%llu) %s switched in",
+                      (unsigned)thread.family, (unsigned)tid, (unsigned)thread.priority,
+                      (unsigned long long)thread.index, GetKernel()->GetSymbolTable()[pc].c_str());
     }
 
     COMMIT
@@ -95,8 +96,27 @@ Processor::Pipeline::PipeAction Processor::Pipeline::FetchStage::OnCycle()
         m_output.kill         = ((control & 2) != 0);
         const bool wantSwitch = ((control & 1) != 0);
         const bool mustSwitch = m_output.kill || (next_pc % m_icache.GetLineSize() == 0);
-        const bool lastThread = m_allocator.m_activeThreads.Empty() || m_allocator.m_activeThreads.Singular();
-        m_output.swch         = mustSwitch || (wantSwitch && !lastThread);
+        bool prioritySwitch   = false;
+        size_t j = 0;
+        for(size_t i = 0; i < m_allocator.GetPriorityLevel(); i++)
+        {
+           if(m_allocator.m_activeThreads[i]->Empty() || m_allocator.m_activeThreads[i]->Singular())
+           {
+               j++;
+           }
+        }
+        
+        for(size_t i = m_output.priority; i > 0; i--)
+        {
+            if(!m_allocator.m_activeThreads[i-1]->Empty())
+            {
+                prioritySwitch = true;
+                break;
+            }
+        }  
+        
+        const bool lastThread = (j <= 1)? true : false;
+        m_output.swch         = prioritySwitch || mustSwitch || (wantSwitch && !lastThread) ;
         m_output.pc           = pc;
         m_output.instr        = UnserializeInstruction(&instrs[iInstr]);
 
@@ -118,8 +138,8 @@ Processor::Pipeline::PipeAction Processor::Pipeline::FetchStage::OnCycle()
         m_switched = m_output.swch;
     }
         
-    DebugPipeWrite("F%u/T%u(%llu) %s fetched 0x%.*lx (switching: %s)",
-                   (unsigned)m_output.fid, (unsigned)m_output.tid, (unsigned long long)m_output.logical_index, m_output.pc_sym,
+    DebugPipeWrite("F%u/T%u(priority:%u   index :%llu) %s fetched 0x%.*lx (switching: %s)",
+                   (unsigned)m_output.fid, (unsigned)m_output.tid, (unsigned)m_output.priority, (unsigned long long)m_output.logical_index, m_output.pc_sym,
                    (int)(sizeof(Instruction) * 2), (unsigned long)m_output.instr,
                    m_switched ? "yes" : "no");
 

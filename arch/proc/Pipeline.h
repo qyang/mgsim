@@ -134,6 +134,7 @@ class Pipeline : public Object, public Inspect::Interface<Inspect::Read>
     struct CommonData
     {
         TID     tid;
+        size_t  priority;
         MemAddr pc;
         LFID    fid;
         bool    swch;
@@ -449,6 +450,7 @@ public:
     Result DoPipeline();
 
     Processor& GetProcessor()  const { return m_parent; }
+    
     
     uint64_t GetTotalBusyTime() const { return m_pipelineBusyTime; }
     uint64_t GetStalls() const { return m_nStalls; }

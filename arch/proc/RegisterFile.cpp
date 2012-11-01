@@ -145,7 +145,7 @@ bool Processor::RegisterFile::WriteRegister(const RegAddr& addr, const RegValue&
             if (value.m_state == RST_WAITING && value.m_waiting.head != INVALID_TID)
             {
                 // This write caused a reschedule
-                if (!m_allocator.ActivateThreads(value.m_waiting))
+                if (!m_allocator.PrepareThreads(value.m_waiting))
                 {
                     DeadlockWrite("Unable to wake up threads after write of %s: %s becomes %s", addr.str().c_str(), value.str(addr.type).c_str(), data.str(addr.type).c_str());
                     return false;

@@ -73,7 +73,7 @@ Processor::Pipeline::Pipeline(
     std::vector<BypassInfo> bypasses;
 
     // Create the Execute stage
-    size_t fpu_client_id = fpu.RegisterSource(regFile, alloc.m_readyThreads2);
+    size_t fpu_client_id = fpu.RegisterSource(regFile, alloc.m_preparingThreads2);
     m_stages[3].stage  = new ExecuteStage(*this, clock, m_reLatch, m_emLatch, alloc, familyTable, threadTable, fpu, fpu_client_id, config);
     m_stages[3].input  = &m_reLatch;
     m_stages[3].output = &m_emLatch;

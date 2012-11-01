@@ -192,8 +192,8 @@ void Processor::FamilyTable::Cmd_Read(ostream& out, const vector<string>& argume
     }
     else
     {
-        out << "    |     Initial PC     | Allocated | Threads | P/A/D/Rd |  Cores  | Link |    Sync    |     Capability     | State         | Symbol" << endl;
-        out << "----+--------------------+-----------+---------+----------+---------+------+------------+--------------------+---------------+--------" << endl;
+        out << "    |     Initial PC     | Allocated | Threads | P/A/D/Rd |  Cores  | Link |    Sync    |     Capability     |    State / Priority    | Symbol" << endl;
+        out << "----+--------------------+-----------+---------+----------+---------+------+------------+--------------------+------------------------+--------" << endl;
         for (set<LFID>::const_iterator p = fids.begin(); p != fids.end(); ++p)
         {
             const Family& family = m_families[*p];
@@ -201,7 +201,7 @@ void Processor::FamilyTable::Cmd_Read(ostream& out, const vector<string>& argume
             out << dec << right << setw(3) << setfill(' ') << *p << " | ";
             if (family.state == FST_EMPTY)
             {
-                out << "                   |           |         |          |         |      |            |                    |               |";
+                out << "                   |           |         |          |         |      |            |                    |                       |";
             }
             else
             {
@@ -254,6 +254,7 @@ void Processor::FamilyTable::Cmd_Read(ostream& out, const vector<string>& argume
             
                 out << " | 0x" << right << setw(16) << setfill('0') << hex << noshowbase << family.capability
                     << " | " << left  << setw(13) << setfill(' ') << FamilyStates[family.state]
+                    << "  /  " << left << setw(4) << dec << family.priority
                     << " | ";
             
                 if (family.state != FST_ALLOCATED)

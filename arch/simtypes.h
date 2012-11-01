@@ -295,6 +295,7 @@ enum ThreadState
 {
     TST_EMPTY,
     TST_WAITING,
+    TST_PREPARING,
     TST_READY,
     TST_ACTIVE,
     TST_RUNNING,

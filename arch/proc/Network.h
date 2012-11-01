@@ -30,6 +30,7 @@ struct RemoteMessage
             PlaceID        place;         ///< The place to allocate at
             bool           suspend;       ///< Queue request if no context available?
             bool           exclusive;     ///< Allocate the exclusive context?
+            size_t         priority;      ///< Preset priority for RT
             AllocationType type;          ///< Type of the allocation
             PID            completion_pid;///< PID where the thread runs that issued the allocate
             RegIndex       completion_reg;///< Register to write FID back to
@@ -117,6 +118,7 @@ struct LinkMessage
             PSize    size;           ///< Size of the place
             bool     exact;          ///< Allocate exactly 'size' cores
             bool     suspend;        ///< Suspend until we get a context (only if exact)
+            size_t   priority;      ///< Preset priority for RT
             PID      completion_pid; ///< PID where the thread runs that issued the allocate
             RegIndex completion_reg; ///< Reg on parent_pid of the completion register
         } allocate;
@@ -127,6 +129,7 @@ struct LinkMessage
             PID      min_pid;        ///< Core where the minimum was found
             PSize    size;           ///< Size of the place
             bool     suspend;        ///< Suspend until we get a context (only if exact)
+            size_t   priority;      ///< Preset priority for RT
             PID      completion_pid; ///< PID where the thread runs that issued the allocate
             RegIndex completion_reg; ///< Reg on parent_pid of the completion register
         } ballocate;
@@ -186,7 +189,6 @@ struct AllocResponse
     bool     exact;     ///< If the allocate was exact, unwind all the way
     LFID     prev_fid;  ///< FID of the family on the previous (receiver) core
     LFID     next_fid;  ///< FID of the family on the next (sender) core if !failed
-        
     PID      completion_pid; ///< PID where the thread runs that issued the allocate
     RegIndex completion_reg; ///< Reg on parent_pid of the completion register
 };   

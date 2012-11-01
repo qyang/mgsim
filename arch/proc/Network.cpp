@@ -544,6 +544,7 @@ Result Processor::Network::DoDelegationIn()
                 fwd.ballocate.min_pid        = m_parent.GetPID();
                 fwd.ballocate.size           = msg.allocate.place.size;
                 fwd.ballocate.suspend        = msg.allocate.suspend;
+                fwd.ballocate.priority       = msg.allocate.priority;
                 fwd.ballocate.completion_pid = msg.allocate.completion_pid;
                 fwd.ballocate.completion_reg = msg.allocate.completion_reg;
                 
@@ -797,6 +798,7 @@ Result Processor::Network::DoLink()
         rmsg.allocate.place.size     = msg.ballocate.size;
         rmsg.allocate.suspend        = msg.ballocate.suspend;
         rmsg.allocate.exclusive      = false;
+        rmsg.allocate.priority       = msg.ballocate.priority;
         rmsg.allocate.type           = ALLOCATE_SINGLE;
         rmsg.allocate.completion_pid = msg.ballocate.completion_pid;
         rmsg.allocate.completion_reg = msg.ballocate.completion_reg;

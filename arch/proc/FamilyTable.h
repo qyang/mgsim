@@ -67,6 +67,7 @@ struct Family
     PSize        placeSize;      // Number of cores this family wanted to run on.
     PSize        numCores;       // Number of cores this family is actually running on (1 <= numCores <= placeSize).
     FCapability  capability;     // Capability value for security
+    size_t       priority;       // Preset priority for RT
     MemAddr      pc;             // Initial PC for newly created threads
 	bool         legacy;		 // Consists of a single thread of legacy code?
     TSize        physBlockSize;  // Physical block size, <= Virtual block size, depending on the amount of free registers

@@ -484,10 +484,10 @@ Result Processor::ICache::DoIncoming()
     if (line.waiting.head != INVALID_TID)
     {
         // Reschedule the line's waiting list
-        if (!m_allocator.QueueActiveThreads(line.waiting))
+        if (!m_allocator.QueueReadyThreads(line.waiting))
         {
-            DeadlockWrite("Unable to queue active threads T%u through T%u for C%u",
-                (unsigned)line.waiting.head, (unsigned)line.waiting.tail, (unsigned)cid);
+            DeadlockWrite("Unable to queue ready threads T%u through T%u for C%u",
+                          (unsigned)line.waiting.head, (unsigned)line.waiting.tail, (unsigned)cid);
             return FAILED;
         }
 

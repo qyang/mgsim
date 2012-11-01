@@ -42,6 +42,7 @@ public:
 	    PID            completion_pid; ///< Core that requested the allocation
 	    RegIndex       completion_reg; ///< Register (on that core) that will receive the FID
 	    bool      	   bundle;         ///< Whether the family parameters are already bundled.
+            size_t         priority;       ///< Preset priority for RT
 	    MemAddr   	   pc;             ///< For bundled requests, the PC of the newly created family.
 	    Integer   	   parameter;      ///< For bundled requests, the value of the first shared argument.
 	    SInteger   	   index;          ///< For bundled requests, the initial thread index.
@@ -52,7 +53,7 @@ public:
 	enum CreateState
 	{
 		CREATE_INITIAL,             // Waiting for a family to create
-                CREATE_LOAD_REGSPEC,        // Load program code to look for register window specification
+	        CREATE_LOAD_REGSPEC,        // Load program code to look for register window specification
 		CREATE_LOADING_LINE,        // Waiting until the cache-line is loaded
 		CREATE_LINE_LOADED,         // The line has been loaded
 		CREATE_RESTRICTING,         // Check family property and restrict if necessary
@@ -66,6 +67,7 @@ public:
 	{
 		MemAddr   addr;            ///< Memory Entry
 		Integer   parameter;      ///< Parameter for shareds
+    		size_t    priority;        ///< Preset priority for RT
 		RegIndex  completion_reg; ///< Register (on that core) that will receive the FID
 	};
 	
@@ -86,7 +88,7 @@ public:
     void AllocateInitialFamily(MemAddr pc, bool legacy, PSize placeSize, SInteger startIndex);
 
     /// Allocates a contexts and sets the family's 'link' field to prev_fid
-    LFID AllocateContext(ContextType type, LFID prev_fid, PSize placeSize);
+    LFID AllocateContext(ContextType type, size_t prioriy, LFID prev_fid, PSize placeSize);
 
     // Returns the physical register address for a logical register in a certain family.
     RegAddr GetRemoteRegisterAddress(LFID fid, RemoteRegType kind, const RegAddr& addr) const;
@@ -96,7 +98,8 @@ public:
     //
     // Thread management
     //
-    bool ActivateThreads(const ThreadQueue& threads);   // Activates the specified threads
+    bool PrepareThreads(const ThreadQueue& threads);   //  Preapare ins. for the specified threads
+   // bool ActivateThreads(const ThreadQueue& threads);   // Activates the specified threads
     bool RescheduleThread(TID tid, MemAddr pc);         // Reschedules a thread from the pipeline
     bool SuspendThread(TID tid, MemAddr pc);            // Suspends a thread at the specified PC
     bool KillThread(TID tid);                           // Kills a thread
@@ -111,6 +114,7 @@ public:
 	
     bool QueueCreate(const RemoteMessage& msg, PID src);
     bool QueueCreate(const LinkMessage& msg);
+    bool QueueReadyThreads(const ThreadQueue& threads);
     bool QueueActiveThreads(const ThreadQueue& threads);
     bool QueueThreads(ThreadList& list, const ThreadQueue& threads, ThreadState state);
     
@@ -173,28 +177,35 @@ private:
 	Pipeline&	  m_pipeline;
     
     
-    char                  m_bundleData[MAX_MEMORY_OPERATION_SIZE];
+    size_t        m_priorities;
+    size_t        m_pribits;
+    char          m_bundleData[MAX_MEMORY_OPERATION_SIZE];
     Buffer<BundleInfo>    m_bundle;
-    Buffer<LFID>          m_alloc;                   ///< This is the queue of families waiting for initial thread allocation
-    Buffer<CreateInfo>    m_creates;                 ///< Create queue
+   
     Buffer<TID>           m_cleanup;                 ///< Cleanup queue
+    Buffer<CreateInfo>*   m_currentCreation;         ///< current create queue
+    const CreateInfo*     m_createInfo;              ///< current create info
     CreateState           m_createState;	         ///< State of the current state;
     CID                   m_createLine;	   	         ///< Cache line that holds the register info
-    ThreadList            m_readyThreads1;           ///< Queue of the threads can be activated; from the pipeline
-    ThreadList            m_readyThreads2;           ///< Queue of the threads can be activated; from the rest
-    ThreadList*           m_prevReadyList;           ///< Which ready list was used last cycle. For round-robin prioritization.
+    ThreadList            m_preparingThreads1;           ///< Queue of the threads can be ready; from the pipeline
+    ThreadList            m_preparingThreads2;           ///< Queue of the threads can be ready; from the rest
+    ThreadList*           m_prevPreparingList;           ///< Which ready list was used last cycle. For round-robin prioritization.
+    ThreadList            m_readyThreads;                ///< Queue of the threads can be activited; from the pipeline
     BundleState           m_bundleState;
-
+   
     // The family allocation request queues
-    Buffer<AllocRequest>  m_allocRequestsSuspend;	 ///< Non-exclusive requests that want to suspend.
-    Buffer<AllocRequest>  m_allocRequestsNoSuspend;	 ///< Non-exclusive requests that do not want to suspend.
-    Buffer<AllocRequest>  m_allocRequestsExclusive;  ///< Exclusive requests.
+    std::vector<Buffer<AllocRequest>*> m_allocRequestsSuspend; ///< Non-exclusive requests that want to suspend.
+    std::vector<Buffer<AllocRequest>*> m_allocRequestsNoSuspend;	 ///< Non-exclusive requests that do not want to suspend.
+    std::vector<Buffer<AllocRequest>*> m_allocRequestsExclusive;  ///< Exclusive requests.
     
+    std::vector<Buffer<CreateInfo>*>  m_creates;                 ///< Create queue
     
+    std::vector<Buffer<LFID>*>        m_allocThreads;      ///< This is the queue of families waiting for initial thread allocation
     
     Result DoThreadAllocate();
     Result DoFamilyAllocate();
     Result DoFamilyCreate();
+    Result DoThreadPreparation();
     Result DoThreadActivation();
     Result DoBundle();
 
@@ -212,22 +223,29 @@ public:
     Process p_ThreadAllocate;
     Process p_FamilyAllocate;
     Process p_FamilyCreate;
+    Process p_ThreadPrepare;
     Process p_ThreadActivation;
     Process p_Bundle;
 
-    ArbitratedService<>   p_allocation;     ///< Arbitrator for FamilyTable::AllocateFamily
-    ArbitratedService<>   p_alloc;          ///< Arbitrator for m_alloc
-    ArbitratedService<>   p_readyThreads;   ///< Arbitrator for m_readyThreads2
-    ArbitratedService<>   p_activeThreads;  ///< Arbitrator for m_activeThreads
-    ThreadList            m_activeThreads;  ///< Queue of the active threads
+    ArbitratedService<>      p_allocFamily;     ///< Arbitrator for Family allocation
+    ArbitratedService<>      p_allocThreads;    ///< Arbitrator for thread allocation
+    ArbitratedService<>      p_prepThreads;   ///< Arbitrator for m_preparingThreads2
+    ArbitratedService<>      p_readyThreads;  ///< Arbitrator for m_readyThreads
+    std::vector<ThreadList*>  m_activeThreads;  ///< Queue of the active threads
 
     size_t                m_numThreadsPerState[TST_NUMSTATES]; ///< For debugging only.
 
+   
+    size_t GetPriority(TID tid)              const {return tid & ((1<<m_pribits) - 1);}
+    size_t GetPriorityLevel()                const {return m_priorities;}
+    size_t GetPriorityBits()                 const {return m_pribits;}
+        
     // Statistics
     BufferSize GetTotalAllocatedEx() { UpdateStats(); return m_totalallocex; }
     BufferSize GetMaxAllocatedEx() const { return m_maxallocex; }
     TSize GetTotalFamiliesCreated() const { return m_numCreatedFamilies; }
     FSize GetTotalThreadsCreated() const { return m_numCreatedThreads; }
+    
 };
 
 #endif

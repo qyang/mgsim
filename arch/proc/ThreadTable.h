@@ -57,6 +57,7 @@ struct Thread
     CID          cid;
     LFID         family;
     TID          next;
+    size_t       priority;
 
     // Architecture specific per-thread stuff
 #if defined(TARGET_MTALPHA)
@@ -99,6 +100,7 @@ public:
     TSize GetMaxAllocated() const { return m_maxalloc; }
 
 private:
+
     TID                 m_empty;
     std::vector<Thread> m_threads;
     TSize               m_free[NUM_CONTEXT_TYPES];

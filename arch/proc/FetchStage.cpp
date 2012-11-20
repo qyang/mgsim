@@ -52,7 +52,7 @@ Processor::Pipeline::PipeAction Processor::Pipeline::FetchStage::OnCycle()
         {
             DeadlockWrite("F%u/T%u(priority:%u   index :%llu) %s fetch stall due to I-cache miss",
                           (unsigned)thread.family, (unsigned)tid, (unsigned)thread.priority,
-                          (unsigned long long)thread.index, GetKernel()->GetSymbolTable()[pc].c_str());
+                          (unsigned long long)thread.index, m_parent.GetProcessor().GetSymbolTable()[pc].c_str());
             return PIPE_STALL;
         }
 
@@ -78,7 +78,7 @@ Processor::Pipeline::PipeAction Processor::Pipeline::FetchStage::OnCycle()
 
         DebugSimWrite("F%u/T%u(priority:%u   index :%llu) %s switched in",
                       (unsigned)thread.family, (unsigned)tid, (unsigned)thread.priority,
-                      (unsigned long long)thread.index, GetKernel()->GetSymbolTable()[pc].c_str());
+                      (unsigned long long)thread.index, m_parent.GetProcessor().GetSymbolTable()[pc].c_str());
     }
 
     COMMIT

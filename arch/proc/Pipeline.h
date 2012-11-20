@@ -111,7 +111,7 @@ class Pipeline : public Object, public Inspect::Interface<Inspect::Read>
         const char*  pc_sym;        // Symbolic name for PC
         uint64_t     logical_index; // Thread logical index
 
-        CommonData() : pc(0), tid(0), fid(0), swch(false), kill(false), pc_dbg(0), pc_sym(NULL), logical_index(0) {}
+        CommonData() : priority(0), pc(0), tid(0), fid(0), swch(false), kill(false), pc_dbg(0), pc_sym(NULL), logical_index(0) {}
         CommonData(const CommonData&) = default;
         CommonData& operator=(const CommonData&) = default;
         virtual ~CommonData() {}

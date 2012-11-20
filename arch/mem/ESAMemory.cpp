@@ -975,10 +975,10 @@ ESAMemory::ESAMemory(const std::string& name, Simulator::Object& parent, Clock& 
     
     for (size_t i = 0; i < m_ifs.size(); ++i)
     {
-        stringstream name;
-        name << "extif" << i;
+        stringstream iname;
+        iname << "extif" << i;
     
-        m_ifs[i] = new Interface(name.str(), *this, clock, i, m_ddr, config);
+        m_ifs[i] = new Interface(iname.str(), *this, clock, i, m_ddr, config);
     
         config.registerObject(*m_ifs[i], "extif");
         config.registerRelation(*this, *m_ifs[i], "extif");

@@ -236,7 +236,7 @@ void Processor::ThreadTable::Cmd_Read(ostream& out, const vector<string>& argume
 
                 out << left << setfill(' ') << setw(9) <<  ThreadStateNames[thread.state]
                     << "  /  " << setw(4) << dec << thread.priority
-                    << " | " << GetKernel()->GetSymbolTable()[thread.pc];
+                    << " | " << symtable[thread.pc];
             }
             else
             {

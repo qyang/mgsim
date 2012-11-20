@@ -23,13 +23,8 @@ class ICache : public Object, public IMemoryCallback, public Inspect::Interface<
         MemAddr       tag;	    ///< Address tag
         char*         data;	    ///< The line data
         CycleNo       access;	    ///< Last access time (for LRU replacement)
-        ThreadQueue   waiting;      ///< Threads waiting on this line
-        unsigned long references;   ///< Number of references to this line
         LineState     state;        ///< The state of the line
-        MemAddr       tag;			///< Address tag
-        char*         data;			///< The line data
-        CycleNo       access;		///< Last access time (for LRU replacement)
-		bool          creation;		///< Is the family creation process waiting on this line?
+       	bool          creation;		///< Is the family creation process waiting on this line?
         std::vector<ThreadQueue> waiting;		///< Threads waiting on this line
 		unsigned long references;	///< Number of references to this line
 	};	

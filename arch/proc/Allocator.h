@@ -42,10 +42,8 @@ public:
 	    PID            completion_pid; ///< Core that requested the allocation
 	    RegIndex       completion_reg; ///< Register (on that core) that will receive the FID
 	    bool      	   bundle;         ///< Whether the family parameters are already bundled.
-            size_t         priority;       ///< Preset priority for RT
-	    MemAddr   	   pc;             ///< For bundled requests, the PC of the newly created family.
-	    Integer   	   parameter;      ///< For bundled requests, the value of the first shared argument.
-	    SInteger   	   index;          ///< For bundled requests, the initial thread index.
+        size_t         priority;       ///< Preset priority for RT
+	    Bundle         binfo;          ///< The bundle information for bundled requests.
 	};
 
     // These are the different states in the state machine for
@@ -67,7 +65,7 @@ public:
 	{
 		MemAddr   addr;            ///< Memory Entry
 		Integer   parameter;      ///< Parameter for shareds
-    		size_t    priority;        ///< Preset priority for RT
+        size_t    priority;        ///< Preset priority for RT
 		RegIndex  completion_reg; ///< Register (on that core) that will receive the FID
 	};
 	
@@ -76,14 +74,7 @@ public:
 		BUNDLE_INITIAL,             // Waiting for a system call to be handle
 		BUNDLE_LOADING_LINE,        // Waiting until the cache-line is loaded
 		BUNDLE_LINE_LOADED,         // The line has been loaded        
-	};
-
-    enum BundleState
-    {
-        BUNDLE_INITIAL,             // Waiting for a system call to be handle
-        BUNDLE_LOADING_LINE,        // Waiting until the cache-line is loaded
-        BUNDLE_LINE_LOADED,         // The line has been loaded
-    };
+	};   
 
     Allocator(const std::string& name, Processor& parent, Clock& clock,
               FamilyTable& familyTable, ThreadTable& threadTable, RegisterFile& registerFile, RAUnit& raunit, ICache& icache, DCache& dcache, Network& network, Pipeline& pipeline,

@@ -298,7 +298,7 @@ bool Processor::Allocator::RescheduleThread(TID tid, MemAddr pc)
 
     DebugSimWrite("F%u/T%u(priority:%u  index:%llu) rescheduling to %s", 
                   (unsigned)thread.family, (unsigned)tid, (unsigned)thread.priority, (unsigned long long)thread.index,
-                  GetKernel()->GetSymbolTable()[pc].c_str());
+                  m_parent.GetSymbolTable()[pc].c_str());
 
     return true;
 }
@@ -1177,9 +1177,9 @@ bool Processor::Allocator::QueueFamilyAllocation(const LinkMessage& msg)
     request.completion_pid = msg.allocate.completion_pid;
     request.bundle         = false;
     request.priority       = msg.allocate.priority;
-    request.pc             = 0;
-    request.parameter      = 0;
-    request.index          = 0;
+    request.binfo.pc        = 0;
+    request.binfo.parameter = 0;
+    request.binfo.index     = 0;
     size_t i = msg.allocate.priority;
     Buffer<AllocRequest>* allocations = (msg.allocate.suspend ? m_allocRequestsSuspend[i] : m_allocRequestsNoSuspend[i]);
     if (!allocations->Push(request))
@@ -1716,7 +1716,7 @@ Result Processor::Allocator::DoFamilyCreate()
         Family& family = m_familyTable[m_createInfo->fid];
             
         DebugSimWrite("F%u start creation %s", 
-                      (unsigned)m_createInfo->fid, GetKernel()->GetSymbolTable()[family.pc].c_str());
+                      (unsigned)m_createInfo->fid, m_parent.GetSymbolTable()[family.pc].c_str());
 
         // Load the register counts from the family's first cache line
         Instruction counts;
@@ -2095,7 +2095,7 @@ Processor::Allocator::Allocator(const string& name, Processor& parent, Clock& cl
     string sname = " ";
     for (size_t i = 0; i < m_priorities; ++i)
     {
-        string sname = "b_allocRequestsSuspend_" + i; 
+        sname = "b_allocRequestsSuspend_" + i; 
         m_allocRequestsSuspend[i]   = new Buffer<AllocRequest>(sname, *this, clock, config.getValue<BufferSize>(*this, "FamilyAllocationSuspendQueueSize"));
        
         sname = "b_allocRequestsNoSuspend_" + i;

@@ -46,7 +46,7 @@ public:
         Request& request = m_activeRequests.front();
 
         COMMIT {
-            m_memory.Read(request.address, request.data, data_size);
+            m_memory.Read(request.address, request.mdata.data, data_size);
         }
         
         DebugMemWrite("Complete Read for address %#016llx from external memory",(unsigned long long) request.address);
@@ -114,7 +114,7 @@ public:
                 return FAILED;
             }            
             COMMIT { 
-                m_memory.Write(req.address, req.data, req.mask, data_size);
+                m_memory.Write(req.address, req.mdata.data, req.mdata.mask, data_size);
 
                 ++m_nwrites;
             }
@@ -151,7 +151,7 @@ public:
     {
         out << hex << setfill('0') << right
             << " 0x" << setw(16) << request.address << " | "
-            << setfill(' ') << setw(4) << dec << sizeof(request.data) << " | ";
+            << setfill(' ') << setw(4) << dec << sizeof(request.mdata.data) << " | ";
 
         if (request.write) {
             out << "Write";
@@ -163,10 +163,10 @@ public:
         if ( prefix == '<' || request.write)
         {
             out << hex << setfill('0');
-            for (size_t x = 0; x < sizeof(request.data); ++x)
+            for (size_t x = 0; x < sizeof(request.mdata.data); ++x)
             {
                 out << " ";
-                out << setw(2) << (unsigned)(unsigned char)request.data[x];
+                out << setw(2) << (unsigned)(unsigned char)request.mdata.data[x];
             }
         }
         else
@@ -217,7 +217,9 @@ public:
         }
         out << endl;
     }
-    
+
+    Interface(const Interface&) = delete;
+    Interface& operator=(const Interface&) = delete;
     Interface(const std::string& name, ESAMemory& parent, Clock& clock, size_t id, const DDRChannelRegistry& ddr, Config& config) :
           Simulator::Object(name, parent, clock),
           data_size  (parent.GetLineSize()),
@@ -337,8 +339,8 @@ bool ESAMemory::Write(MCID id, MemAddr address, const MemData& data, WClientID w
     req.client  = id;
     req.wid     = wid;
     COMMIT{
-        std::copy(data.data, data.data + m_lineSize, req.data);
-        std::copy(data.mask, data.mask + m_lineSize, req.mask);
+        std::copy(data.data, data.data + m_lineSize, req.mdata.data);
+        std::copy(data.mask, data.mask + m_lineSize, req.mdata.mask);
     }
 
     
@@ -358,7 +360,7 @@ bool ESAMemory::Write(MCID id, MemAddr address, const MemData& data, WClientID w
         IMemoryCallback* client = m_clients[i];
         if (client != NULL && i != req.client)
         {
-            if (!client->OnMemorySnooped(req.address, req.data, req.mask))
+            if (!client->OnMemorySnooped(req.address, req.mdata.data, req.mdata.mask))
             {
                 DeadlockWrite("Unable to snoop data to clients");
                 ++m_numStallingWSnoops;
@@ -450,8 +452,8 @@ bool ESAMemory::EvictLine(Line* line)
         Request request;
         request.write = true;
         request.address = address;
-        std::fill(request.mask, request.mask + m_lineSize, true);
-        std::copy(line->data, line->data + m_lineSize, request.data);
+        std::fill(request.mdata.mask, request.mdata.mask + m_lineSize, true);
+        std::copy(line->data, line->data + m_lineSize, request.mdata.data);
         
         if(!m_outgoing.Push(request))
         {
@@ -601,8 +603,8 @@ Result ESAMemory::OnWriteRequest(const Request& req)
                   (unsigned long long)req.address,(unsigned long long)line->tag);
     COMMIT
     {
-        line::blit(line->data, req.data, req.mask, m_lineSize);
-        line::setif(line->valid, true, req.mask, m_lineSize);
+        line::blit(line->data, req.mdata.data, req.mdata.mask, m_lineSize);
+        line::setif(line->valid, true, req.mdata.mask, m_lineSize);
         
         // The line is now dirty
         line->dirty = true;
@@ -770,7 +772,7 @@ Result ESAMemory::DoResponses()
     
     DebugMemWrite("Processing Read Response from address %#016llx from DDR-channel",(unsigned long long) request.address);
     
-    MemData data(request);
+    MemData data(request.mdata);
     
     COMMIT
     {
@@ -804,13 +806,13 @@ Result ESAMemory::DoResponses()
     */
     COMMIT
     {
-        for (Buffer<Request>::const_iterator p = m_requests.begin(); p != m_requests.end(); ++p)
+        for (auto& p : m_requests)
         {
            // unsigned int offset = p->address % m_lineSize;
-            if (p->write && p->address == request.address)
+            if (p.write && p.address == request.address)
             {
                 // This is a write to the same line, merge it
-                line::blit(data.data, p->data, p->mask, m_lineSize);
+                line::blit(data.data, p.mdata.data, p.mdata.mask, m_lineSize);
             }
         }
     }
@@ -870,37 +872,6 @@ bool ESAMemory::GetResponse(const Request& req)
   return true;
 
 }
-
-void ESAMemory::Reserve(MemAddr address, MemSize size, ProcessID pid, int perm)
-{
-    return VirtualMemory::Reserve(address, size, pid, perm);
-}
-
-void ESAMemory::Unreserve(MemAddr address, MemSize size)
-{
-    return VirtualMemory::Unreserve(address, size);
-}
-
-void ESAMemory::UnreserveAll(ProcessID pid)
-{
-    return VirtualMemory::UnreserveAll(pid);
-}
-
-void ESAMemory::Read(MemAddr address, void* data, MemSize size)
-{
-    return VirtualMemory::Read(address, data,size);
-}
-
-void ESAMemory::Write(MemAddr address, const void* data, const bool* mask, MemSize size)
-{
-    return VirtualMemory::Write(address, data, mask, size);
-}
-
-bool ESAMemory::CheckPermissions(MemAddr address, MemSize size, int access) const
-{
-    return VirtualMemory::CheckPermissions(address, size, access);
-}
-
 
 ESAMemory::ESAMemory(const std::string& name, Simulator::Object& parent, Clock& clock, Config& config): 
     Simulator::Object(name, parent, clock),
@@ -1191,20 +1162,20 @@ void ESAMemory::Cmd_Read(std::ostream& out, const std::vector<std::string>& argu
             out << "Bus requests:" << endl << endl
                 << "      Address      | Size | Type  |     Value (writes)" << endl
                 << "-------------------+------+-------+-------------------------" << endl;
-            for (Buffer<Request>::const_iterator p = m_requests.begin(); p != m_requests.end(); ++p)
+            for (auto& p : m_requests)
             {
-                out << hex << "0x" << setw(16) << setfill('0') << p->address << " | "
+                out << hex << "0x" << setw(16) << setfill('0') << p.address << " | "
                     << dec << setw(4) << right << setfill(' ') << m_lineSize << " | "
-                    << (p->write ? "Write" : "Read ") << " | ";
-                if (p->write)
+                    << (p.write ? "Write" : "Read ") << " | ";
+                if (p.write)
                 {
                     for (size_t y = 0; y < m_lineSize; y += BYTES_PER_LINE)
                     {
                         for (size_t x = y; x < y + BYTES_PER_LINE; ++x) 
                         {
-                            if (p->mask[x])
+                            if (p.mdata.mask[x])
                             {
-                                out << " " << hex << setw(2) << (unsigned)(unsigned char)p->data[x];
+                                out << " " << hex << setw(2) << (unsigned)(unsigned char)p.mdata.data[x];
                             }
                             else 
                             {
@@ -1224,16 +1195,16 @@ void ESAMemory::Cmd_Read(std::ostream& out, const std::vector<std::string>& argu
             out << endl << "Memory responses:" << endl << endl
                 << "      Address      |                       Data" << endl
                 << "-------------------+--------------------------------------------------" << endl;
-            for (Buffer<Request>::const_iterator p = m_responses.begin(); p != m_responses.end(); ++p)
+            for (auto &p : m_responses)
             {
-                out << hex << "0x" << setw(16) << setfill('0') << p->address << " |";
+                out << hex << "0x" << setw(16) << setfill('0') << p.address << " |";
                 out << hex;
                 for (size_t y = 0; y < m_lineSize; y += BYTES_PER_LINE)
                 {
                     for (size_t x = y; x < y + BYTES_PER_LINE; ++x) 
                     {
                         out << " ";
-                        out << setw(2) << (unsigned)(unsigned char)p->data[x];
+                        out << setw(2) << (unsigned)(unsigned char)p.mdata.data[x];
                          
                     } 
                     if (y + BYTES_PER_LINE < m_lineSize) {

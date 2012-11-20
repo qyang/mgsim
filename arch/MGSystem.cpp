@@ -19,16 +19,19 @@
 #include <arch/dev/RPC.h>
 #include <arch/dev/RPC_unix.h>
 
-
 #include <cstdlib>
 #include <iomanip>
 #include <iostream>
 #include <fstream>
 #include <cmath>
 #include <limits>
-#include <cxxabi.h>
 #include <fnmatch.h>
 #include <cstring>
+
+#ifdef HAVE_GCC_ABI_DEMANGLE
+#include <cxxabi.h>
+#endif
+#include <typeinfo>
 
 using namespace Simulator;
 using namespace std;
@@ -36,18 +39,16 @@ using namespace std;
 uint64_t MGSystem::GetOp() const
 {
     uint64_t op = 0;
-    for (size_t i = 0; i < m_procs.size(); ++i) {
-        op += m_procs[i]->GetPipeline().GetOp();
-    }
+    for (Processor* p : m_procs)
+        op += p->GetPipeline().GetOp();
     return op;
 }
 
 uint64_t MGSystem::GetFlop() const
 {
     uint64_t flop = 0;
-    for (size_t i = 0; i < m_procs.size(); ++i) {
-        flop += m_procs[i]->GetPipeline().GetFlop();
-    }
+    for (Processor* p : m_procs)
+        flop += p->GetPipeline().GetFlop();
     return flop;
 }
 
@@ -55,26 +56,23 @@ uint64_t MGSystem::GetFlop() const
 
 struct my_iomanip_i { };
 template<typename _CharT, typename _Traits>
-std::basic_ostream<_CharT, _Traits>& operator<<(std::basic_ostream<_CharT, _Traits>&os, my_iomanip_i /*unused*/)
+auto operator<<(basic_ostream<_CharT, _Traits>&os, my_iomanip_i /*unused*/) -> decltype(os)
 {
-    os << std::left << std::fixed << std::setprecision(2) << std::setw(9);
-    return os;
+    return os << left << fixed << setprecision(2) << setw(9);
 }
 
 struct my_iomanip_f { };
 template<typename _CharT, typename _Traits>
-std::basic_ostream<_CharT, _Traits>& operator<<(std::basic_ostream<_CharT, _Traits>&os, my_iomanip_f /*unused*/)
+auto operator<<(basic_ostream<_CharT, _Traits>&os, my_iomanip_f /*unused*/) -> decltype(os)
 {
-    os << std::left << std::scientific << std::setprecision(6) << std::setw(12);
-    return os;
+    return os << left << scientific << setprecision(6) << setw(12);
 }
 
 struct my_iomanip_p { };
 template<typename _CharT, typename _Traits>
-std::basic_ostream<_CharT, _Traits>& operator<<(std::basic_ostream<_CharT, _Traits>&os, my_iomanip_p /*unused*/)
+auto operator<<(basic_ostream<_CharT, _Traits>&os, my_iomanip_p /*unused*/) -> decltype(os)
 {
-    os << std::left << std::setprecision(1) << std::setw(8);
-    return os;
+    return os << left << setprecision(1) << setw(8);
 }
 
 static string GetClassName(const type_info& info)
@@ -87,9 +85,12 @@ static string GetClassName(const type_info& info)
     char *buf = (char*)malloc(len);
     assert(buf != 0);
 
-    int status;
+    int status = 0;
+    char *res = 0;
 
-    char *res = abi::__cxa_demangle(name, buf, &len, &status);
+#ifdef HAVE_GCC_ABI_DEMANGLE
+    res = abi::__cxa_demangle(name, buf, &len, &status);
+#endif
 
     if (res && status == 0)
     {
@@ -131,7 +132,7 @@ map<string, Object*> MGSystem::GetComponents(const string& pat)
         string syspat = m_root.GetName() + '.' + pat;
         ::GetComponents(ret, &m_root, syspat);
     }
-    
+
     return ret;
 }
 
@@ -153,14 +154,12 @@ static string StringReplace(string arg, string pat, string repl)
 
 void MGSystem::PrintProcesses(ostream& out, const string& pat) const
 {
-    const std::set<const Process*>& allprocs = Process::GetAllProcesses();
-    for (std::set<const Process*>::const_iterator i = allprocs.begin(); i != allprocs.end(); ++i)
+    auto& allprocs = Process::GetAllProcesses();
+    for (const Process* p : allprocs)
     {
-        std::string name = (*i)->GetName();
+        std::string name = p->GetName();
         if (FNM_NOMATCH != fnmatch(pat.c_str(), name.c_str(), 0))
-        {
             out << name << endl;
-        }
     }
 }
 
@@ -185,10 +184,10 @@ static void PrintComponents(ostream& out, const Object* cur, const string& inden
         if (new_printing && (levels == 0 || cur_level < levels))
         {
             string str = indent + child->GetName();
-            
+
             out << setfill(' ') << setw(30) << left << str << right << " ";
 
-            const Inspect::ListCommands *lc = dynamic_cast<const Inspect::ListCommands*>(child);
+            auto lc = dynamic_cast<const Inspect::ListCommands*>(child);
             if (lc != NULL)
             {
                 lc->ListSupportedCommands(out);
@@ -217,9 +216,7 @@ static size_t CountComponents(const Object& obj)
 {
     size_t c = 1;
     for (size_t i = 0; i < obj.GetNumChildren(); ++i)
-    {
         c += CountComponents(*obj.GetChild(i));
-    }
     return c;
 }
 
@@ -232,11 +229,11 @@ void MGSystem::PrintCoreStats(ostream& os) const {
     const size_t P = m_procs.size();
     enum ct { I, F, PC };
     struct dt { uint64_t i; float f; };
-    struct dt c[P][MAXCOUNTS];
-    enum ct types[MAXCOUNTS];
+    dt c[P][MAXCOUNTS];
+    ct types[MAXCOUNTS];
 
     size_t i, j;
-    
+
     memset(c, 0, sizeof(struct dt)*P*MAXCOUNTS);
 
     // Collect the data
@@ -358,24 +355,6 @@ void MGSystem::PrintCoreStats(ostream& os) const {
         os << endl;
     }
 
-/*
-    os << "# minimas - all active cores" << endl
-       << setw(4) << activecores << sep;
-    for (j = 0; j < NC; ++j)
-        if (types[j] == I)
-            os << fi << dmin[j].i << sep;
-        else
-            os << ff << dmin[j].f << sep;
-    os << endl
-       << "# maxima - all active cores" << endl
-       << setw(4) << activecores << sep;
-    for (j = 0; j < NC; ++j)
-        if (types[j] == I)
-            os << fi << dmin[j].i << sep;
-        else
-            os << ff << dmin[j].f << sep;
-    os << endl;
-*/
     os << "# cumulative - all active cores" << endl
        << setw(4) << activecores << sep;
     for (j = 0; j < NC; ++j)
@@ -426,7 +405,6 @@ void MGSystem::PrintCoreStats(ostream& os) const {
        << "# xqavg: average size of the exclusive allocate queue (= xqtot / nmastercycles_total)" << endl
        << "# fcreates: total number of local families created" << endl
        << "# tcreates: total number of threads created" << endl;
-
 }
 
 void MGSystem::PrintMemoryStatistics(ostream& os) const {
@@ -490,19 +468,15 @@ void MGSystem::PrintState(const vector<string>& /*unused*/) const
         }
     }
 
-    int width = (int)log10(m_procs.size()) + 1;
-    for (size_t i = 0; i < m_procs.size(); ++i)
-    {
-        if (!m_procs[i]->IsIdle()) {
-            cout << "Processor " << dec << right << setw(width) << i << ": non-empty" << endl;
-        }
-    }
+    for (Processor* p : m_procs)
+        if (!p->IsIdle())
+            cout << p->GetFQN() << ": non-empty" << endl;
 }
 
 void MGSystem::PrintAllStatistics(ostream& os) const
 {
-    os << dec;
-    os << GetKernel().GetCycleNo() << "\t# master cycle counter" << endl
+    os << dec
+       << GetKernel().GetCycleNo() << "\t# master cycle counter" << endl
        << m_clock.GetCycleNo() << "\t# core cycle counter" << endl
        << GetOp() << "\t# total executed instructions" << endl
        << GetFlop() << "\t# total issued fp instructions" << endl;
@@ -521,14 +495,12 @@ void MGSystem::Step(CycleNo nCycles)
         // An idle state might actually be deadlock if there's a
         // suspended thread.  So check all cores to see if they're
         // really done.
-        for (size_t i = 0; i < m_procs.size(); ++i)
-        {
-            if (!m_procs[i]->IsIdle())
+        for (Processor* p : m_procs)
+            if (!p->IsIdle())
             {
                 state = STATE_DEADLOCK;
                 break;
             }
-        }
 
         // If all cores are done, but there are still some remaining
         // processes, and all the remaining processes are stalled,
@@ -569,15 +541,15 @@ void MGSystem::Step(CycleNo nCycles)
             {
                 switch (process->GetState())
                 {
-                case STATE_DEADLOCK: 
+                case STATE_DEADLOCK:
                     ss << "  " << process->GetName() << endl;
-                    ++num_stalled; 
+                    ++num_stalled;
                     break;
-                case STATE_RUNNING:  
-                    ++num_running; 
+                case STATE_RUNNING:
+                    ++num_running;
                     break;
-                default: 
-                    assert(false); 
+                default:
+                    assert(false);
                     break;
                 }
             }
@@ -586,11 +558,11 @@ void MGSystem::Step(CycleNo nCycles)
         ss << "Suspended registers:" << endl;
 
         unsigned int num_regs = 0;
-        for (size_t i = 0; i < m_procs.size(); ++i)
+        for (Processor* p : m_procs)
         {
-            unsigned suspended = m_procs[i]->GetNumSuspendedRegisters();
-            if (suspended)
-                ss << "  " << m_procs[i]->GetFQN() << ": " << suspended << endl;
+            unsigned suspended = p->GetNumSuspendedRegisters();
+            if (suspended > 0)
+                ss << "  " << p->GetFQN() << ": " << suspended << endl;
             num_regs += suspended;
         }
 
@@ -626,22 +598,30 @@ void MGSystem::Disassemble(MemAddr addr, size_t sz) const
 }
 
 MGSystem::MGSystem(Config& config,
-                   const string& symtable,
                    const vector<pair<RegAddr, RegValue> >& regs,
                    const vector<pair<RegAddr, string> >& loads,
                    const vector<string>& extradevs,
-                   bool quiet, bool doload)
-    : m_kernel(m_symtable, m_breakpoints),
+                   bool quiet)
+    : m_kernel(m_breakpoints),
       m_clock(m_kernel.CreateClock(config.getValue<unsigned long>("CoreFreq"))),
       m_root("", m_clock),
+      m_procs(),
+      m_fpus(),
+      m_iobuses(),
+      m_devices(),
+      m_procbusmapping(),
+      m_symtable(),
       m_breakpoints(m_kernel),
+      m_memory(0),
+      m_objdump_cmd(),
       m_config(config),
-      m_bootrom(NULL)
+      m_bootrom(0),
+      m_selector(0)
 {
 
     if (!quiet)
     {
-        clog << endl 
+        clog << endl
              << "Instanciating components..." << endl;
     }
 
@@ -655,36 +635,38 @@ MGSystem::MGSystem(Config& config,
 
     Clock& memclock = m_kernel.CreateClock(config.getValue<size_t>("MemoryFreq"));
 
+    IMemoryAdmin *memadmin;
+
     if (memory_type == "SERIAL") {
         SerialMemory* memory = new SerialMemory("memory", m_root, memclock, config);
-        m_memory = memory;
+        memadmin = memory; m_memory = memory;
     } else if (memory_type == "PARALLEL") {
         ParallelMemory* memory = new ParallelMemory("memory", m_root, memclock, config);
-        m_memory = memory;
+        memadmin = memory; m_memory = memory;
     } else if (memory_type == "BANKED") {
         BankedMemory* memory = new BankedMemory("memory", m_root, memclock, config, "DIRECT");
-        m_memory = memory;
+        memadmin = memory; m_memory = memory;
     } else if (memory_type == "RANDOMBANKED") {
         BankedMemory* memory = new BankedMemory("memory", m_root, memclock, config, "RMIX");
-        m_memory = memory;
+        memadmin = memory; m_memory = memory;
     } else if (memory_type == "DDR") {
         DDRMemory* memory = new DDRMemory("memory", m_root, memclock, config, "DIRECT");
-        m_memory = memory;
+        memadmin = memory; m_memory = memory;
     } else if (memory_type == "RANDOMDDR") {
         DDRMemory* memory = new DDRMemory("memory", m_root, memclock, config, "RMIX");
-        m_memory = memory;
+        memadmin = memory; m_memory = memory;
     } else if (memory_type == "COMA") {
         COMA* memory = new TwoLevelCOMA("memory", m_root, memclock, config);
-        m_memory = memory;
+        memadmin = memory; m_memory = memory;
     } else if (memory_type == "ZLCOMA") {
         ZLCOMA* memory = new ZLCOMA("memory", m_root, memclock, config);
-        m_memory = memory;
+        memadmin = memory; m_memory = memory;
     }else if (memory_type == "ESA") {
         ESAMemory* memory = new ESAMemory("memory", m_root, memclock, config);
-        m_memory = memory;
+        memadmin = memory; m_memory = memory;
     } else if (memory_type == "FLATCOMA") {
         COMA* memory = new OneLevelCOMA("memory", m_root, memclock, config);
-        m_memory = memory;
+        memadmin = memory; m_memory = memory;
     } else {
         throw runtime_error("Unknown memory type: " + memory_type);
     }
@@ -692,6 +674,8 @@ MGSystem::MGSystem(Config& config,
     {
         clog << "memory: " << memory_type << endl;
     }
+    memadmin->SetSymbolTable(m_symtable);
+    m_breakpoints.SetSymbolTable(m_symtable);
 
     // Create the event selector
     Clock& selclock = m_kernel.CreateClock(config.getValue<unsigned long>("EventCheckFreq"));
@@ -768,13 +752,13 @@ MGSystem::MGSystem(Config& config,
             }
         }
 
-        m_procs[i]   = new Processor(name, m_root, m_clock, i, m_procs, *m_memory, *m_memory, fpu, iobus, config);
+        m_procs[i]   = new Processor(name, m_root, m_clock, i, m_procs, *m_memory, *memadmin, fpu, iobus, config);
     }
     if (!quiet)
     {
         clog << numProcessors << " cores instantiated." << endl;
     }
-    
+
     // Create the I/O devices
     vector<string> dev_names = extradevs;
     vector<string> cfg_names = config.getWordList("IODevices");
@@ -801,7 +785,7 @@ MGSystem::MGSystem(Config& config,
         {
             throw runtime_error("Device " + name + " set to connect to non-existent bus");
         }
-        
+
         IIOBus& iobus = *m_iobuses[busid];
 
         IODeviceID devid = config.getValueOrDefault<IODeviceID>(m_root, name, "DeviceID", iobus.GetNextAvailableDeviceID());
@@ -828,7 +812,7 @@ MGSystem::MGSystem(Config& config,
             m_devices[i] = disp;
             config.registerObject(*disp, "gfx");
         } else if (dev_type == "AROM") {
-            ActiveROM *rom = new ActiveROM(name, m_root, *m_memory, iobus, devid, config, quiet);
+            ActiveROM *rom = new ActiveROM(name, m_root, *memadmin, iobus, devid, config, quiet);
             m_devices[i] = rom;
             aroms.push_back(rom);
             config.registerObject(*rom, "arom");
@@ -865,7 +849,7 @@ MGSystem::MGSystem(Config& config,
 
     if (!quiet)
     {
-        clog << endl 
+        clog << endl
              << "Initializing components..." << endl;
     }
 
@@ -883,16 +867,12 @@ MGSystem::MGSystem(Config& config,
     }
 
     // Initialize the buses. This initializes the devices as well.
-    for (size_t i = 0; i < m_iobuses.size(); ++i)
-    {
-        m_iobuses[i]->Initialize();
-    }
+    for (auto iob : m_iobuses)
+        iob->Initialize();
 
     // Check for bootable ROMs. This must happen after I/O bus
     // initialization because the ROM contents are loaded then.
-    for (size_t i = 0; i < aroms.size(); ++i)
-    {
-        ActiveROM *rom = aroms[i];
+    for (auto rom : aroms)
         if (rom->IsBootable())
         {
             if (m_bootrom != NULL)
@@ -901,7 +881,7 @@ MGSystem::MGSystem(Config& config,
             }
             m_bootrom = rom;
         }
-    }
+
     if (m_bootrom == NULL)
     {
         cerr << "Warning: No bootable ROM configured." << endl;
@@ -909,7 +889,7 @@ MGSystem::MGSystem(Config& config,
 
     if (!quiet)
     {
-        clog << endl 
+        clog << endl
              << "Final configuration..." << endl;
     }
 
@@ -933,27 +913,25 @@ MGSystem::MGSystem(Config& config,
         if (mode.find("X") != string::npos)
             perm |= IMemory::PERM_EXECUTE;
 
-        m_memory->Reserve(address, size, pid, perm);
+        memadmin->Reserve(address, size, pid, perm);
     }
 
     // Set program debugging per default
     m_kernel.SetDebugMode(Kernel::DEBUG_PROG);
 
-    // Load symbol table
-    if (doload && !symtable.empty())
-    {
-        ifstream in(symtable.c_str(), ios::in);
-        m_symtable.Read(in, quiet);
-    }
-
     // Find objdump command
 #if defined(TARGET_MTALPHA)
     const char *default_objdump = "mtalpha-linux-gnu-objdump";
     const char *objdump_var = "MTALPHA_OBJDUMP";
-#endif
-#if defined(TARGET_MTSPARC)
+#elif defined(TARGET_MTSPARC)
     const char *default_objdump = "mtsparc-linux-gnu-objdump";
     const char *objdump_var = "MTSPARC_OBJDUMP";
+#elif defined(TARGET_MIPS32)
+    const char *default_objdump = "mips-linux-gnu-objdump";
+    const char *objdump_var = "MIPS_OBJDUMP";
+#elif defined(TARGET_MIPS32EL)
+    const char *default_objdump = "mipsel-linux-gnu-objdump";
+    const char *objdump_var = "MIPSEL_OBJDUMP";
 #endif
     const char *v = getenv(objdump_var);
     if (!v) v = default_objdump;
@@ -977,22 +955,14 @@ MGSystem::MGSystem(Config& config,
 
 MGSystem::~MGSystem()
 {
-    for (size_t i = 0; i < m_iobuses.size(); ++i)
-    {
-        delete m_iobuses[i];
-    }
-    for (size_t i = 0; i < m_devices.size(); ++i)
-    {
-        delete m_devices[i];
-    }
-    for (size_t i = 0; i < m_procs.size(); ++i)
-    {
-        delete m_procs[i];
-    }
-    for (size_t i = 0; i < m_fpus.size(); ++i)
-    {
-        delete m_fpus[i];
-    }
+    for (auto iob : m_iobuses)
+        delete iob;
+    for (auto dev : m_devices)
+        delete dev;
+    for (auto proc : m_procs)
+        delete proc;
+    for (auto fpu : m_fpus)
+        delete fpu;
     delete m_selector;
     delete m_memory;
 }

@@ -98,7 +98,7 @@ Processor::Pipeline::PipeAction Processor::Pipeline::FetchStage::OnCycle()
         const bool mustSwitch = m_output.kill || (next_pc % m_icache.GetLineSize() == 0);
         bool prioritySwitch   = false;
         size_t j = 0;
-        for(size_t i = 0; i < m_allocator.GetPriorityLevel(); i++)
+        for(size_t i = 0; i < m_parent.GetProcessor().GetPriorityLevels(); i++)
         {
            if(m_allocator.m_activeThreads[i]->Empty() || m_allocator.m_activeThreads[i]->Singular())
            {

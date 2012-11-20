@@ -19,6 +19,7 @@ Processor::ICache::ICache(const std::string& name, Processor& parent, Clock& clo
     m_selector(IBankSelector::makeSelector(*this, config.getValue<string>(*this, "BankSelector"), config.getValue<size_t>(*this, "NumSets"))),
     m_outgoing("b_outgoing", *this, clock, config.getValue<BufferSize>(*this, "OutgoingBufferSize")),
     m_incoming("b_incoming", *this, clock, config.getValue<BufferSize>(*this, "IncomingBufferSize")),
+    m_priorities(config.getValueOrDefault<size_t>("PriorityLevel", 1)),
     m_lineSize(config.getValue<size_t>("CacheLineSize")),
     m_assoc   (config.getValue<size_t>(*this, "Associativity")),
 
@@ -84,8 +85,12 @@ Processor::ICache::ICache(const std::string& name, Processor& parent, Clock& clo
         line.state        = LINE_EMPTY;
         line.data         = &m_data[i * m_lineSize];
         line.references   = 0;
-        line.waiting.head = INVALID_TID;
         line.creation     = false;
+        line.waiting.resize(m_priorities);  
+        for (size_t j = 0; j < m_priorities; j++)
+        {
+            line.waiting[j].head = INVALID_TID;
+        }
     }
 }
 
@@ -283,7 +288,7 @@ Result Processor::ICache::Fetch(MemAddr address, MemSize size, TID* tid, CID* ci
     {
         *cid = line - &m_lines[0];
     }
-
+      
     if (result == SUCCESS)
     {
         // Cache hit
@@ -313,11 +318,14 @@ Result Processor::ICache::Fetch(MemAddr address, MemSize size, TID* tid, CID* ci
             if (tid != NULL)
             {
                 // Add the thread to the queue
-                TID head = line->waiting.head;
-                if (line->waiting.head == INVALID_TID) {
-                    line->waiting.tail = *tid;
+                size_t pri = m_parent.GetTIDPriority(*tid);
+                TID  N_tid = m_parent.UnpackTID(*tid);
+                ThreadQueue& queue = line->waiting[pri];
+                TID head = queue.head;
+                if (queue.head == INVALID_TID) {
+                    queue.tail = N_tid;
                 }
-                line->waiting.head = *tid;
+                queue.head = N_tid;
                 *tid = head;
             }
             else if (cid != NULL)
@@ -358,8 +366,11 @@ Result Processor::ICache::Fetch(MemAddr address, MemSize size, TID* tid, CID* ci
             if (tid != NULL)
             {
                 // Initialize the waiting queue
-                line->waiting.head = *tid;
-                line->waiting.tail = *tid;
+                size_t pri = m_parent.GetTIDPriority(*tid);
+                TID  N_tid = m_parent.UnpackTID(*tid);
+                ThreadQueue& queue = line->waiting[pri];
+                queue.head = N_tid;
+                queue.tail = N_tid;
                 *tid = INVALID_TID;
             }
             else if (cid != NULL)
@@ -480,23 +491,26 @@ Result Processor::ICache::DoIncoming()
         }
         COMMIT{ line.creation = false; }
     }
-
-    if (line.waiting.head != INVALID_TID)
+    
+    for( size_t i = 0; i < m_priorities; i++)
     {
-        // Reschedule the line's waiting list
-        if (!m_allocator.QueueReadyThreads(line.waiting))
+        if (line.waiting[i].head != INVALID_TID)
         {
-            DeadlockWrite("Unable to queue ready threads T%u through T%u for C%u",
-                          (unsigned)line.waiting.head, (unsigned)line.waiting.tail, (unsigned)cid);
-            return FAILED;
-        }
+            // Reschedule the line's waiting list
+            if (!m_allocator.QueueActiveThreads(line.waiting[i], i))
+            {
+                DeadlockWrite("Unable to queue active threads T%u through T%u with priority %u for C%u",
+                          (unsigned)line.waiting[i].head, (unsigned)line.waiting[i].tail, (unsigned)i, (unsigned)cid);
+                return FAILED;
+            }
 
-        // Clear the waiting list
-        COMMIT
-        {
-            line.waiting.head = INVALID_TID;
-            line.waiting.tail = INVALID_TID;
-           }
+            // Clear the waiting list
+            COMMIT
+            {
+                line.waiting[i].head = INVALID_TID;
+                line.waiting[i].tail = INVALID_TID;
+            }
+        }
     }
     m_incoming.Pop();
     return SUCCESS;

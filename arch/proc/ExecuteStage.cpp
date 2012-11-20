@@ -200,7 +200,7 @@ Processor::Pipeline::PipeAction Processor::Pipeline::ExecuteStage::ExecAllocate(
     // Send an allocation request.
     // This will write back the FID to the specified register once the allocation
     // has completed. Even for creates to this core, we do this. Simplifies things.    
-    size_t priority = (flags >> 2) & ((1 << m_allocator.GetPriorityBits()) - 1);
+    size_t priority = (flags >> 2) & ((1 << m_parent.GetProcessor().GetPriorityBits()) - 1);
     
     COMMIT
     {

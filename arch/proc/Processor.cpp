@@ -54,6 +54,11 @@ Processor::Processor(const std::string& name, Object& parent, Clock& clock, PID 
     m_bits.pid_bits = ilog2(GetGridSize());
     m_bits.fid_bits = ilog2(m_familyTable.GetFamilies().size());
     m_bits.tid_bits = ilog2(m_threadTable.GetNumThreads());
+    
+    //Get priority configuration    
+    
+    m_priority.levels = config.getValueOrDefault<size_t>("PriorityLevel", 1);
+    m_priority.bits = ilog2(m_priority.levels);
 
     // Configure the MMIO interface for the common devices
     m_perfcounters.Connect(m_mmio, IOMatchUnit::READ, config);
@@ -246,14 +251,12 @@ void Processor::Initialize(Processor* prev, Processor* next)
         /* CREATE_NOTIFY */                 opt(DELEGATE) );
 
     m_allocator.p_ThreadPrepare.SetStorageTraces(
-        opt(m_allocator.m_readyThreads ^ m_icache.m_outgoing) );  
-    
-    m_allocator.p_ThreadActivation.SetStorageTraces(opt(allocator_activeThread));
-    
+        opt(allocator_activeThread ^ m_icache.m_outgoing) );      
+       
     m_allocator.p_Bundle.SetStorageTraces( m_dcache.m_outgoing ^ DELEGATE );
 
     m_icache.p_Incoming.SetStorageTraces(
-        opt(m_allocator.m_readyThreads) );
+        opt(allocator_activeThread) );
 
     // m_icache.p_Outgoing is set in the memory
 
@@ -516,6 +519,25 @@ Integer Processor::PackFID(const FID& fid) const
 {
     // Construct the FID: <Capability:N, LFID:F, PID:P>
     return (fid.capability << (m_bits.pid_bits + m_bits.fid_bits)) | (fid.lfid << m_bits.pid_bits) | fid.pid;
+}
+
+Integer Processor::PackTID(const TID tid, Integer priority) const
+{
+    // Construct the FID: <Capability:N, LFID:F, PID:P>
+    return (tid == INVALID_TID) ? tid : ((tid << m_priority.bits) | priority ) ;
+}
+
+TID Processor::UnpackTID(Integer id) const
+{
+    assert(id != INVALID_TID);
+    
+    return (id >> m_priority.bits);
+}
+
+Integer Processor::GetTIDPriority(Integer id) const
+{
+    assert(id != INVALID_TID);
+    return (id &((1 << m_priority.bits) - 1));    
 }
 
 }

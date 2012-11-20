@@ -166,14 +166,13 @@ bool Processor::Allocator::QueueThreads(ThreadList& list, const ThreadQueue& thr
 }
 
 
-bool Processor::Allocator::QueueActiveThreads(const ThreadQueue& threads)
+bool Processor::Allocator::QueueActiveThreads(const ThreadQueue& threads, Integer priority)
 {
-    assert(threads.head == threads.tail);
-    
+    assert(threads.head != INVALID_TID);  
   
-    DebugSimWrite("T%u(%u) pushed to active queue %u", (unsigned)threads.head, (unsigned)threads.head, (unsigned)m_threadTable[threads.head].priority);
+    //DebugSimWrite("T%u(%u) pushed to active queue %u", (unsigned)threads.head, (unsigned)priority);
     
-    if (!QueueThreads(*m_activeThreads[m_threadTable[threads.head].priority], threads, TST_ACTIVE))
+    if (!QueueThreads(*m_activeThreads[priority], threads, TST_ACTIVE))
     {
         DeadlockWrite("Unable to queue threads onto Ready Queue");
         return false;      
@@ -182,6 +181,7 @@ bool Processor::Allocator::QueueActiveThreads(const ThreadQueue& threads)
     return true;
 }
 
+/*
 bool Processor::Allocator::QueueReadyThreads(const ThreadQueue& threads)
 {
     
@@ -201,7 +201,7 @@ bool Processor::Allocator::QueueReadyThreads(const ThreadQueue& threads)
     return true;    
     
 }
-
+*/
 //
 // This is called by various components (RegisterFile, Pipeline, ...) to
 // add the threads to the ready queue.
@@ -1029,7 +1029,7 @@ Result Processor::Allocator::DoThreadPreparation()
 
         // This thread doesn't have a Thread Instruction Buffer yet,
         // so try to get the cache line
-        TID    next = tid;
+        TID    next = (TID)m_parent.PackTID(tid, thread.priority);
         CID    cid;
         Result result = SUCCESS;
         if ((result = m_icache.Fetch(thread.pc, sizeof(Instruction), next, cid)) == FAILED)
@@ -1056,9 +1056,9 @@ Result Processor::Allocator::DoThreadPreparation()
         {
             // The thread can be added to the family's ready queue
             ThreadQueue tq = {tid, tid};
-            if (!QueueReadyThreads(tq))
+            if (!QueueActiveThreads(tq, thread.priority))
             {
-                DeadlockWrite("Unable to enqueue T%u to the ready Queue", (unsigned)tid);
+                DeadlockWrite("Unable to enqueue T%u to the ActiveQueue %u", (unsigned)tid, (unsigned)thread.priority);
                 return FAILED;
             }
         }
@@ -1066,6 +1066,7 @@ Result Processor::Allocator::DoThreadPreparation()
     }
 }
 
+/*
 Result Processor::Allocator::DoThreadActivation()
 {
     assert(!m_readyThreads.Empty());    
@@ -1075,7 +1076,7 @@ Result Processor::Allocator::DoThreadActivation()
     
     DebugSimWrite("Poped T%u with priprity %u from ready queue to active queue", (unsigned)tid, (unsigned)m_threadTable[tid].priority );
     
-    if (!QueueActiveThreads(tq))
+    if (!QueueActiveThreads(tq,m_threadTable[tid].priority))
     {
         DeadlockWrite("Unable to enqueue T%u to the Active Queue", (unsigned)tid);
         return FAILED;
@@ -1084,15 +1085,16 @@ Result Processor::Allocator::DoThreadActivation()
     
     return SUCCESS;
     
-}
+}*/
 
 bool Processor::Allocator::QueueBundle(const MemAddr addr, Integer parameter, RegIndex completion_reg)
 {
    
     BundleInfo info;
+    size_t bit = ilog2(m_priorities);
     info.addr           = addr;
-    info.parameter      = parameter >> m_pribits;
-    info.priority       = parameter & ((1 << m_pribits) - 1);
+    info.parameter      = parameter >> bit;
+    info.priority       = parameter & ((1 << bit) - 1);
     info.completion_reg = completion_reg;
 
     if (!m_bundle.Push(info))
@@ -2051,7 +2053,6 @@ Processor::Allocator::Allocator(const string& name, Processor& parent, Clock& cl
  :  Object(name, parent, clock),
     m_parent(parent), m_familyTable(familyTable), m_threadTable(threadTable), m_registerFile(registerFile), m_raunit(raunit), m_icache(icache), m_dcache(dcache), m_network(network), m_pipeline(pipeline),
     m_priorities    (config.getValueOrDefault<size_t>("PriorityLevel", 1)),
-    m_pribits       (ilog2(m_priorities)),
     m_bundle        ("b_bundlecreation", *this, clock, config.getValueOrDefault<BufferSize>(*this,"IndirectCreateQueueSize", 8)),
     m_cleanup       ("b_cleanup",        *this, clock, config.getValueOrDefault<BufferSize>(*this, "ThreadCleanupQueueSize", threadTable.GetNumThreads()), 4),
     m_currentCreation (NULL),
@@ -2060,7 +2061,6 @@ Processor::Allocator::Allocator(const string& name, Processor& parent, Clock& cl
     m_preparingThreads1 ("q_preparingThreads1", *this, clock, threadTable),
     m_preparingThreads2 ("q_preparingThreads2", *this, clock, threadTable),
     m_prevPreparingList (NULL),
-    m_readyThreads      ("q_readyThreads", *this, clock, threadTable),
     m_bundleState       (BUNDLE_INITIAL),  
 
     m_maxallocex(0), m_totalallocex(0), m_lastcycle(0), m_curallocex(0),
@@ -2071,7 +2071,6 @@ Processor::Allocator::Allocator(const string& name, Processor& parent, Clock& cl
     p_FamilyAllocate  (*this, "family-allocate",   delegate::create<Allocator, &Processor::Allocator::DoFamilyAllocate  >(*this)  ),
     p_FamilyCreate    (*this, "family-create",     delegate::create<Allocator, &Processor::Allocator::DoFamilyCreate    >(*this)  ),
     p_ThreadPrepare   (*this, "thread-preparation", delegate::create<Allocator, &Processor::Allocator::DoThreadPreparation>(*this)),
-    p_ThreadActivation(*this, "thread-activation", delegate::create<Allocator, &Processor::Allocator::DoThreadActivation>(*this)  ),
     p_Bundle          (*this, "bundle-create",     delegate::create<Allocator, &Processor::Allocator::DoBundle          >(*this)  ),    
     p_allocFamily    (*this, clock, "p_allocateFamily"),
     p_allocThreads  (*this, clock, "p_allocateThreads"),
@@ -2083,8 +2082,7 @@ Processor::Allocator::Allocator(const string& name, Processor& parent, Clock& cl
     m_bundle            .Sensitive(p_Bundle);
     m_preparingThreads1 .Sensitive(p_ThreadPrepare);
     m_preparingThreads2 .Sensitive(p_ThreadPrepare);
-    m_readyThreads      .Sensitive(p_ThreadActivation);
-    
+     
      
     m_allocRequestsSuspend   .resize(m_priorities);
     m_allocRequestsNoSuspend .resize(m_priorities);

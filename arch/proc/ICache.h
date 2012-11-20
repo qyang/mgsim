@@ -25,7 +25,7 @@ class ICache : public Object, public IMemoryCallback, public Inspect::Interface<
         char*         data;			///< The line data
         CycleNo       access;		///< Last access time (for LRU replacement)
 		bool          creation;		///< Is the family creation process waiting on this line?
-        ThreadQueue	  waiting;		///< Threads waiting on this line
+        std::vector<ThreadQueue> waiting;		///< Threads waiting on this line
 		unsigned long references;	///< Number of references to this line
 	};
 	
@@ -45,9 +45,11 @@ class ICache : public Object, public IMemoryCallback, public Inspect::Interface<
 	std::vector<char> m_data;
 	Buffer<MemAddr>   m_outgoing;
 	Buffer<CID>       m_incoming;
+    size_t            m_priorities;
 
     size_t            m_lineSize;
     size_t            m_assoc;
+    
 
     // Statistics:
     uint64_t             m_numHits;

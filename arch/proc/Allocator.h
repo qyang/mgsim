@@ -114,8 +114,8 @@ public:
 	
     bool QueueCreate(const RemoteMessage& msg, PID src);
     bool QueueCreate(const LinkMessage& msg);
-    bool QueueReadyThreads(const ThreadQueue& threads);
-    bool QueueActiveThreads(const ThreadQueue& threads);
+    //bool QueueReadyThreads(const ThreadQueue& threads);
+    bool QueueActiveThreads(const ThreadQueue& threads, Integer priority);
     bool QueueThreads(ThreadList& list, const ThreadQueue& threads, ThreadState state);
     
     bool OnICachelineLoaded(CID cid);
@@ -190,7 +190,7 @@ private:
     ThreadList            m_preparingThreads1;           ///< Queue of the threads can be ready; from the pipeline
     ThreadList            m_preparingThreads2;           ///< Queue of the threads can be ready; from the rest
     ThreadList*           m_prevPreparingList;           ///< Which ready list was used last cycle. For round-robin prioritization.
-    ThreadList            m_readyThreads;                ///< Queue of the threads can be activited; from the pipeline
+   
     BundleState           m_bundleState;
    
     // The family allocation request queues
@@ -206,7 +206,6 @@ private:
     Result DoFamilyAllocate();
     Result DoFamilyCreate();
     Result DoThreadPreparation();
-    Result DoThreadActivation();
     Result DoBundle();
 
     // Statistics
@@ -224,7 +223,7 @@ public:
     Process p_FamilyAllocate;
     Process p_FamilyCreate;
     Process p_ThreadPrepare;
-    Process p_ThreadActivation;
+  //  Process p_ThreadActivation;
     Process p_Bundle;
 
     ArbitratedService<>      p_allocFamily;     ///< Arbitrator for Family allocation
@@ -233,12 +232,7 @@ public:
     ArbitratedService<>      p_readyThreads;  ///< Arbitrator for m_readyThreads
     std::vector<ThreadList*>  m_activeThreads;  ///< Queue of the active threads
 
-    size_t                m_numThreadsPerState[TST_NUMSTATES]; ///< For debugging only.
-
-   
-    size_t GetPriority(TID tid)              const {return tid & ((1<<m_pribits) - 1);}
-    size_t GetPriorityLevel()                const {return m_priorities;}
-    size_t GetPriorityBits()                 const {return m_pribits;}
+    size_t                m_numThreadsPerState[TST_NUMSTATES]; ///< For debugging only.   
         
     // Statistics
     BufferSize GetTotalAllocatedEx() { UpdateStats(); return m_totalallocex; }

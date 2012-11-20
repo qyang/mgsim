@@ -83,7 +83,12 @@ public:
     Integer     PackPlace(const PlaceID& id) const;
     FID         UnpackFID(Integer id) const;
     Integer     PackFID(const FID& fid) const;
+    Integer     PackTID(const TID tid, Integer priority) const;
+    TID         UnpackTID(Integer id) const;
+    Integer     GetTIDPriority(Integer id) const;
     FCapability GenerateFamilyCapability() const;
+    Integer     GetPriorityBits()   const { return m_priority.bits; }
+    Integer     GetPriorityLevels() const { return m_priority.levels; }
 
     void MapMemory(MemAddr address, MemSize size, ProcessID pid = 0);
     void UnmapMemory(MemAddr address, MemSize size);
@@ -110,6 +115,12 @@ private:
         unsigned int fid_bits;  ///< Number of bits for a LFID (Local Family ID)
         unsigned int tid_bits;  ///< Number of bits for a TID (Thread ID)
     } m_bits;
+    
+    struct
+    {
+        unsigned int levels;
+        unsigned int bits;
+    } m_priority;
     
     // The components on the core
     FamilyTable           m_familyTable;

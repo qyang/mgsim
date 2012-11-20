@@ -29,10 +29,10 @@ enum ThreadDependency
 class Allocator : public Object, public Inspect::Interface<Inspect::Read>
 {
     friend class Processor;
-    
+
 public:
     typedef LinkedList< TID, ThreadTable, &Thread::next> ThreadList;
-    
+   
 	struct AllocRequest
 	{
 	    LFID           first_fid;      ///< FID of the family on the first core
@@ -78,10 +78,18 @@ public:
 		BUNDLE_LINE_LOADED,         // The line has been loaded        
 	};
 
+    enum BundleState
+    {
+        BUNDLE_INITIAL,             // Waiting for a system call to be handle
+        BUNDLE_LOADING_LINE,        // Waiting until the cache-line is loaded
+        BUNDLE_LINE_LOADED,         // The line has been loaded
+    };
 
     Allocator(const std::string& name, Processor& parent, Clock& clock,
-        FamilyTable& familyTable, ThreadTable& threadTable, RegisterFile& registerFile, RAUnit& raunit, ICache& icache, DCache& dcache, Network& network, Pipeline& pipeline,
-        Config& config);
+              FamilyTable& familyTable, ThreadTable& threadTable, RegisterFile& registerFile, RAUnit& raunit, ICache& icache, DCache& dcache, Network& network, Pipeline& pipeline,
+              Config& config);
+    Allocator(const Allocator&) = delete;
+    Allocator& operator=(const Allocator&) = delete;
 
     // Allocates the initial family consisting of a single thread on the first CPU.
     // Typically called before tha actual simulation starts.
@@ -103,7 +111,7 @@ public:
     bool RescheduleThread(TID tid, MemAddr pc);         // Reschedules a thread from the pipeline
     bool SuspendThread(TID tid, MemAddr pc);            // Suspends a thread at the specified PC
     bool KillThread(TID tid);                           // Kills a thread
-    
+
     bool QueueFamilyAllocation(const RemoteMessage& msg, bool bundle);
     bool QueueFamilyAllocation(const LinkMessage& msg);
     bool QueueBundle(const MemAddr addr, Integer parameter, RegIndex completion_reg);
@@ -111,30 +119,30 @@ public:
 
     FCapability InitializeFamily(LFID fid) const;
     void ReleaseContext(LFID fid);
-	
+
     bool QueueCreate(const RemoteMessage& msg, PID src);
     bool QueueCreate(const LinkMessage& msg);
     //bool QueueReadyThreads(const ThreadQueue& threads);
     bool QueueActiveThreads(const ThreadQueue& threads, Integer priority);
     bool QueueThreads(ThreadList& list, const ThreadQueue& threads, ThreadState state);
-    
+
     bool OnICachelineLoaded(CID cid);
     bool OnDCachelineLoaded(char* data);
     bool OnMemoryRead(LFID fid);
-    
+
     bool DecreaseFamilyDependency(LFID fid, FamilyDependency dep);
     bool DecreaseFamilyDependency(LFID fid, Family& family, FamilyDependency dep);
     bool IncreaseThreadDependency(TID tid, ThreadDependency dep);
     bool DecreaseThreadDependency(TID tid, ThreadDependency dep);
-    
+
     TID PopActiveThread();
-    
+
     // Helpers
     TID  GetRegisterType(LFID fid, RegAddr addr, RegClass* group) const;
-    
+
     // Debugging
-    void Cmd_Info(std::ostream& out, const std::vector<std::string>& arguments) const;
-    void Cmd_Read(std::ostream& out, const std::vector<std::string>& arguments) const;
+    void Cmd_Info(std::ostream& out, const std::vector<std::string>& arguments) const override;
+    void Cmd_Read(std::ostream& out, const std::vector<std::string>& arguments) const override;
 
 private:
     struct CreateInfo
@@ -142,11 +150,11 @@ private:
         LFID     fid;
         PID      completion_pid;
         RegIndex completion_reg;
-        Integer  parameter;
-        SInteger index;
-        bool     bundle;
+        Integer  parameter; // For bundle creation
+        SInteger index;     // For bundle creation
+        bool     bundle;    // For bundle creation
     };
-    
+
     // A queued integer register write
     struct RegisterWrite
     {
@@ -159,7 +167,7 @@ private:
     void    CalculateDistribution(Family& family, Integer nThreads, PSize numCores);
     bool    AllocateRegisters(LFID fid, ContextType type);
     bool    AllocateThread(LFID fid, TID tid, bool isNewlyAllocated = true);
-    bool    PushCleanup(TID tid);   
+    bool    PushCleanup(TID tid);
     bool    IsContextAvailable(ContextType type) const;
 
     // Thread queue manipulation
@@ -180,6 +188,7 @@ private:
     size_t        m_priorities;
     size_t        m_pribits;
     char          m_bundleData[MAX_MEMORY_OPERATION_SIZE];
+
     Buffer<BundleInfo>    m_bundle;
    
     Buffer<TID>           m_cleanup;                 ///< Cleanup queue
@@ -209,9 +218,9 @@ private:
     Result DoBundle();
 
     // Statistics
+    CycleNo    m_lastcycle;
     BufferSize m_maxallocex;
     BufferSize m_totalallocex;
-    CycleNo    m_lastcycle;
     BufferSize m_curallocex;
     FSize      m_numCreatedFamilies;
     TSize      m_numCreatedThreads;

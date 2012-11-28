@@ -41,6 +41,8 @@ DEVICE_SRC = \
         arch/dev/UART.cpp
 
 PROCESSOR_SRC = \
+        arch/proc/ActionInterface.cpp \
+        arch/proc/ActionInterface.h \
 	arch/proc/Allocator.cpp \
 	arch/proc/Allocator.h \
 	arch/proc/AncillaryRegisterFile.cpp \
@@ -74,6 +76,8 @@ PROCESSOR_SRC = \
 	arch/proc/ISA.mtsparc.h \
 	arch/proc/ISA.mips.h \
 	arch/proc/MemoryStage.cpp \
+	arch/proc/MMUInterface.cpp \
+	arch/proc/MMUInterface.h \
 	arch/proc/Network.cpp \
 	arch/proc/Network.h \
 	arch/proc/Pipeline.cpp \

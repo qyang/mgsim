@@ -175,7 +175,15 @@ namespace Simulator
 
         if (source == "RAW" || source == "ELF")
         {
-            m_filename = m_config.getValue<string>(*this, "ROMFileName");
+            auto &v = m_config.GetArgumentVector();
+            if (!v.empty())
+            {
+                m_filename = m_config.getValueOrDefault<string>(*this, "ROMFileName", v[0]);
+            }
+            else
+            {
+                m_filename = m_config.getValue<string>(*this, "ROMFileName");
+            }
             LoadFile(m_filename);
         }
         else if (source == "CONFIG")
@@ -193,7 +201,7 @@ namespace Simulator
 
         if (source == "ELF")
         {
-            pair<MemAddr, bool> res = LoadProgram(GetName(), m_loadable, m_memory, m_data, m_numLines * m_lineSize, m_verboseload);
+            pair<MemAddr, bool> res = LoadProgram(GetName() + ':' + m_filename, m_loadable, m_memory, m_data, m_numLines * m_lineSize, m_verboseload);
             m_bootable = true;
             m_start_address = res.first;
             m_legacy = res.second;

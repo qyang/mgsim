@@ -920,22 +920,25 @@ MGSystem::MGSystem(Config& config, bool quiet)
 #  define OBJDUMP_CMD OBJDUMP_MTALPHA
 # endif
 #elif defined(TARGET_MTSPARC)
-# define OBJDUMP_VAR "MTSPARc_OBJDUMP"
+# define OBJDUMP_VAR "MTSPARC_OBJDUMP"
 # if defined(OBJDUMP_MTSPARC)
 #  define OBJDUMP_CMD OBJDUMP_MTSPARC
 # endif
 #elif defined(TARGET_MIPS32)
-# define OBJDUMP_VAR "MIPS_OBJDUMP"
-# if defined(OBJDUMP_MIPS)
-#  define OBJDUMP_CMD OBJDUMP_MIPS
+# define OBJDUMP_VAR "MIPS32_OBJDUMP"
+# if defined(OBJDUMP_MIPS32)
+#  define OBJDUMP_CMD OBJDUMP_MIPS32
 # endif
 #elif defined(TARGET_MIPS32EL)
-# define OBJDUMP_VAR "MIPSEL_OBJDUMP"
-# if defined(OBJDUMP_MIPSEL)
-#  define OBJDUMP_CMD OBJDUMP_MIPSEL
+# define OBJDUMP_VAR "MIPS32EL_OBJDUMP"
+# if defined(OBJDUMP_MIPS32EL)
+#  define OBJDUMP_CMD OBJDUMP_MIPS32EL
 # endif
 #endif
-    const char *v = getenv(OBJDUMP_VAR);
+    const char *v = 0;
+#ifdef OBJDUMP_VAR
+    v = getenv(OBJDUMP_VAR);
+#endif
     if (!v)
     {
 #ifdef OBJDUMP_CMD
@@ -943,6 +946,7 @@ MGSystem::MGSystem(Config& config, bool quiet)
 #else
         if (!quiet)
             cerr << "# Warning: platform-specific 'objdump' was not found and " OBJDUMP_VAR " is not set; cannot disassemble code." << endl;
+        v = "unknown-objdump";
 #endif
     }
     m_objdump_cmd = v;

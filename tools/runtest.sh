@@ -9,9 +9,9 @@ mem=${6:?}
 TEST=${7:?}
 fail=0
 
-if test $mem="esa" -a $ncores -gt 4 
+if test $mem = "esa" -a $ncores -gt 4 
 then
-    $ncores=4
+   exit 77
 fi
 
 dotest() {

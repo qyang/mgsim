@@ -2037,7 +2037,7 @@ Result Processor::Allocator::DoFamilyCreate()
 
 // Sanitizes the limit and block size.
 // Use only for non-delegated creates.
-Integer Processor::Allocator::CalculateThreadCount(Integer start, Integer limit, Integer step)
+Integer Processor::Allocator::CalculateThreadCount(SInteger start, SInteger limit, SInteger step)
 {
     // Sanitize the family entry
     if (step == 0)

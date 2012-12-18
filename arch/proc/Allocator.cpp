@@ -2132,27 +2132,27 @@ Processor::Allocator::Allocator(const string& name, Processor& parent, Clock& cl
     m_activeThreads          .resize(m_priorities);
     m_allocThreads           .resize(m_priorities);                
     
-    string sname = " ";
+    std::ostringstream sname;
     for (size_t i = 0; i < m_priorities; ++i)
     {
-        sname = "b_allocRequestsSuspend_" + i; 
-        m_allocRequestsSuspend[i]   = new Buffer<AllocRequest>(sname, *this, clock, config.getValue<BufferSize>(*this, "FamilyAllocationSuspendQueueSize"));
-       
-        sname = "b_allocRequestsNoSuspend_" + i;
-        m_allocRequestsNoSuspend[i] = new Buffer<AllocRequest>(sname, *this, clock, config.getValue<BufferSize>(*this, "FamilyAllocationNoSuspendQueueSize"));
-        
-        sname = "b_allocRequestsExclusive_" + i;
-        m_allocRequestsExclusive[i] = new Buffer<AllocRequest>(sname, *this, clock, config.getValue<BufferSize>(*this, "FamilyAllocationExclusiveQueueSize"));
-        
-        sname = "b_creates_" + i;
-        m_creates[i]                = new Buffer<CreateInfo>  (sname, *this, clock, config.getValueOrDefault<BufferSize>(*this, "CreateQueueSize", familyTable.GetNumFamilies()), 3),
-        
-        sname = "b_alloc_" + i;
-        m_allocThreads[i]           = new Buffer<LFID>        (sname, *this, clock, config.getValueOrDefault<BufferSize>(*this, "InitialThreadAllocateQueueSize", familyTable.GetNumFamilies()));        
-       
-        sname = "q_threadList_" + i;
-        m_activeThreads[i]          = new ThreadList          (sname, *this, clock, threadTable);
-        
+        sname << "b_allocRequestsSuspend_p" << i; 
+        m_allocRequestsSuspend[i]   = new Buffer<AllocRequest>(sname.str(), *this, clock, config.getValue<BufferSize>(*this, "FamilyAllocationSuspendQueueSize"));
+        sname.str("");
+        sname << "b_allocRequestsNoSuspend_p" << i;
+        m_allocRequestsNoSuspend[i] = new Buffer<AllocRequest>(sname.str(), *this, clock, config.getValue<BufferSize>(*this, "FamilyAllocationNoSuspendQueueSize"));
+        sname.str("");
+        sname << "b_allocRequestsExclusive_p" << i;
+        m_allocRequestsExclusive[i] = new Buffer<AllocRequest>(sname.str(), *this, clock, config.getValue<BufferSize>(*this, "FamilyAllocationExclusiveQueueSize"));
+        sname.str("");
+        sname <<"b_creates_p" << i;
+        m_creates[i]                = new Buffer<CreateInfo>  (sname.str(), *this, clock, config.getValueOrDefault<BufferSize>(*this, "CreateQueueSize", familyTable.GetNumFamilies()), 3),
+        sname.str("");
+        sname << "b_alloc_p" << i;
+        m_allocThreads[i]           = new Buffer<LFID>        (sname.str(), *this, clock, config.getValueOrDefault<BufferSize>(*this, "InitialThreadAllocateQueueSize", familyTable.GetNumFamilies()));        
+        sname.str("");
+        sname << "q_threadList_p" << i;
+        m_activeThreads[i]          = new ThreadList          (sname.str(), *this, clock, threadTable);
+        sname.str("");
         m_allocRequestsSuspend[i]   ->Sensitive(p_FamilyAllocate);
         m_allocRequestsNoSuspend[i] ->Sensitive(p_FamilyAllocate);
         m_allocRequestsExclusive[i] ->Sensitive(p_FamilyAllocate);

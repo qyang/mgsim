@@ -296,6 +296,7 @@ void Processor::Pipeline::DecodeStage::DecodeInstruction(const Instruction& inst
                 m_output.Rb  = MAKE_REGADDR(RT_INTEGER, Rb);
             }
 
+            m_output.Rc = MAKE_REGADDR(RT_INTEGER, Rc);
             if (Ra == 0x13 /*ASR19*/)
             {
                 switch(m_output.function)
@@ -304,10 +305,6 @@ void Processor::Pipeline::DecodeStage::DecodeInstruction(const Instruction& inst
                 case S_OPT2_CREBIS:
                     // Special case, Rc is input as well
                     m_output.Ra = MAKE_REGADDR(RT_INTEGER, Rc);
-                    // fall through to init output Rc
-                case S_OPT2_LDFP:
-                case S_OPT2_LDBP:
-                    m_output.Rc = MAKE_REGADDR(RT_INTEGER, Rc);
                     break;
                 }
             }
@@ -321,18 +318,16 @@ void Processor::Pipeline::DecodeStage::DecodeInstruction(const Instruction& inst
                 case S_OPT1_CREATE:
                     // Special case, Rc is input as well
                     m_output.Ra = MAKE_REGADDR(RT_INTEGER, Rc);
-                    m_output.Rc = MAKE_REGADDR(RT_INTEGER, Rc);
                     break;
 
                 case S_OPT1_FGETS:
                 case S_OPT1_FGETG:
+                    // Special case, Rc is really a float
                     m_output.Rc = MAKE_REGADDR(RT_FLOAT, Rc);
-                    break;
-                default:
-                    m_output.Rc = MAKE_REGADDR(RT_INTEGER, Rc);
                     break;
                 }
             }
+
             break;
 
         default:
@@ -505,14 +500,6 @@ uint32_t Processor::Pipeline::ExecuteStage::ExecOtherInteger(int opcode, uint32_
     return 0;
 }
 
-static void ThrowIllegalInstructionException(Object& obj, MemAddr pc)
-{
-    stringstream error;
-    error << "Illegal instruction at "
-          << hex << setw(sizeof(MemAddr) * 2) << setfill('0') << pc;
-    throw IllegalInstructionException(obj, error.str());
-}
-
 Processor::Pipeline::PipeAction Processor::Pipeline::ExecuteStage::ExecReadASR19(uint8_t func)
 {
     switch (func)
@@ -546,7 +533,7 @@ Processor::Pipeline::PipeAction Processor::Pipeline::ExecuteStage::ExecReadASR19
         }
 
         default:
-            ThrowIllegalInstructionException(*this, m_input.pc);
+            ThrowIllegalInstructionException(*this, m_input.pc, "Invalid read from ASR19: func = %d", (int)func);
             break;
     }
     return PIPE_CONTINUE;
@@ -616,7 +603,7 @@ Processor::Pipeline::PipeAction Processor::Pipeline::ExecuteStage::ExecReadASR20
             return ReadFamilyRegister(RRT_GLOBAL, RT_FLOAT, m_parent.GetProcessor().UnpackFID(Rbv), m_input.asi);
 
         default:
-            ThrowIllegalInstructionException(*this, m_input.pc);
+            ThrowIllegalInstructionException(*this, m_input.pc, "Invalid read from ASR20: func = %d", (int)func);
             break;
     }
     return PIPE_CONTINUE;
@@ -643,7 +630,7 @@ Processor::Pipeline::PipeAction Processor::Pipeline::ExecuteStage::ExecWriteASR1
             break;
 
         default:
-            ThrowIllegalInstructionException(*this, m_input.pc);
+            ThrowIllegalInstructionException(*this, m_input.pc, "Invalid write to ASR19: func = %d", (int)func);
             break;
     }
     return PIPE_CONTINUE;
@@ -695,7 +682,7 @@ Processor::Pipeline::PipeAction Processor::Pipeline::ExecuteStage::ExecWriteASR2
             return ExecDetach(m_parent.GetProcessor().UnpackFID(Rav));
 
         default:
-            ThrowIllegalInstructionException(*this, m_input.pc);
+            ThrowIllegalInstructionException(*this, m_input.pc, "Invalid write to ASR20: func = %d", (int)func);
             break;
     }
     return PIPE_CONTINUE;
@@ -759,7 +746,7 @@ Processor::Pipeline::PipeAction Processor::Pipeline::ExecuteStage::ExecuteInstru
 
         case S_OP2_UNIMPL:
         default:
-            ThrowIllegalInstructionException(*this, m_input.pc);
+            ThrowIllegalInstructionException(*this, m_input.pc, "Unimplemented branch instruction");
         }
         break;
 
@@ -785,14 +772,14 @@ Processor::Pipeline::PipeAction Processor::Pipeline::ExecuteStage::ExecuteInstru
             case S_OP3_LDSBA: case S_OP3_LDSHA: case S_OP3_LDUBA:
             case S_OP3_LDUHA: case S_OP3_LDA:   case S_OP3_LDDA:
             default:
-                ThrowIllegalInstructionException(*this, m_input.pc);
+                ThrowIllegalInstructionException(*this, m_input.pc, "Unimplemented load/store with ASI");
                 break;
         }
 
         if ((address & (size - 1)) != 0)
         {
-            // The address is mis-aligned
-            ThrowIllegalInstructionException(*this, m_input.pc);
+            ThrowIllegalInstructionException(*this, m_input.pc, "Misaligned address for size %u: %#llx", 
+                                             (unsigned)size, (unsigned long long)address);
         }
 
         COMMIT
@@ -995,7 +982,7 @@ Processor::Pipeline::PipeAction Processor::Pipeline::ExecuteStage::ExecuteInstru
                 // STBAR: Store Barrier
                 // Rc has to be %g0 (invalid)
                 if (m_input.Rc.valid()) {
-                    ThrowIllegalInstructionException(*this, m_input.pc);
+                    ThrowIllegalInstructionException(*this, m_input.pc, "Store barrier with valid output register %s", m_input.Rc.str().c_str());
                 }
 
                 if (!MemoryWriteBarrier(m_input.tid))
@@ -1018,23 +1005,7 @@ Processor::Pipeline::PipeAction Processor::Pipeline::ExecuteStage::ExecuteInstru
                 return ExecReadASR20(m_input.function);
 
             default:
-                if (m_input.displacement >= 7 && m_input.displacement < 15) {
-                    // Read reserved state register 7-14
-                    COMMIT {
-                        m_output.Rcv.m_integer = m_parent.GetProcessor().ReadASR(m_input.displacement - 7);
-                        m_output.Rcv.m_state   = RST_FULL;
-                    }
-                } else if (m_input.displacement >= 21) {
-                    // Read implementation dependent State Register >= 21
-                    COMMIT {
-                        m_output.Rcv.m_integer = m_parent.GetProcessor().ReadAPR(m_input.displacement - 21);
-                        m_output.Rcv.m_state   = RST_FULL;
-                    }
-                } else {
-                    // Read implementation dependent State Register > 15, < 20
-                    // We don't support this yet
-                    ThrowIllegalInstructionException(*this, m_input.pc);
-                }
+                ThrowIllegalInstructionException(*this, m_input.pc, "Unsupported read from ASR%d", (int)m_input.displacement);
                 break;
             }
             break;
@@ -1056,15 +1027,7 @@ Processor::Pipeline::PipeAction Processor::Pipeline::ExecuteStage::ExecuteInstru
                 return ExecWriteASR19(m_input.function);
 
             default:
-                if (m_input.displacement < 16) {
-                    // WRASR: Write Ancillary State Register
-                    // We don't support this yet
-                    ThrowIllegalInstructionException(*this, m_input.pc);
-                } else {
-                    // Write implementation dependent State Register
-                    // We don't support this yet
-                    ThrowIllegalInstructionException(*this, m_input.pc);
-                }
+                ThrowIllegalInstructionException(*this, m_input.pc, "Unsupported write to ASR%d", (int)m_input.displacement);
                 break;
             }
             break;
@@ -1072,9 +1035,7 @@ Processor::Pipeline::PipeAction Processor::Pipeline::ExecuteStage::ExecuteInstru
         case S_OP3_SAVE:
         case S_OP3_RESTORE:
         {
-            // TODO
-            //const Thread& thread = m_threadTable[m_input.tid];
-            ThrowIllegalInstructionException(*this, m_input.pc);
+            ThrowIllegalInstructionException(*this, m_input.pc, "SAVE/RESTORE not supported on D-RISC");
             break;
         }
 
@@ -1083,8 +1044,7 @@ Processor::Pipeline::PipeAction Processor::Pipeline::ExecuteStage::ExecuteInstru
             MemAddr target = (MemAddr)(m_input.Rav.m_integer.get(m_input.Rav.m_size) + m_input.Rbv.m_integer.get(m_input.Rbv.m_size));
             if ((target & (sizeof(Instruction) - 1)) != 0)
             {
-                // Misaligned jump
-                ThrowIllegalInstructionException(*this, m_input.pc);
+                ThrowIllegalInstructionException(*this, m_input.pc, "Misaligned jump to %#llx", (unsigned long long)target);
             }
 
             COMMIT
@@ -1116,7 +1076,7 @@ Processor::Pipeline::PipeAction Processor::Pipeline::ExecuteStage::ExecuteInstru
         case S_OP3_CPOP1:
         case S_OP3_CPOP2:
             // We don't support these instructions (yet?)
-            ThrowIllegalInstructionException(*this, m_input.pc);
+            ThrowIllegalInstructionException(*this, m_input.pc, "Unsupported opcode: %#x", (unsigned)m_input.op3);
             break;
 
         default:
@@ -1135,7 +1095,7 @@ Processor::Pipeline::PipeAction Processor::Pipeline::ExecuteStage::ExecuteInstru
             else
             {
                 // Invalid instruction
-                ThrowIllegalInstructionException(*this, m_input.pc);
+                ThrowIllegalInstructionException(*this, m_input.pc, "Unsupported opcode: %#x", (unsigned)m_input.op3);
             }
             break;
         }

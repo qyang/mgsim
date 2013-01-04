@@ -172,7 +172,7 @@ bool Processor::Network::SendSync(const SyncInfo& sync)
     {
         // This shouldn't happen; the buffer should be large enough
         // to accomodate all family events (family table size).
-        assert(false);
+        UNREACHABLE;
         return false;
     }
     return true;
@@ -202,7 +202,7 @@ Result Processor::Network::DoSyncs()
 
     if (!m_allocator.DecreaseFamilyDependency(info.fid, FAMDEP_SYNC_SENT))
     {
-        assert(false); // can't be there
+        UNREACHABLE;
         DeadlockWrite("F%u unable to mark SYNC_SENT after sending writeback %u", (unsigned)info.fid, (unsigned)info.broken);
         return FAILED;
     }
@@ -342,7 +342,7 @@ bool Processor::Network::ReadRegister(LFID fid, RemoteRegType kind, const RegAdd
         {
         case RT_FLOAT:   value.m_float.fromfloat(0.0f); break;
         case RT_INTEGER: value.m_integer = 0; break;
-        default: assert(0); // should not be here
+        default: UNREACHABLE;
         }
     }
     else
@@ -594,7 +594,7 @@ Result Processor::Network::DoDelegationIn()
                 case FAMPROP_LIMIT: family.limit         = (SInteger)msg.property.value; break;
                 case FAMPROP_STEP:  family.step          = (SInteger)msg.property.value; break;
                 case FAMPROP_BLOCK: family.physBlockSize = (TSize)msg.property.value; break;
-                default: assert(false); break;
+            default: UNREACHABLE;
             }
         }
 
@@ -733,7 +733,7 @@ Result Processor::Network::DoDelegationIn()
     break;
 
     default:
-        assert(false);
+        UNREACHABLE;
         break;
     }
 
@@ -821,7 +821,7 @@ Result Processor::Network::DoLink()
                 case FAMPROP_LIMIT: family.limit         = (SInteger)msg.property.value; break;
                 case FAMPROP_STEP:  family.step          = (SInteger)msg.property.value; break;
                 case FAMPROP_BLOCK: family.physBlockSize = (TSize)msg.property.value; break;
-                default: assert(false); break;
+                default: UNREACHABLE;
             }
         }
 
@@ -926,8 +926,7 @@ Result Processor::Network::DoLink()
         break;
 
     default:
-        assert(false);
-        break;
+        UNREACHABLE;
     }
 
     m_link.in.Clear();
@@ -1088,7 +1087,7 @@ string Processor::RemoteMessage::str() const
         ss << "]";
         break;
     default:
-        assert(false); // all types should be listed here.
+        UNREACHABLE;
     }
 
     return ss.str();
@@ -1180,7 +1179,7 @@ string Processor::LinkMessage::str() const
             ;
         break;
     default:
-        assert(false); // all types should be listed here.
+        UNREACHABLE;
     }
 
     return ss.str();

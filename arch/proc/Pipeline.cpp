@@ -237,6 +237,7 @@ Result Processor::Pipeline::DoPipeline()
                     << " (0x" << hex << stage->input->pc_dbg
                     << ") in T" << dec << stage->input->tid << " in F" << stage->input->fid;
             e.AddDetails(details.str());
+            e.SetPC(stage->input->pc_dbg);
         }
         throw;
     }
@@ -456,8 +457,7 @@ string Processor::Pipeline::PipeValue::str(RegType type) const
         return ss.str();
     }
     default:
-        assert(0); // can't be here
-        return "UNKNOWN";
+        UNREACHABLE;
     }
 }
 

@@ -56,6 +56,18 @@ AX_CXX_GCC_ABI_DEMANGLE
 # check support for C++11
 AX_CXX_COMPILE_STDCXX_11
 
+AC_CACHE_CHECK([for __builtin_unreachable],
+               [mg_cv_unreachable],
+               [
+                  mg_cv_unreachable=no
+                  AC_COMPILE_IFELSE([AC_LANG_PROGRAM([], 
+                                                     [__builtin_unreachable();])], 
+                                    [mg_cv_unreachable=yes])
+               ])
+if test x$mg_cv_unreachable = xyes; then
+   AC_DEFINE([HAVE___BUILTIN_UNREACHABLE],[1],[Define to 1 if __builtin_unreachable() is available.])
+fi
+
 AC_CACHE_CHECK([which template to use for unique pointers],
                [mg_cv_uniqueptr],
                [
@@ -337,11 +349,10 @@ cat <<EOF
 * Asynchronous monitor:   $enable_monitor
 * Area calculation:       $enable_cacti
 *
-* MT-Alpha tests:         $enable_mtalpha_tests
-* MT-SPARC tests:         $enable_mtsparc_tests
-* MIPS tests:             $enable_mips_tests
-* MIPSel tests:           $enable_mipsel_tests
-* Compiled tests:         $enable_compiled_tests
+* MT-Alpha tests:         (asm) $enable_mtalpha_tests (compiled) $enable_compiled_mtalpha_tests
+* MT-SPARC tests:         (asm) $enable_mtsparc_tests (compiled) $enable_compiled_mtsparc_tests
+* MIPS tests:             (asm) $enable_mips_tests (compiled) $enable_compiled_mips_tests
+* MIPSel tests:           (asm) $enable_mipsel_tests (compiled) $enable_compiled_mipsel_tests
 *
 * C++ compiler:           $CXX $CPPFLAGS $WARN_CXXFLAGS $AM_CXXFLAGS $CXXFLAGS $LDFLAGS
 * Destination dir:        $prefix

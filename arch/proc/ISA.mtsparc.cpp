@@ -45,39 +45,67 @@ static const int OPF_MASK       = (1 << 9) - 1;
 static const int OPT_SHIFT      = 9;
 static const int OPT_MASK       = (1 << 4) - 1;
 
+// Function for naming local registers according to a standard ABI
+const vector<string>& GetDefaultLocalRegisterAliases(RegType type)
+{
+    static const vector<string> intnames = {
+        "g1", "g2", "g3", "g4", "g5", "g6", "g7",
+        "o0", "o1", "o2", "o3", "o4", "o5", "sp", "o7",
+        "l0", "l1", "l2", "l3", "l4", "l5", "l6", "l7",
+        "i0", "i1", "i2", "i3", "i4", "i5", "fp", "i7", "g0" };
+    static const vector<string> fltnames = {
+        "f0", "f1", "f2", "f3", "f4", "f5", "f6", "f7",
+        "f8", "f9", "f10", "f11", "f12", "f13", "f14", "f15",
+        "f16", "f17", "f18", "f19", "f20", "f21", "f22", "f23",
+        "f24", "f25", "f26", "f27", "f28", "f29", "f30", "f31" };
+    if (type == RT_INTEGER)
+        return intnames;
+    else
+        return fltnames;
+}
+
+
 // Function for getting a register's type and index within that type
-unsigned char GetRegisterClass(unsigned char addr, const RegsNo& regs, RegClass* rc)
+unsigned char GetRegisterClass(unsigned char addr, const RegsNo& regs, RegClass* rc, RegType type)
 {
     assert(regs.globals < 32);
     assert(regs.shareds < 32);
-    assert(regs.locals  < 32);
+    assert((type == RT_INTEGER && regs.locals  < 32) || regs.locals <= 32);
 
-    if (addr > 0)
+    if (type == RT_INTEGER)
     {
+        // SPARC is strange: integer register 0 is RAZ,
+        // but FP register 0 is valid.
+        if (addr == 0)
+        {
+            *rc = RC_RAZ;
+            return addr;
+        }
         addr--;
-        if (addr < regs.locals)
-        {
-            *rc = RC_LOCAL;
-            return addr;
-        }
-        addr -= regs.locals;
-        if (addr < regs.globals)
-        {
-            *rc = RC_GLOBAL;
-            return addr;
-        }
-        addr -= regs.globals;
-        if (addr < regs.shareds)
-        {
-            *rc = RC_SHARED;
-            return addr;
-        }
-        addr -= regs.shareds;
-        if (addr < regs.shareds)
-        {
-            *rc = RC_DEPENDENT;
-            return addr;
-        }
+    }
+
+    if (addr < regs.locals)
+    {
+        *rc = RC_LOCAL;
+        return addr;
+    }
+    addr -= regs.locals;
+    if (addr < regs.globals)
+    {
+        *rc = RC_GLOBAL;
+        return addr;
+    }
+    addr -= regs.globals;
+    if (addr < regs.shareds)
+    {
+        *rc = RC_SHARED;
+        return addr;
+    }
+    addr -= regs.shareds;
+    if (addr < regs.shareds)
+    {
+        *rc = RC_DEPENDENT;
+        return addr;
     }
     *rc = RC_RAZ;
     return 0;
@@ -377,16 +405,15 @@ bool Processor::Pipeline::ExecuteStage::BranchTakenFlt(int cond, uint32_t fsr)
     const bool u = (fsr & FSR_FCC) == FSR_FCC_UO; // Unordered
     bool b = false;
 
-    if (~cond & 7) return (cond & 8) != 0;   // FBA, FBN
-    cond--;
-    if (cond & 8) { b |= e; cond = ~cond; }
+    if (cond & 8) { b |= e; }
+
+    cond =  (cond & 8) ? ((cond & 7) - 1) : (8 - cond);
     if (cond & 4) b |= l;
     if (cond & 2) b |= g;
     if (cond & 1) b |= u;
     return b;
 }
 
-/*static*/
 uint32_t Processor::Pipeline::ExecuteStage::ExecBasicInteger(int opcode, uint32_t Rav, uint32_t Rbv, uint32_t& Y, PSR& psr)
 {
     uint64_t Rcv = 0;
@@ -409,8 +436,10 @@ uint32_t Processor::Pipeline::ExecuteStage::ExecBasicInteger(int opcode, uint32_
         // Multiplication & Division
         case S_OP3_UMUL:    Rcv =                   Rav *                   Rbv; Y = (uint32_t)(Rcv >> 32); break;
         case S_OP3_SMUL:    Rcv = (int64_t)(int32_t)Rav * (int64_t)(int32_t)Rbv; Y = (uint32_t)(Rcv >> 32); break;
-        case S_OP3_UDIV:    Rcv =          (((uint64_t)Y << 32) | Rav) /                   Rbv; break;
-        case S_OP3_SDIV:    Rcv = (int64_t)(((uint64_t)Y << 32) | Rav) / (int64_t)(int32_t)Rbv; break;
+
+#define CHECKDIV0(X) if ((X) == 0) ThrowIllegalInstructionException(*this, m_input.pc, "Division by zero")
+        case S_OP3_UDIV:    CHECKDIV0(Rbv);                   Rcv =          (((uint64_t)Y << 32) | Rav) /                   Rbv; break;
+        case S_OP3_SDIV:    CHECKDIV0((int64_t)(int32_t)Rbv); Rcv = (int64_t)(((uint64_t)Y << 32) | Rav) / (int64_t)(int32_t)Rbv; break;
     }
 
     if (opcode & 0x10)
@@ -465,7 +494,6 @@ uint32_t Processor::Pipeline::ExecuteStage::ExecBasicInteger(int opcode, uint32_
     return (uint32_t)Rcv;
 }
 
-/*static*/
 uint32_t Processor::Pipeline::ExecuteStage::ExecOtherInteger(int opcode, uint32_t Rav, uint32_t Rbv, uint32_t& Y, PSR& psr)
 {
     switch (opcode)
@@ -727,7 +755,7 @@ Processor::Pipeline::PipeAction Processor::Pipeline::ExecuteStage::ExecuteInstru
                 default:
                 case S_OP2_BRANCH_COP: taken = false; break; // We don't have a co-processor
                 case S_OP2_BRANCH_INT: taken = BranchTakenInt(m_input.function, thread.psr); break;
-                case S_OP2_BRANCH_FLT: taken = BranchTakenFlt(m_input.function, thread.psr); break;
+                case S_OP2_BRANCH_FLT: taken = BranchTakenFlt(m_input.function, thread.fsr); break;
             }
 
             if (taken)

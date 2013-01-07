@@ -69,7 +69,7 @@ RegAddr Processor::Allocator::GetRemoteRegisterAddress(LFID fid, RemoteRegType k
 }
 
 // Administrative function for getting a register's type and thread mapping
-TID Processor::Allocator::GetRegisterType(LFID fid, RegAddr addr, RegClass* group) const
+TID Processor::Allocator::GetRegisterType(LFID fid, RegAddr addr, RegClass* group, size_t *rel) const
 {
     const Family& family = m_familyTable[fid];
     const Family::RegInfo& regs = family.regs[addr.type];
@@ -79,6 +79,7 @@ TID Processor::Allocator::GetRegisterType(LFID fid, RegAddr addr, RegClass* grou
     {
         // It's a global
         *group = RC_GLOBAL;
+        *rel = addr.index - globals;
         return INVALID_TID;
     }
 
@@ -90,16 +91,19 @@ TID Processor::Allocator::GetRegisterType(LFID fid, RegAddr addr, RegClass* grou
             const Thread::RegInfo& tregs = m_threadTable[i].regs[addr.type];
             if (tregs.locals != INVALID_REG_INDEX && addr.index >= tregs.locals && addr.index < tregs.locals + regs.count.locals) {
                 *group = RC_LOCAL;
+                *rel = addr.index - tregs.locals;
                 return i;
             }
 
             if (tregs.shareds != INVALID_REG_INDEX && addr.index >= tregs.shareds && addr.index < tregs.shareds + regs.count.shareds) {
                 *group = RC_SHARED;
+                *rel = addr.index - tregs.shareds;
                 return i;
             }
 
             if (tregs.dependents != INVALID_REG_INDEX && addr.index >= tregs.dependents && addr.index < tregs.dependents + regs.count.shareds) {
                 *group = RC_DEPENDENT;
+                *rel = addr.index - tregs.dependents;
                 return i;
             }
         }
@@ -2174,7 +2178,12 @@ Processor::Allocator::Allocator(const string& name, Processor& parent, Clock& cl
 
 void Processor::Allocator::AllocateInitialFamily(MemAddr pc, bool legacy, PSize placeSize, SInteger startIndex)
 {
+#if defined(TARGET_MTSPARC)
+    // On SPARC there is no RAZ floating-point register.
+    static const unsigned char InitialRegisters[NUM_REG_TYPES] = {31, 32};
+#else
     static const unsigned char InitialRegisters[NUM_REG_TYPES] = {31, 31};
+#endif
 
     LFID fid = m_familyTable.AllocateFamily(CONTEXT_NORMAL);
     if (fid == INVALID_LFID)

@@ -109,7 +109,7 @@ class Pipeline : public Object, public Inspect::Interface<Inspect::Read>
         // Admin (debugging, traces)
         MemAddr      pc_dbg;        // Original, unmodified PC for debugging (execute can change the pc)
         const char*  pc_sym;        // Symbolic name for PC
-        uint64_t     logical_index; // Thread logical index
+        int64_t     logical_index; // Thread logical index
 
         CommonData() : priority(0), pc(0), tid(0), fid(0), swch(false), kill(false), pc_dbg(0), pc_sym(NULL), logical_index(0) {}
         CommonData(const CommonData&) = default;

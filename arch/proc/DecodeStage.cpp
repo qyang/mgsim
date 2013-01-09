@@ -123,13 +123,13 @@ Processor::Pipeline::PipeAction Processor::Pipeline::DecodeStage::OnCycle()
 
             DecodeInstruction(m_input.instr);
 
-            DebugPipeWrite("F%u/T%u(priority:%u   index :%llu) %s decoded %s %s %s"
+            DebugPipeWrite("F%u/T%u(priority:%u   index:%lld) %s decoded %s %s %s"
 #if defined(TARGET_MTSPARC)
                            " %s"
 #endif
                            " lit %lu"
                            ,
-                           (unsigned)m_input.fid, (unsigned)m_input.tid, (unsigned)m_input.priority, (unsigned long long)m_input.logical_index, m_input.pc_sym,
+                           (unsigned)m_input.fid, (unsigned)m_input.tid, (unsigned)m_input.priority, (long long)m_input.logical_index, m_input.pc_sym,
                            m_output.Ra.str().c_str(),
                            m_output.Rb.str().c_str(),
                            m_output.Rc.str().c_str(),
@@ -159,12 +159,12 @@ Processor::Pipeline::PipeAction Processor::Pipeline::DecodeStage::OnCycle()
         }
     }
 
-    DebugPipeWrite("F%u/T%u(priority:%u   index :%llu) %s translated %s %s %s"
+    DebugPipeWrite("F%u/T%u(priority:%u   index:%lld) %s translated %s %s %s"
 #if defined(TARGET_MTSPARC)
                    " %s"
 #endif
                    ,
-                   (unsigned)m_input.fid, (unsigned)m_input.tid, (unsigned)m_input.priority, (unsigned long long)m_input.logical_index, m_input.pc_sym,
+                   (unsigned)m_input.fid, (unsigned)m_input.tid, (unsigned)m_input.priority, (long long)m_input.logical_index, m_input.pc_sym,
                    m_output.Ra.str().c_str(),
                    m_output.Rb.str().c_str(),
                    m_output.Rc.str().c_str()

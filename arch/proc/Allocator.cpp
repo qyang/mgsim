@@ -259,7 +259,7 @@ bool Processor::Allocator::KillThread(TID tid)
         return false;
     }
 
-    DebugSimWrite("F%u/T%u(priority:%u  index:%llu) terminated", (unsigned)thread.family, (unsigned)tid, (unsigned)thread.priority, (unsigned long long)thread.index);
+    DebugSimWrite("F%u/T%u(priority:%u  index:%lld)terminated", (unsigned)thread.family, (unsigned)tid, (unsigned)thread.priority, (long long)thread.index);
 
     COMMIT
     {
@@ -299,8 +299,8 @@ bool Processor::Allocator::RescheduleThread(TID tid, MemAddr pc)
         return false;
     }
 
-    DebugSimWrite("F%u/T%u(priority:%u  index:%llu) rescheduling to %s", 
-                  (unsigned)thread.family, (unsigned)tid, (unsigned)thread.priority, (unsigned long long)thread.index,
+    DebugSimWrite("F%u/T%u(priority:%u  index:%lld)rescheduling to %s", 
+                  (unsigned)thread.family, (unsigned)tid, (unsigned)thread.priority, (long long)thread.index,
                   m_parent.GetSymbolTable()[pc].c_str());
 
     return true;
@@ -417,16 +417,16 @@ bool Processor::Allocator::AllocateThread(LFID fid, TID tid, bool isNewlyAllocat
 
         if (!m_registerFile.p_asyncW.Write(addr))
         {
-            DeadlockWrite("F%u/T%u(priority:%u  index:%llu) %s unable to acquire RF port to write",
-                          (unsigned)fid, (unsigned)tid, (unsigned)thread->priority, (unsigned long long)logical_index,
+            DeadlockWrite("F%u/T%u(priority:%u  index:%lld) %s unable to acquire RF port to write",
+                          (unsigned)fid, (unsigned)tid, (unsigned)thread->priority, (long long)logical_index,
                           addr.str().c_str());
             return false;
         }
 
         if (!m_registerFile.ReadRegister(addr, data))
         {
-            DeadlockWrite("F%u/T%u(priority:%u  index:%llu) %s unable to read index register", 
-                          (unsigned)fid, (unsigned)tid, (unsigned)thread->priority, (unsigned long long)logical_index,
+            DeadlockWrite("F%u/T%u(priority:%u  index:%lld) %s unable to read index register", 
+                          (unsigned)fid, (unsigned)tid, (unsigned)thread->priority, (long long)logical_index,
                           addr.str().c_str());
             return false;
         }
@@ -434,8 +434,8 @@ bool Processor::Allocator::AllocateThread(LFID fid, TID tid, bool isNewlyAllocat
         assert(data.m_state != RST_WAITING);
         if (data.m_state == RST_PENDING)
         {
-            DeadlockWrite("F%u/T%u(priority:%u  index:%llu) %s index register pending", 
-                          (unsigned)fid, (unsigned)tid, (unsigned)thread->priority, (unsigned long long)logical_index,
+            DeadlockWrite("F%u/T%u(priority:%u  index:%lld) %s index register pending", 
+                          (unsigned)fid, (unsigned)tid, (unsigned)thread->priority, (long long)logical_index,
                           addr.str().c_str());
             return false;
         }
@@ -445,14 +445,14 @@ bool Processor::Allocator::AllocateThread(LFID fid, TID tid, bool isNewlyAllocat
 
         if (!m_registerFile.WriteRegister(addr, data, false))
         {
-            DeadlockWrite("F%u/T%u(priority:%u  index:%llu) %s unable to write index register", 
-                          (unsigned)fid, (unsigned)tid, (unsigned)thread->priority, (unsigned long long)logical_index,
+            DeadlockWrite("F%u/T%u(priority:%u  index:%lld) %s unable to write index register", 
+                          (unsigned)fid, (unsigned)tid, (unsigned)thread->priority, (long long)logical_index,
                           addr.str().c_str());
             return false;
         }
 
-        DebugSimWrite("F%u/T%u(priority:%u  index:%llu) %s wrote index register",
-                      (unsigned)fid, (unsigned)tid, (unsigned)thread->priority, (unsigned long long)logical_index,
+        DebugSimWrite("F%u/T%u(priority:%u  index:%lld) %s wrote index register",
+                      (unsigned)fid, (unsigned)tid, (unsigned)thread->priority, (long long)logical_index,
                       addr.str().c_str());
     }
 
@@ -490,8 +490,8 @@ bool Processor::Allocator::AllocateThread(LFID fid, TID tid, bool isNewlyAllocat
     {
         // Abort allocation
 
-        DeadlockWrite("F%u/T%u(priority:%u   index:%llu) unable to activate", 
-                      (unsigned)fid, (unsigned)tid, (unsigned)thread->priority, (unsigned long long)logical_index);
+        DeadlockWrite("F%u/T%u(priority:%u   index:%lld) unable to activate", 
+                      (unsigned)fid, (unsigned)tid, (unsigned)thread->priority, (long long)logical_index);
         return false;
     }
 
@@ -500,8 +500,8 @@ bool Processor::Allocator::AllocateThread(LFID fid, TID tid, bool isNewlyAllocat
         ++m_numCreatedThreads;
     }
 
-    DebugSimWrite("F%u/T%u(priority:%u   index:%llu) created",
-                  (unsigned)fid, (unsigned)tid, (unsigned)thread->priority, (unsigned long long)logical_index);
+    DebugSimWrite("F%u/T%u(priority:%u   index:%lld) created",
+                  (unsigned)fid, (unsigned)tid, (unsigned)thread->priority, (long long)logical_index);
     return true;
 }
 
@@ -891,8 +891,8 @@ Result Processor::Allocator::DoThreadAllocate()
             {
                 if (!m_registerFile.Clear(MAKE_REGADDR((RegType)i, thread.regs[i].dependents), family.regs[i].count.shareds))
                 {
-                    DeadlockWrite("F%u/T%u(priority:%u   index:%llu) unable to clear the dependent registers",
-                                  (unsigned)fid, (unsigned)tid, (unsigned)thread.priority, (unsigned long long)thread.index);
+                    DeadlockWrite("F%u/T%u(priority:%u   index:%lld) unable to clear the dependent registers",
+                                  (unsigned)fid, (unsigned)tid, (unsigned)thread.priority, (long long)thread.index);
                     return FAILED;
                 }
             }
@@ -904,13 +904,13 @@ Result Processor::Allocator::DoThreadAllocate()
             if (thread.nextInBlock == INVALID_TID)
             {
                 COMMIT{ family.prevCleanedUp = true; }
-                DebugSimWrite("F%u/T%u(priority:%u   index:%llu) marking PREV_CLEANED_UP on family (no next thread)", 
-                              (unsigned)fid, (unsigned)tid, (unsigned)thread.priority, (unsigned long long)thread.index);
+                DebugSimWrite("F%u/T%u(priority:%u   index:%lld) marking PREV_CLEANED_UP on family (no next thread)", 
+                              (unsigned)fid, (unsigned)tid, (unsigned)thread.priority, (long long)thread.index);
             }
             else if (!DecreaseThreadDependency(thread.nextInBlock, THREADDEP_PREV_CLEANED_UP))
             {
-                DeadlockWrite("F%u/T%u(priority:%u   index:%llu) marking PREV_CLEANED_UP on next T%u",
-                              (unsigned)fid, (unsigned)tid, (unsigned)thread.priority, (unsigned long long)thread.index,
+                DeadlockWrite("F%u/T%u(priority:%u   index:%lld) marking PREV_CLEANED_UP on next T%u",
+                              (unsigned)fid, (unsigned)tid, (unsigned)thread.priority, (long long)thread.index,
                               (unsigned)thread.nextInBlock);
                 return FAILED;
             }
@@ -933,13 +933,13 @@ Result Processor::Allocator::DoThreadAllocate()
 
             if (!DecreaseFamilyDependency(fid, FAMDEP_THREAD_COUNT))
             {
-                DeadlockWrite("F%u/T%u(priority:%u   index:%llu) unable to decrease thread count in family during thread cleanup",
-                              (unsigned)fid, (unsigned)tid, (unsigned)thread.priority, (unsigned long long)thread.index);
+                DeadlockWrite("F%u/T%u(priority:%u   index:%lld) unable to decrease thread count in family during thread cleanup",
+                              (unsigned)fid, (unsigned)tid, (unsigned)thread.priority, (long long)thread.index);
                 return FAILED;
             }
 
-            DebugSimWrite("F%u/T%u(priority:%u   index:%llu) cleaned up",
-                          (unsigned)fid, (unsigned)tid, (unsigned)thread.priority, (unsigned long long)thread.index);
+            DebugSimWrite("F%u/T%u(priority:%u   index:%lld) cleaned up",
+                          (unsigned)fid, (unsigned)tid, (unsigned)thread.priority, (long long)thread.index);
         }
         // Reallocate thread
         else if (!AllocateThread(fid, tid, false))
@@ -1532,12 +1532,12 @@ bool Processor::Allocator::QueueCreate(const LinkMessage& msg)
     Integer nThreads = CalculateThreadCount(family.start, family.limit, family.step);
     CalculateDistribution(family, nThreads, family.numCores);
 
-    DebugSimWrite("F%u (%llu threads, place CPU%u/%u) accepted link create %s start index %llu",
+    DebugSimWrite("F%u (%llu threads, place CPU%u/%u) accepted link create %s start index %lld",
                   (unsigned)msg.create.fid, (unsigned long long)family.nThreads,
                   (unsigned)(m_parent.GetPID() & ~family.numCores),
                   (unsigned)family.numCores,
                   m_parent.GetSymbolTable()[msg.create.address].c_str(),
-                  (unsigned long long)family.start);
+                  (long long)family.start);
 
     if (!AllocateRegisters(msg.create.fid, CONTEXT_RESERVED))
     {

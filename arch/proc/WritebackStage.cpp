@@ -30,8 +30,8 @@ Processor::Pipeline::PipeAction Processor::Pipeline::WritebackStage::OnCycle()
             DeadlockWrite("Unable to send network message");
             return PIPE_STALL;
         }
-        DebugPipeWrite("F%u/T%u(priority:%u   index :%llu) %s sent network message %s",
-                       (unsigned)m_input.fid, (unsigned)m_input.tid, (unsigned)m_input.priority, (unsigned long long)m_input.logical_index, m_input.pc_sym,
+        DebugPipeWrite("F%u/T%u(priority:%u   index:%lld) %s sent network message %s",
+                       (unsigned)m_input.fid, (unsigned)m_input.tid, (unsigned)m_input.priority, (long long)m_input.logical_index, m_input.pc_sym,
                        m_input.Rrc.str().c_str());
     }
 
@@ -95,8 +95,8 @@ Processor::Pipeline::PipeAction Processor::Pipeline::WritebackStage::OnCycle()
                 // We have something to write back
                 if (!m_regFile.p_pipelineW.Write(addr))
                 {
-                    DeadlockWrite("F%u/T%u(priority:%u   index :%llu) %s unable to acquire write port on RF",
-                                  (unsigned)m_input.fid, (unsigned)m_input.tid, (unsigned)m_input.priority, (unsigned long long)m_input.logical_index,
+                    DeadlockWrite("F%u/T%u(priority:%u   index:%lld) %s unable to acquire write port on RF",
+                                  (unsigned)m_input.fid, (unsigned)m_input.tid, (unsigned)m_input.priority, (long long)m_input.logical_index,
                                   m_input.pc_sym);
 
                     return PIPE_STALL;
@@ -106,8 +106,8 @@ Processor::Pipeline::PipeAction Processor::Pipeline::WritebackStage::OnCycle()
                 RegValue old_value;
                 if (!m_regFile.ReadRegister(addr, old_value))
                 {
-                    DeadlockWrite("F%u/T%u(priority:%u   index :%llu) %s unable to read prev %s",
-                                  (unsigned)m_input.fid, (unsigned)m_input.tid, (unsigned)m_input.priority, (unsigned long long)m_input.logical_index,
+                    DeadlockWrite("F%u/T%u(priority:%u   index:%lld) %s unable to read prev %s",
+                                  (unsigned)m_input.fid, (unsigned)m_input.tid, (unsigned)m_input.priority, (long long)m_input.logical_index,
                                   m_input.pc_sym,
                                   addr.str().c_str());
 
@@ -125,8 +125,8 @@ Processor::Pipeline::PipeAction Processor::Pipeline::WritebackStage::OnCycle()
                         suspend = false;
                         value.m_state = RST_INVALID;
 
-                        DebugPipeWrite("F%u/T%u(priority:%u   index :%llu) %s data arrived in %s since read, rescheduling",
-                                      (unsigned)m_input.fid, (unsigned)m_input.tid, (unsigned)m_input.priority, (unsigned long long)m_input.logical_index,
+                        DebugPipeWrite("F%u/T%u(priority:%u   index:%lld) %s data arrived in %s since read, rescheduling",
+                                      (unsigned)m_input.fid, (unsigned)m_input.tid, (unsigned)m_input.priority, (long long)m_input.logical_index,
                                        m_input.pc_sym,
                                        addr.str().c_str());
                     }
@@ -166,8 +166,8 @@ Processor::Pipeline::PipeAction Processor::Pipeline::WritebackStage::OnCycle()
                     value.m_state   = RST_WAITING;
                     value.m_waiting = old_value.m_waiting;
 
-                    DebugPipeWrite("F%u/T%u(priority:%u   index :%llu) %s combining pending and waiting -> %s",
-                                   (unsigned)m_input.fid, (unsigned)m_input.tid, (unsigned)m_input.priority, (unsigned long long)m_input.logical_index,
+                    DebugPipeWrite("F%u/T%u(priority:%u   index:%lld) %s combining pending and waiting -> %s",
+                                   (unsigned)m_input.fid, (unsigned)m_input.tid, (unsigned)m_input.priority, (long long)m_input.logical_index,
                                    m_input.pc_sym,
                                    value.str(addr.type).c_str());
 
@@ -182,8 +182,8 @@ Processor::Pipeline::PipeAction Processor::Pipeline::WritebackStage::OnCycle()
                         // the port and causing deadlock, we do nothing every other cycle.
                         COMMIT{ m_stall = true; }
 
-                        DebugPipeWrite("F%u/T%u(priority:%u   index :%llu) %s target busy %s %s, retrying",
-                                       (unsigned)m_input.fid, (unsigned)m_input.tid, (unsigned)m_input.priority, (unsigned long long)m_input.logical_index,
+                        DebugPipeWrite("F%u/T%u(priority:%u   index:%lld) %s target busy %s %s, retrying",
+                                       (unsigned)m_input.fid, (unsigned)m_input.tid, (unsigned)m_input.priority, (long long)m_input.logical_index,
                                        m_input.pc_sym,
                                        addr.str().c_str(), old_value.str(addr.type).c_str());
 
@@ -204,15 +204,15 @@ Processor::Pipeline::PipeAction Processor::Pipeline::WritebackStage::OnCycle()
                 {
                     if (!m_regFile.WriteRegister(addr, value, false))
                     {
-                        DeadlockWrite("F%u/T%u(priority:%u   index :%llu) %s unable to write %s <- %s",
-                                      (unsigned)m_input.fid, (unsigned)m_input.tid, (unsigned)m_input.priority, (unsigned long long)m_input.logical_index,
+                        DeadlockWrite("F%u/T%u(priority:%u   index:%lld) %s unable to write %s <- %s",
+                                      (unsigned)m_input.fid, (unsigned)m_input.tid, (unsigned)m_input.priority, (long long)m_input.logical_index,
                                       m_input.pc_sym,
                                       addr.str().c_str(), value.str(addr.type).c_str());
                         return PIPE_STALL;
                     }
 
-                    DebugPipeWrite("F%u/T%u(priority:%u   index :%llu) %s writeback %s <- %s",
-                                   (unsigned)m_input.fid, (unsigned)m_input.tid, (unsigned)m_input.priority, (unsigned long long)m_input.logical_index,
+                    DebugPipeWrite("F%u/T%u(priority:%u   index:%lld) %s writeback %s <- %s",
+                                   (unsigned)m_input.fid, (unsigned)m_input.tid, (unsigned)m_input.priority, (long long)m_input.logical_index,
                                    m_input.pc_sym,
                                    addr.str().c_str(), value.str(addr.type).c_str());
                 }
@@ -232,8 +232,8 @@ Processor::Pipeline::PipeAction Processor::Pipeline::WritebackStage::OnCycle()
             COMMIT{ m_threadTable[m_input.tid].waitingForWrites = true; }
         }
 
-        DebugPipeWrite("F%u/T%u(priority:%u   index :%llu) %s memory barrier, suspend: %s",
-                       (unsigned)m_input.fid, (unsigned)m_input.tid, (unsigned)m_input.priority, (unsigned long long)m_input.logical_index,
+        DebugPipeWrite("F%u/T%u(priority:%u   index:%lld) %s memory barrier, suspend: %s",
+                       (unsigned)m_input.fid, (unsigned)m_input.tid, (unsigned)m_input.priority, (long long)m_input.logical_index,
                        m_input.pc_sym,
                        suspend ? "yes" : "no");
 
@@ -253,8 +253,8 @@ Processor::Pipeline::PipeAction Processor::Pipeline::WritebackStage::OnCycle()
                 assert(suspend == false);
                 if (!m_allocator.KillThread(m_input.tid))
                 {
-                    DeadlockWrite("F%u/T%u(priority:%u   index :%llu) %s unable to terminate thread",
-                                  (unsigned)m_input.fid, (unsigned)m_input.tid, (unsigned)m_input.priority, (unsigned long long)m_input.logical_index,
+                    DeadlockWrite("F%u/T%u(priority:%u   index:%lld) %s unable to terminate thread",
+                                  (unsigned)m_input.fid, (unsigned)m_input.tid, (unsigned)m_input.priority, (long long)m_input.logical_index,
                                   m_input.pc_sym);
                     return PIPE_STALL;
                 }
@@ -265,8 +265,8 @@ Processor::Pipeline::PipeAction Processor::Pipeline::WritebackStage::OnCycle()
                 // Suspend the thread
                 if (!m_allocator.SuspendThread(m_input.tid, m_input.pc))
                 {
-                    DeadlockWrite("F%u/T%u(priority:%u   index :%llu) %s unable to suspend thread",
-                                  (unsigned)m_input.fid, (unsigned)m_input.tid, (unsigned)m_input.priority, (unsigned long long)m_input.logical_index,
+                    DeadlockWrite("F%u/T%u(priority:%u   index:%lld) %s unable to suspend thread",
+                                  (unsigned)m_input.fid, (unsigned)m_input.tid, (unsigned)m_input.priority, (long long)m_input.logical_index,
                                   m_input.pc_sym);
                     return PIPE_STALL;
                 }
@@ -280,8 +280,8 @@ Processor::Pipeline::PipeAction Processor::Pipeline::WritebackStage::OnCycle()
                 if (!m_allocator.RescheduleThread(m_input.tid, m_input.pc))
                 {
                     // We cannot reschedule, stall pipeline
-                    DeadlockWrite("F%u/T%u(priority:%u   index :%llu) %s unable to reschedule thread",
-                                  (unsigned)m_input.fid, (unsigned)m_input.tid, (unsigned)m_input.priority, (unsigned long long)m_input.logical_index,
+                    DeadlockWrite("F%u/T%u(priority:%u   index:%lld) %s unable to reschedule thread",
+                                  (unsigned)m_input.fid, (unsigned)m_input.tid, (unsigned)m_input.priority, (long long)m_input.logical_index,
                                   m_input.pc_sym);
                     return PIPE_STALL;
                 }

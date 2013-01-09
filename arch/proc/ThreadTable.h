@@ -73,7 +73,7 @@ struct Thread
     bool         waitingForWrites;
 
     // Admin
-    uint64_t    index;
+    int64_t    index;
     ThreadState state;
 };
 

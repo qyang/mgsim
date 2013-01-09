@@ -114,7 +114,7 @@ bool Processor::Pipeline::ReadStage::ReadRegister(OperandInfo& operand, uint32_t
 
         // Convert the register value to a PipeValue.
         // That way, all ReadStage inputs are PipeValues.
-        operand.value_reg = RegToPipeValue(operand.addr_reg.type, value);
+        operand.value_reg = RegToPipeValue(operand.addr_reg.type, value);       
     }
 
     // Data was read
@@ -348,7 +348,7 @@ Processor::Pipeline::PipeAction Processor::Pipeline::ReadStage::OnCycle()
         DeadlockWrite("Unable to read operand #1's register");
         return PIPE_STALL;
     }
-
+    
     // Use the literal if the second operand is not valid
     if (!ReadRegister(operand2, m_input.literal))
     {
@@ -369,7 +369,7 @@ Processor::Pipeline::PipeAction Processor::Pipeline::ReadStage::OnCycle()
             DeadlockWrite("Unable to read bypasses for operand #1");
             return PIPE_STALL;
         }
-
+        
         if (!ReadBypasses(operand2))
         {
             DeadlockWrite("Unable to read bypasses for operand #2");
@@ -447,7 +447,7 @@ Processor::Pipeline::PipeAction Processor::Pipeline::ReadStage::OnCycle()
                 // First phase of the store has completed,
                 // copy the read value.
                 COMMIT{ m_rsv = operand1.value; }
-
+               
                 // We need to delay this cycle
                 return PIPE_DELAY;
             }
@@ -461,16 +461,16 @@ Processor::Pipeline::PipeAction Processor::Pipeline::ReadStage::OnCycle()
         }
 #endif
 
-        DebugPipeWrite("F%u/T%u(priority:%u   index :%llu) %s operands %s %s"
+        DebugPipeWrite("F%u/T%u(priority:%u   index :%lld) %s operands %s %s"
 #if defined(TARGET_MTSPARC)
                        " %s"
 #endif
                        ,
-                       (unsigned)m_input.fid, (unsigned)m_input.tid, (unsigned)m_input.priority, (unsigned long long)m_input.logical_index, m_input.pc_sym,
+                       (unsigned)m_input.fid, (unsigned)m_input.tid, (unsigned)m_input.priority, (long long)m_input.logical_index, m_input.pc_sym,
                       m_output.Rav.str(m_input.Ra.type).c_str(),
                       m_output.Rbv.str(m_input.Rb.type).c_str()
 #if defined(TARGET_MTSPARC)
-                       , m_output.Rsv.str(m_input.Rs.type).c_str()
+                       ,m_output.Rsv.str(m_input.Rs.type).c_str()
 #endif
 
             );

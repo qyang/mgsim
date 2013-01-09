@@ -50,9 +50,9 @@ Processor::Pipeline::PipeAction Processor::Pipeline::FetchStage::OnCycle()
         size_t offset = (size_t)(pc % m_icache.GetLineSize());   // Offset within the cacheline
         if (!m_icache.Read(thread.cid, pc - offset, m_buffer, m_icache.GetLineSize()))
         {
-            DeadlockWrite("F%u/T%u(priority:%u   index :%llu) %s fetch stall due to I-cache miss",
+            DeadlockWrite("F%u/T%u(priority:%u   index:%lld) %s fetch stall due to I-cache miss",
                           (unsigned)thread.family, (unsigned)tid, (unsigned)thread.priority,
-                          (unsigned long long)thread.index, m_parent.GetProcessor().GetSymbolTable()[pc].c_str());
+                          (long long)thread.index, m_parent.GetProcessor().GetSymbolTable()[pc].c_str());
             return PIPE_STALL;
         }
 
@@ -76,9 +76,9 @@ Processor::Pipeline::PipeAction Processor::Pipeline::FetchStage::OnCycle()
             thread.state = TST_RUNNING;
         }
 
-        DebugSimWrite("F%u/T%u(priority:%u   index :%llu) %s switched in",
+        DebugSimWrite("F%u/T%u(priority:%u   index:%lld) %s switched in",
                       (unsigned)thread.family, (unsigned)tid, (unsigned)thread.priority,
-                      (unsigned long long)thread.index, m_parent.GetProcessor().GetSymbolTable()[pc].c_str());
+                      (long long)thread.index, m_parent.GetProcessor().GetSymbolTable()[pc].c_str());
     }
 
     COMMIT
@@ -138,7 +138,7 @@ Processor::Pipeline::PipeAction Processor::Pipeline::FetchStage::OnCycle()
         m_switched = m_output.swch;
     }
         
-    DebugPipeWrite("F%u/T%u(priority:%u   index :%llu) %s fetched 0x%.*lx (switching: %s)",
+    DebugPipeWrite("F%u/T%u(priority:%u   index:%lld) %s fetched 0x%.*lx (switching: %s)",
                    (unsigned)m_output.fid, (unsigned)m_output.tid, (unsigned)m_output.priority, (unsigned long long)m_output.logical_index, m_output.pc_sym,
                    (int)(sizeof(Instruction) * 2), (unsigned long)m_output.instr,
                    m_switched ? "yes" : "no");

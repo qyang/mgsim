@@ -9,6 +9,10 @@
 #include <sim/configparser.h>
 #include <sim/readfile.h>
 
+// For timing
+#include <sys/time.h>
+#include <sys/resource.h>
+
 #ifdef ENABLE_MONITOR
 # include <sim/monitor.h>
 #endif
@@ -276,6 +280,12 @@ extern "C"
 #endif
 int main(int argc, char** argv)
 {
+    struct timeval tv1, tv2, tv3;
+    struct rusage ru1, ru2, ru3;
+    
+    gettimeofday(&tv1, 0);
+    getrusage(RUSAGE_SELF, &ru1);
+    
     srand(time(NULL));
 
     ProgramConfig flags;
@@ -438,6 +448,9 @@ int main(int argc, char** argv)
     // - always print statistics at termination if not quiet.
     // - always print final variables at termination.
 
+    gettimeofday(&tv2, 0);
+    getrusage(RUSAGE_SELF, &ru2);
+    
     bool interactive = flags.m_interactive;
     try
     {
@@ -496,6 +509,15 @@ int main(int argc, char** argv)
             // Print exception.
             PrintException(sys.get(), cerr, e);
 
+        gettimeofday(&tv3, 0);
+        getrusage(RUSAGE_SELF, &ru3);
+        
+        std::cerr 
+                << "Init time wallclock: " << tv2.tv_sec - tv1.tv_sec + tv2.tv_usec*0.000001 - tv1.tv_usec*0.000001 << std::endl
+                << "Init time self: " << ru2.ru_utime.tv_sec - ru1.ru_utime.tv_sec + ru2.ru_utime.tv_usec*0.000001 - ru1.ru_utime.tv_usec*0.000001 << std::endl
+                << "Sim time wallclock: " << tv3.tv_sec - tv2.tv_sec + tv3.tv_usec*0.000001 - tv2.tv_usec*0.000001 << std::endl
+                << "Sim time self: " << ru3.ru_utime.tv_sec - ru2.ru_utime.tv_sec + ru3.ru_utime.tv_usec*0.000001 - ru2.ru_utime.tv_usec*0.000001 << std::endl
+                ;   
         // Print statistics & final variables.
         AtEnd(*sys, flags);
 
@@ -512,6 +534,15 @@ int main(int argc, char** argv)
             return 1;
     }
 
+    gettimeofday(&tv3, 0);
+    getrusage(RUSAGE_SELF, &ru3);
+      
+    std::cerr 
+            << "Init time wallclock: " << tv2.tv_sec - tv1.tv_sec + tv2.tv_usec*0.000001 - tv1.tv_usec*0.000001 << std::endl
+            << "Init time self: " << ru2.ru_utime.tv_sec - ru1.ru_utime.tv_sec + ru2.ru_utime.tv_usec*0.000001 - ru1.ru_utime.tv_usec*0.000001 << std::endl
+            << "Sim time wallclock: " << tv3.tv_sec - tv2.tv_sec + tv3.tv_usec*0.000001 - tv2.tv_usec*0.000001 << std::endl
+            << "Sim time self: " << ru3.ru_utime.tv_sec - ru2.ru_utime.tv_sec + ru3.ru_utime.tv_usec*0.000001 - ru2.ru_utime.tv_usec*0.000001 << std::endl
+ ;   
     // Print statistics & final variables.
     AtEnd(*sys, flags);
 

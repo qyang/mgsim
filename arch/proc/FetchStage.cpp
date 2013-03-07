@@ -95,28 +95,22 @@ Processor::Pipeline::PipeAction Processor::Pipeline::FetchStage::OnCycle()
         // Fill output latch structure
         m_output.kill         = ((control & 2) != 0);
         const bool wantSwitch = ((control & 1) != 0);
-        const bool mustSwitch = m_output.kill || (next_pc % m_icache.GetLineSize() == 0);
-        bool prioritySwitch   = false;
-        size_t j = 0;
-        for(size_t i = 0; i < m_parent.GetProcessor().GetPriorityLevels(); i++)
-        {
-           if(m_allocator.m_activeThreads[i]->Empty() || m_allocator.m_activeThreads[i]->Singular())
-           {
-               j++;
-           }
-        }
-        
+        const bool lastThread = m_allocator.m_activeThreads[m_output.priority]->Empty() || (m_allocator.m_activeThreads[m_output.priority]->Singular() && (m_allocator.m_activeThreads[m_output.priority]->Front() == m_output.tid));
+
+        bool mustSwitch = m_output.kill || (next_pc % m_icache.GetLineSize() == 0);
+    
+        // if there are active threads at a higher priority, run them!        
         for(size_t i = m_output.priority; i > 0; i--)
         {
             if(!m_allocator.m_activeThreads[i-1]->Empty())
             {
-                prioritySwitch = true;
+                mustSwitch = true;
                 break;
             }
         }  
-        
-        const bool lastThread = (j <= 1)? true : false;
-        m_output.swch         = prioritySwitch || mustSwitch || (wantSwitch && !lastThread) ;
+     
+        //Guarantee its the only active thread avaiable at the moment regardless of priority levels
+        m_output.swch         = mustSwitch || (wantSwitch && !lastThread) ;
         m_output.pc           = pc;
         m_output.instr        = UnserializeInstruction(&instrs[iInstr]);
 
